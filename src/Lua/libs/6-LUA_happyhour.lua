@@ -12,6 +12,7 @@ rawset(_G,"HAPPY_HOUR",{
 	time = 0,
 	othergt = false,
 	trigger = 0,
+	overtime = false,
 })
 local hh = HAPPY_HOUR
 
@@ -57,14 +58,18 @@ addHook("ThinkFrame",function()
 		end
 		
 		//cool
-		if (gametype == GT_PIZZATIMEJISK)
-			hh.happyhour = PTJE.pizzatime
-			hh.timelimit = CV_PTJE.timelimit.value*TICRATE*60 or 0
-			hh.timeleft = PTJE.timeleft
-			hh.time = PTJE.pizzatime_tics
+		if (gametype == GT_PTSPICER)
+			hh.happyhour = PTSR.pizzatime
+			hh.timelimit = CV_PTSR.timelimit.value*TICRATE*60 or 0
+			hh.timeleft = PTSR.timeleft
+			hh.time = PTSR.pizzatime_tics
 			hh.othergt = true
+			hh.overtime = hh.timeleft == 0 and hh.happyhour
 			return
 		else
+			if (hh.overtime)
+				hh.overtime = false
+			end
 			if (hh.othergt)
 				hh.othergt = false 
 			end

@@ -118,14 +118,17 @@ COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a9,a10,a1
 
 	if a10 == 1
 		takis.io.ihavemusicwad = 1
-		if not (modeattacking)
-			if (p and p.valid)
-				COM_BufInsertText(p, "addfile takismusic.pk3")
-			elseif consoleplayer
-				COM_BufInsertText(consoleplayer, "addfile takismusic.pk3")
-			end
-			if (leveltime > 2*TR)
-				P_RestoreMusic(p)
+		if (string.lower(CV_FindVar("takis_loadedmus").string) == "false")
+			if not (modeattacking)
+				if (p and p.valid)
+					COM_BufInsertText(p, "addfile takismusic.pk3")
+				elseif consoleplayer
+					COM_BufInsertText(consoleplayer, "addfile takismusic.pk3")
+				end
+				if (leveltime > 2*TR)
+					P_RestoreMusic(p)
+				end
+				CV_StealthSet(CV_FindVar("takis_loadedmus"),"true")
 			end
 		end
 	elseif a10 == 0

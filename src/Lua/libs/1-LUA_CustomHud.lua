@@ -55,7 +55,7 @@ if (rawget(_G, "customhud")) then
 
 	if (oldvers == false) then
 		-- Existing version is OK
-		print("ASDSADSAD")
+		filesdone = $+1
 		return;
 	end
 	

@@ -40,8 +40,8 @@ local guh = {
 //libs
 local filelistt1 = {
 	"CustomHud",
-	"achievements",
 	"functions",
+	"achievements",
 	"taunts",
 	"menu",
 	"happyhour",
@@ -51,9 +51,9 @@ local filelistt1 = {
 local filelist = {
 	"io",
 	"main",
-	"hud",
 	"cmds",
 	"devcmds",
+	"hud",
 	"misc",
 	"MOTD",
 }
@@ -106,17 +106,17 @@ local pre = "LUA_"
 local suf = ".lua"
 
 for k,v in ipairs(guh)
-	dofile(pre..v)
+	dofile("1-"..pre..v)
 	print("Done "..filesdone.." file(s)")
 end
 
 for k,v in ipairs(filelistt1)
-	dofile("libs/".. pre..v..suf)
+	dofile("libs/"..k.."-"..pre..v..suf)
 	print("Done "..filesdone.." file(s)")
 end
 
 for k,v in ipairs(filelist)
-	dofile(pre..v..suf)
+	dofile((k+1).."-"..pre..v..suf)
 	print("Done "..filesdone.." file(s)")
 end
 

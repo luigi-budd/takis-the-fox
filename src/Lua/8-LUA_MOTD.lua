@@ -14,8 +14,13 @@ hud.add(function(v, p)
 	end
 	
 	if p.discord == true
-		v.drawString(160, 0, TAKIS_INVITELINK2,V_SNAPTOTOP|V_ALLOWLOWERCASE|V_30TRANS, "thin-center")
-		v.drawString(160, 8, TAKIS_INVITELINK,V_SNAPTOTOP|V_ALLOWLOWERCASE|V_30TRANS, "thin-center")
+		local off = 0
+		if (gametype == GT_SRBZ)
+			off = 10
+			off = $+#SRBZ:GetActiveTimers()*20
+		end
+		v.drawString(160, 0+off, TAKIS_INVITELINK2,V_SNAPTOTOP|V_ALLOWLOWERCASE|V_30TRANS, "thin-center")
+		v.drawString(160, 8+off, TAKIS_INVITELINK,V_SNAPTOTOP|V_ALLOWLOWERCASE|V_30TRANS, "thin-center")
 	end
 end)
 

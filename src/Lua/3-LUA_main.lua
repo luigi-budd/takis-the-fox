@@ -57,7 +57,7 @@
 	-find out whats making the erz1 fof conveyors hyperspeed
 	-[done]only sweat if we're running
 	-make a function to add takis_menu pages
-	-move all hud related code in shorts to their respective hud
+	-move all hud related code in shoSrts to their respective hud
 	 drawing function
 	 actually,, maybe dont, thatll make it fps dependant
 	-spingebobb #1 hat option
@@ -82,19 +82,15 @@
 	-MORE EFFECTS!!
 	-placements in drawscore?
 	-happy hour trigger and exit objects
-	-dedicated servers may be breaking heart cards?
+	-[done??]dedicated servers may be breaking heart cards?
 	-[done]rings give too much score
 	-we may be loading other people's cfgs??
 	-[done]offset afterimages to start at salmon
 	-sometimes shotgun shots dont give combo?
-	
-	Dear Pesky Plumbers,
-
-	The Koopalings and I have taken over the Mushroom Kingdom. 
-	The Princess is now a permanent guest at one of my seven Koopa Hotels. 
-	I dare you to find her, if you can! 
-	If you need instructions on how to get through the hotels, check out the enclosed instruction book.
-	And you gotta help us!
+	-[done]cap clutch boosts at 5
+	-[done]linedef trigger to open dialog
+	-[done]pt spice runners support
+	-replace menu patches with drawfill
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -106,10 +102,12 @@
 	-Takis_HH_EndMusic - ending happyhour mus, ignore styles
 	-Takis_HH_NoMusic - disable happyhour mus
 	-Takis_HH_NoEndMusic - disable happyhour end mus
-	-Takis_HH_Tics - timelimit (in tics)
+	-Takis_HH_Timelimit - timelimit (in tics)
 	
 	
 */
+
+local flashingtics = flashingtics
 
 //thanks katsy for this function
 local function stupidbouncesectors(mobj, sector)
@@ -373,7 +371,9 @@ addHook("PlayerThink", function(p)
 					and (p.realtime > 0)
 					and not (takis.c2 and me.state == S_PLAY_TAKIS_SLIDE)
 					and not (takis.noability & NOABIL_CLUTCH)
-					
+						
+						local ccombo = min(takis.clutchcombo,3)
+						
 						if takis.io.nostrafe == 1
 							local ang = (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
 							p.drawangle = ang
@@ -388,14 +388,12 @@ addHook("PlayerThink", function(p)
 						takis.clutchingtime = 1
 						//print(takis.clutchtime)
 						
-						local thrust = FixedMul( (4*FU), (takis.clutchcombo*FU)/2 )
+						local thrust = FixedMul( (4*FU), (ccombo*FU)/2 )
 						
 						//not too fast, now
-						/*
-						if thrust >= 13*me.scale
-							thrust = 13*me.scale
+						if thrust >= 13*FU
+							thrust = 13*FU
 						end
-						*/
 						
 						//clutch boost
 						if (takis.clutchtime > 0)
@@ -447,6 +445,11 @@ addHook("PlayerThink", function(p)
 						end
 						
 						local  ang = (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
+						
+						if (takis.accspeed > 55*FU)
+						and not (p.powers[pw_sneakers])
+							thrust = 0
+						end
 						
 						thrust = FixedMul(thrust,me.scale)
 						
@@ -1045,14 +1048,19 @@ addHook("PlayerThink", function(p)
 				takis.wavedashcapable = false
 			end
 			
+			p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
+			
 			//hammerblast stuff
 			if takis.hammerblastdown
 				p.charflags = $ &~SF_RUNONWATER
 				p.powers[pw_strong] = $|(STR_SPRING|STR_HEAVY)
 				takis.noability = $|NOABIL_SHOTGUN|NOABIL_HAMMER
+				//control better
+				p.thrustfactor = $*3/2
 				
 				if (takis.shotgunned)
 					if me.state ~= S_PLAY_TAKIS_SHOTGUNSTOMP
+						p.panim = PA_FALL
 						me.state = S_PLAY_TAKIS_SHOTGUNSTOMP
 					end
 					//wind ring
@@ -1315,13 +1323,11 @@ addHook("PlayerThink", function(p)
 						if takis.jump > 0
 						and me.health
 						and not ((takis.inPain) or (takis.inFakePain))
+							local time = min(takis.hammerblastdown,TR*3/2)
 							takis.hammerblastjumped = 1
 							P_DoJump(p,false)
 							me.state = S_PLAY_ROLL
-							me.momz =  (7*$/4)+((takis.hammerblastdown*takis.gravflip*me.scale)/8)+(-takis.lastmomz/8)
-							if (takis.inGoop)
-								me.momz = $+( 22*me.scale + ((takis.hammerblastdown*takis.gravflip/8)*me.scale))*takis.gravflip
-							end
+							me.momz = 20*takis.gravflip*me.scale+(time*takis.gravflip*me.scale/8)
 							S_StartSoundAtVolume(me,sfx_kc52,180)
 							shouldntcontinueslide = true
 							
@@ -1728,7 +1734,12 @@ addHook("PlayerThink", function(p)
 				end
 				
 				local cc = takis.combo.count
-				takis.combo.score = ((cc*cc)/2)+(17*cc)
+				//be fair to the other runners
+				if (HAPPY_HOUR.othergt)
+					takis.combo.score = ((cc*cc)/2)+(10*cc)
+				else
+					takis.combo.score = ((cc*cc)/2)+(17*cc)
+				end
 				
 				takis.combo.outrotics = 0
 				
@@ -1913,9 +1924,9 @@ addHook("PlayerThink", function(p)
 			end
 			*/
 			
-			if p.ptje_rank
-			and gametype == GT_PIZZATIMEJISK
-				local per = (PTJE.maxrankpoints)/6
+			if p.ptsr_rank
+			and gametype == GT_PTSPICER
+				local per = (PTSR.maxrankpoints)/6
 				takis.HUD.rank.percent = per
 				
 				if p.score < per
@@ -1938,9 +1949,9 @@ addHook("PlayerThink", function(p)
 					takis.HUD.rank.score = $-takis.HUD.flyingscore.lastscore
 				end
 				
-				if ranktonum[p.ptje_rank] ~= takis.lastrank
+				if ranktonum[p.ptsr_rank] ~= takis.lastrank
 				and not (p.pizzaface)
-					local r = ranktonum[p.ptje_rank]
+					local r = ranktonum[p.ptsr_rank]
 					//we went up!
 					if r > takis.lastrank
 						if r == 6
@@ -1997,18 +2008,18 @@ addHook("PlayerThink", function(p)
 				
 				if (tics == 1)
 					S_StartSound(nil,sfx_mclang)
-					takis.HUD.ptje.yoffset = 200*FU
+					takis.HUD.ptsr.yoffset = 200*FU
 				end
 				
 		
 				if tics <= 2*TR
-					if takis.HUD.ptje.yoffset ~= 0
+					if takis.HUD.ptsr.yoffset ~= 0
 						local et = 2*TR
-						takis.HUD.ptje.yoffset = ease.outquad(( FU / et )*tics,200*FU,0)
+						takis.HUD.ptsr.yoffset = ease.outquad(( FU / et )*tics,200*FU,0)
 					end
 				else
-					if takis.HUD.ptje.yoffset ~= 0
-						takis.HUD.ptje.yoffset = 0
+					if takis.HUD.ptsr.yoffset ~= 0
+						takis.HUD.ptsr.yoffset = 0
 					end
 				end
 				
@@ -2060,8 +2071,8 @@ addHook("PlayerThink", function(p)
 		
 		//outside of shorts (and skin check!!!!) to check for
 		//last rank
-		if (p.ptje_rank)
-			takis.lastrank = ranktonum[p.ptje_rank]
+		if (p.ptsr_rank)
+			takis.lastrank = ranktonum[p.ptsr_rank]
 		end
 
 		if (takis.fakesneakers)
@@ -2272,7 +2283,15 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		return
 	end
 	
+	//if a player died...
 	if mo.skin ~= TAKIS_SKIN
+		//and they died to a takis...
+		if (sor.skin == TAKIS_SKIN)
+		and not (gametyperules & GTR_FRIENDLY)
+		and (sor.takistable.heartcards ~= TAKIS_MAX_HEARTCARDS)
+			TakisHealPlayer(sor.player,sor,1,1)
+			S_StartSound(mo,sfx_takhel,sor.player)
+		end
 		return
 	end
 
@@ -2361,13 +2380,14 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	end
 	
 	if (p.timeshit == 1)
-	and p.ptje_rank
+	and p.ptsr_rank
 		takis.HUD.rank.grow = FRACUNIT/3
 		S_StartSound(nil,sfx_didbad,p)
 	end
 	
 	if takis.heartcards > 0
 	and (p.powers[pw_shield] == SH_NONE)
+		TakisResetHammerTime(p)
 		if takis.heartcards == 1
 			P_KillMobj(mo,inf,sor)
 			
@@ -2407,7 +2427,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		p.timeshit = $+1
 		
 		if (p.timeshit == 1)
-		and p.ptje_rank
+		and p.ptsr_rank
 			takis.HUD.rank.grow = FRACUNIT/3
 			S_StartSound(nil,sfx_didbad,p)
 		end
@@ -2722,19 +2742,15 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 				S_StartAntonOw(mo)
 			end
 			if (p.timeshit == 1)
-			and p.ptje_rank
+			and p.ptsr_rank
 				takis.HUD.rank.grow = FRACUNIT/3
 				S_StartSound(nil,sfx_didbad,p)
 			end
 			
 			takis.timesdeathpitted = $+1
-			takis.hammerblastdown = 0
-			if ((takis.hammerblasthitbox) and (takis.hammerblasthitbox.valid))
-				P_RemoveMobj(takis.hammerblasthitbox)
-				takis.hammerblasthitbox = nil
-			end
+			TakisResetHammerTime(p)
 			
-			P_SetObjectMomZ(mo,(-takis.prevmomz)*takis.timesdeathpitted)
+			P_SetObjectMomZ(mo,15*mo.scale*takis.timesdeathpitted)
 			mo.state = S_PLAY_ROLL
 			p.pflags = $|PF_JUMPED &~(PF_THOKKED|PF_SPINNING)
 			takis.thokked = false
@@ -2938,6 +2954,7 @@ local function hurtbytakis(mo,inf,sor)
 			if P_RandomChance(FU/2)
 				local card = P_SpawnMobjFromMobj(mo,0,0,mo.height*P_MobjFlip(mo),MT_TAKIS_HEARTCARD)
 				P_SetObjectMomZ(card,10*mo.scale)
+				mo.heartcard = card
 			end
 		end
 	end

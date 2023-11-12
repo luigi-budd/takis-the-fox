@@ -172,8 +172,13 @@ rawset(_G, "TakisAnimateHappyHour", function(p)
 	local hud = takis.HUD
 	local me = p.mo
 
+	local dontdo = false
+	if (HAPPY_HOUR.othergt)
+		dontdo = takis.io.nohappyhour == 1
+	end
+	
 	if HAPPY_HOUR.time and HAPPY_HOUR.time <= 5*TR	
-	and (takis.io.nohappyhour == 0)
+	and not (dontdo)
 		
 		local tics = HAPPY_HOUR.time
 		if tics == 1
@@ -292,23 +297,28 @@ rawset(_G, "TakisHUDStuff", function(p)
 	end
 	
 
+	local dontdo = false
+	if (HAPPY_HOUR.othergt)
+		dontdo = takis.io.nohappyhour == 1
+	end
+	
 	//happy hour hud and stuff
 	if HAPPY_HOUR.time
-	and takis.io.nohappyhour == 0
+	and not (dontdo)
 		local tics = HAPPY_HOUR.time
 		
 		if (tics == 1)
-			hud.ptje.yoffset = 200*FU
+			hud.ptsr.yoffset = 200*FU
 		end
 		
 		if tics <= 2*TR
-			if hud.ptje.yoffset ~= 0
+			if hud.ptsr.yoffset ~= 0
 				local et = 2*TR
-				hud.ptje.yoffset = ease.outquad(( FU / et )*tics,200*FU,0)
+				hud.ptsr.yoffset = ease.outquad(( FU / et )*tics,200*FU,0)
 			end
 		else
-			if hud.ptje.yoffset ~= 0
-				hud.ptje.yoffset = 0
+			if hud.ptsr.yoffset ~= 0
+				hud.ptsr.yoffset = 0
 			end
 		end
 		
@@ -320,8 +330,13 @@ rawset(_G, "TakisHUDStuff", function(p)
 			local tics = HAPPY_HOUR.timeleft
 			local time = hud.timeshake
 			
+			local dontdo = false
+			if (HAPPY_HOUR.othergt)
+				dontdo = takis.io.nohappyhour == 1
+			end
+	
 			if tics <= (56*TR)
-			and (takis.io.nohappyhour == 0)
+			and not (dontdo)
 				hud.timeshake = $+1
 				if not takis.sethappyend
 				and (takis.io.happyhourstyle == 1)
@@ -787,6 +802,10 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 			takis.goingfast = true
 			takis.wentfast = 10*TR
 		end
+	elseif (takis.heartcards <= (TAKIS_MAX_HEARTCARDS/6 or 1))
+	and not (takis.fakeexiting)
+		takis.goingfast = true
+		takis.wentfast = 3
 	else
 		takis.goingfast = false
 	end
@@ -859,8 +878,13 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 		
 	//happy hour hud and stuff
+	local dontdo = false
+	if (HAPPY_HOUR.othergt)
+		dontdo = takis.io.nohappyhour == 1
+	end
+	
 	if HAPPY_HOUR.time
-	and takis.io.nohappyhour == 0
+	and not (dontdo)
 		local tics = HAPPY_HOUR.time
 		
 		if (tics == 1)
@@ -1149,6 +1173,25 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if (takis.shotguntuttic)
 		takis.shotguntuttic = $-1
+	end
+	
+	TakisNoShield(p)
+	
+	if (p.powers[pw_shield]&SH_NOSTACK == SH_FIREFLOWER)
+		if (me.color ~= SKINCOLOR_BONE)
+			me.color = SKINCOLOR_BONE
+		end
+		if not (leveltime % 3)
+			A_BossScream(me, 1, MT_FIREBALLTRAIL)
+		end
+	end
+	
+	if (HAPPY_HOUR.othergt)
+	and (HAPPY_HOUR.overtime)
+	and (HAPPY_HOUR.happyhour)
+		if (takis.heartcards > 1)
+			takis.heartcards = 1
+		end
 	end
 	
 	p.alreadyhascombometer = 2
@@ -1493,7 +1536,7 @@ rawset(_G, "TakisTeamNewShields", function(player)
 	end
 end)
 
-rawset(_G, "TakisHUDShieldUsability", function(player)
+rawset(_G, "TakisNoShield", function(player)
 	local s = player.powers[pw_shield]
 	local f = s&SH_NOSTACK
 	local takis = player.takistable
@@ -1501,57 +1544,46 @@ rawset(_G, "TakisHUDShieldUsability", function(player)
 	local me = p.mo
 	
 	if not (player.mo.health)
-		return false
+		takis.noability = $|NOABIL_SHIELD
 	end
 	
 	if not (not takis.onGround
 	//and (p.pflags & PF_JUMPED)
 	and p.powers[pw_shield] ~= SH_NONE
 	and not (takis.hammerblastdown))
-		return false
+		takis.noability = $|NOABIL_SHIELD
 	end
 	
 	if (takis.shotgunned)
-	or (takis.noability & NOABIL_SHIELD)
-		return false
+		takis.noability = $|NOABIL_SHIELD
 	end
 	
 	if (f or player.powers[pw_super])
 	and not (player.mo.state >= 59 and player.mo.state <= 64)
 		local t = takis.attracttarg
-			
-		if s & SH_FORCE
-			return true
+		if (f == SH_PITY)
+		or (f == SH_PINK)
+			takis.noability = $|NOABIL_SHIELD
 		end
+		
 		if f == SH_WHIRLWIND
 		or f == SH_THUNDERCOIN
-			if not (p.pflags & (PF_THOKKED|PF_SHIELDABILITY))
-				return true
+			if (p.pflags & (PF_THOKKED|PF_SHIELDABILITY))
+				takis.noability = $|NOABIL_SHIELD
 			end
-			return false
-		end
-		if f == SH_ARMAGEDDON
-			return true
 		end
 		if f == SH_ATTRACT
-			if (p.powers[pw_shield]&SH_NOSTACK) == SH_ATTRACT
-			and not (me.state >= 59 and me.state <= 64)
-			//and not ((p.pflags & PF_THOKKED) or (takis.thokked or takis.dived))
-				return true
+			if not ((p.powers[pw_shield]&SH_NOSTACK) == SH_ATTRACT
+			and not (me.state >= 59 and me.state <= 64))
+				takis.noability = $|NOABIL_SHIELD
 			end
-			return false
-		end
-		if f == SH_BUBBLEWRAP
-		or f == SH_ELEMENTAL
-			return true
 		end
 		if f == SH_FLAMEAURA
-		and not (takis.thokked or takis.dived or p.pflags & (PF_THOKKED|PF_SHIELDABILITY))
-			return true
+		and (takis.thokked or takis.dived or p.pflags & (PF_THOKKED|PF_SHIELDABILITY))
+			takis.noability = $|NOABIL_SHIELD
 		end
 		
 	end
-	return false
 end)
 
 rawset(_G, "TakisHealPlayer", function(p,me,takis,healtype,healamt)
@@ -1953,6 +1985,10 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 	
 	if p.deadtimer == 1
 		DoFlash(p,PAL_NUKE,7)
+	end
+	
+	if me.state == S_PLAY_FALL
+		me.state = S_PLAY_DEAD
 	end
 	
 	if takis.saveddmgt

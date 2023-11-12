@@ -1,0 +1,1 @@
+TAKIS_SKIN = "tails"

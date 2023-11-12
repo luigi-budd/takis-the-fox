@@ -14,6 +14,13 @@
 	
 */
 
+CV_RegisterVar({
+	"takis_loadedmus",
+	"false",
+	CV_NOSHOWHELP,
+	CV_TrueFalse,
+})
+
 local pnk = "\x8E"
 local wht = "\x80"
 
@@ -32,6 +39,7 @@ local dbgflags = {
 	"BLOCKMAP",
 	"DEATH",
 	"IO",
+	"SPEEDOMETER",
 }
 for k,v in ipairs(dbgflags)
 	rawset(_G,"DEBUG_"..v,1<<(k-1))
@@ -168,7 +176,8 @@ rawset(_G, "TAKIS_NET", {
 		["hpyhr2"] = true,
 		["letter"] = true,
 		["creds"] = true,
-		["_conga"] = true
+		["_conga"] = true,
+		["ovrtme"] = true,
 	},
 
 })
@@ -532,7 +541,7 @@ rawset(_G, "TakisInitTable", function(p)
 				alsofunny = false,
 				tics = 0,
 			},
-			ptje = {
+			ptsr = {
 				xoffset = 30,
 				yoffset = 100,
 			},
@@ -819,6 +828,7 @@ SafeFreeslot("SPR_HTCD")
 SafeFreeslot("SPR_CMBB")
 SafeFreeslot("SPR_TNDE")
 SafeFreeslot("SPR_RGDA") //ragdoll A
+SafeFreeslot("SPR_THND")
 
 --
 
@@ -1205,9 +1215,10 @@ addHook("NetVars",function(n)
 	TAKIS_ACHIEVEMENTINFO = n($)
 	SPIKE_LIST = n($)
 	//weird stuff happening in ptd... maybe ded serv issue?
-	if (gametype ~= GT_PIZZATIMEJISK)
+	if (gametype ~= GT_PTSPICER)
 		HAPPY_HOUR = n($)
 	end
+	TAKIS_TEXTBOXES = n($)
 end)
 
 filesdone = $+1

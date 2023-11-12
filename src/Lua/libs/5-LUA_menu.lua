@@ -31,7 +31,7 @@ tm.entries = {
 		curcolor = SKINCOLOR_SUPERGOLD4,
 		text = {
 			"No Strafe",
-			"No Happy Hour",
+			"No PT Happy Hour",
 			"Happy Hour Style",
 			"More Happy Hour",
 			"Taunt Menu Cursor",

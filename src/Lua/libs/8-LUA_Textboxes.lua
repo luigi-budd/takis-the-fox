@@ -8,8 +8,9 @@ local function choosething(...)
 end
 
 if CFTextBoxes then
+    filesdone = $+1
     error("A version of Clone Fighter's Text Boxes is already loaded. Aborting...", -1)
-    return
+	return
 end
 
 -- The main library for the textboxes.
@@ -610,5 +611,58 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		},
 	},
 })
+
+addHook("LinedefExecute",function(line,mo,sec)
+	if not mo.valid
+	or not mo.health
+	or not mo.player
+	or not mo.player.valid
+		return
+	end
+	
+	if TAKIS_TEXTBOXES["gmap"..gamemap] ~= nil
+		if TAKIS_TEXTBOXES["gmap"..gamemap][sec.tag] ~= nil
+			CFTextBoxes:DisplayBox(mo.player,
+				TAKIS_TEXTBOXES["gmap"..gamemap][sec.tag]
+			)
+		end
+	end
+end,"TAK_TBOX")
+
+/*
+	a map specific textbox would be listed like this:
+	TAKIS_TEXTBOXES.gmap1 = {			-this is the gamemap
+		[1] = {							-the first set of boxes
+										 indexed by the calling
+										 sector's tag
+			[1] = {						-the textboxes whatever
+				...
+			}
+			...
+		}
+		[2] = {
+			...
+		}
+	}
+	
+	TAKIS_TEXTBOXES.gmap1 = {
+		[1] = {							
+			[1] = {						
+			}
+		}
+	}
+	
+	//for stuff that isnt loaded alongside takis, use this
+	
+	local addeddia = false
+	addHook("ThinkFrame",do
+		if TAKIS_TEXTBOXES ~= nil
+		and not addeddia
+			-- add the dialog...
+			addeddia = true
+			print("Added Takis Dialog")
+		end
+	end)
+*/
 
 filesdone = $+1

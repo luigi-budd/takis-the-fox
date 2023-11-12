@@ -140,7 +140,13 @@ local function calcstatusface(p,takis)
 		takis.HUD.statusface.state = "PTIM"
 		takis.HUD.statusface.frame = (2*leveltime/3)%2
 		takis.HUD.statusface.priority = 0
+	end
 	
+	if (takis.heartcards <= (TAKIS_MAX_HEARTCARDS/6 or 1))
+	and not (takis.fakeexiting)
+		takis.HUD.statusface.state = "PTIM"
+		takis.HUD.statusface.frame = (2*leveltime/3)%2
+		takis.HUD.statusface.priority = 0	
 	end
 	
 	if takis.HUD.statusface.priority < 10
@@ -541,6 +547,7 @@ local function drawlivesarea(v,p)
 	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
 	or (p.textBoxInAction)
+	or (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
 		return
 	end
 	
@@ -772,7 +779,7 @@ local function drawlivesarea(v,p)
 	
 	if (p.powers[pw_shield] ~= SH_NONE)
 		local shieldflag = V_HUDTRANSHALF
-		shieldflag = TakisHUDShieldUsability(p) and V_HUDTRANS or V_HUDTRANSHALF
+		shieldflag = (not(takis.noability&NOABIL_SHIELD)) and V_HUDTRANS or V_HUDTRANSHALF
 		
 		v.drawScaled(hudinfo[HUD_LIVES].x*FU, (hudinfo[HUD_LIVES].y+disp)*FU, (FU/2)+(FU/12), v.cachePatch("TB_C2"), V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|shieldflag)
 		v.drawString(hudinfo[HUD_LIVES].x+20, hudinfo[HUD_LIVES].y+(disp+5), "Shield Ability",V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS, "small")
@@ -1115,6 +1122,7 @@ local function drawcombostuff(v,p)
 			"thin-fixed"
 		)
 		
+		//font
 		local scorenum = "CMBCF"
 		local score = takis.combo.count
 		
@@ -1195,7 +1203,7 @@ local function drawcombostuff(v,p)
 		
 		local x = (300-30)*FU
 		local y = 35*FU
-		if p.ptje_rank
+		if p.ptsr_rank
 			x = $-20*FU
 		end
 		local grow = takis.HUD.combo.tokengrow
@@ -1262,7 +1270,7 @@ end
 
 local function drawhappyhour(v,p)
 
-	if (customhud.CheckType("ptje_itspizzatime") != modname) return end
+	if (customhud.CheckType("PTSR_itspizzatime") != modname) and (HAPPY_HOUR.othergt) then return end
 	
 	if ((skins[p.skin].name ~= TAKIS_SKIN)
 	and (p.takistable.io.morehappyhour == 0))
@@ -1272,8 +1280,13 @@ local function drawhappyhour(v,p)
 	
 	local takis = p.takistable
 	
+	local dontdo = false
+	if (HAPPY_HOUR.othergt)
+		dontdo = takis.io.nohappyhour == 1
+	end
+	
 	if (HAPPY_HOUR.time) and (HAPPY_HOUR.time <= 5*TR)
-	and (takis.io.nohappyhour == 0)
+	and not (dontdo)
 		
 		local tics = HAPPY_HOUR.time
 
@@ -1358,12 +1371,12 @@ local function getlaptext(p)
 	local num = ''
 	
 	//lots of these for backwards compatability
-	local laps = ((PTJE) and (PTJE.laps)) or JISK_LAPS
-	local laptype = ((CV_PTJE) and (CV_PTJE.lappingtype.value)) or ((JISK_LAPPINGTYPE) and (JISK_LAPPINGTYPE.value))
-	local dynalap = ((CV_PTJE) and (CV_PTJE.dynamiclaps.value)) or ((JISK_DYNAMICLAPS) and (JISK_DYNAMICLAPS.value))
-	local mlpp = ((CV_PTJE) and (CV_PTJE.maxlaps_perplayer.value)) or ((JISK_MAXLAPS_PERPLAYER) and (JISK_MAXLAPS_PERPLAYER.value))
-	local maxlaps = ((CV_PTJE) and (CV_PTJE.maxlaps.value)) or ((JISK_MAXLAPS) and (JISK_MAXLAPS.value))
-	local dynalapsv = ((PTJE) and (PTJE.dynamic_maxlaps)) or JISK_DYNAMICMAXLAPS
+	local laps = ((PTSR) and (PTSR.laps)) or JISK_LAPS
+	local laptype = ((CV_PTSR) and (CV_PTSR.lappingtype.value)) or ((JISK_LAPPINGTYPE) and (JISK_LAPPINGTYPE.value))
+	local dynalap = ((CV_PTSR) and (CV_PTSR.dynamiclaps.value)) or ((JISK_DYNAMICLAPS) and (JISK_DYNAMICLAPS.value))
+	local mlpp = ((CV_PTSR) and (CV_PTSR.maxlaps_perplayer.value)) or ((JISK_MAXLAPS_PERPLAYER) and (JISK_MAXLAPS_PERPLAYER.value))
+	local maxlaps = ((CV_PTSR) and (CV_PTSR.maxlaps.value)) or ((JISK_MAXLAPS) and (JISK_MAXLAPS.value))
+	local dynalapsv = ((PTSR) and (PTSR.dynamic_maxlaps)) or JISK_DYNAMICMAXLAPS
 	
 	if p.pizzaface and laptype == 2 then 
 		num = 'dontdraw'
@@ -1432,7 +1445,7 @@ local function hhtimerbase(v,p)
 	
 	local string = timertime..extrastring
 	
-	local h = takis.HUD.ptje
+	local h = takis.HUD.ptsr
 		
 	local frame = ((5*leveltime/6)%14)
 	local patch
@@ -1450,7 +1463,18 @@ local function hhtimerbase(v,p)
 	
 	if not (takis.inNIGHTSMode)
 		v.drawScaled(110*FU+(h.xoffset*FU),168*FU+(h.yoffset),FU,patch,V_HUDTRANS|V_SNAPTOBOTTOM)
-		TakisDrawPatchedText(v, 150+(h.xoffset), 173+(h.yoffset/FU), tostring(string),{font = TAKIS_HAPPYHOURFONT, flags = (V_SNAPTOBOTTOM|V_HUDTRANS), align = 'left', scale = 4*FU/5})
+		local doot = false
+		
+		if not (HAPPY_HOUR.overtime)
+			TakisDrawPatchedText(v, 150+(h.xoffset), 173+(h.yoffset/FU), tostring(string),{font = TAKIS_HAPPYHOURFONT, flags = (V_SNAPTOBOTTOM|V_HUDTRANS), align = 'left', scale = 4*FU/5})
+		else
+			local x,y = happyshakelol(v)
+			v.drawScaled(
+				(150+h.xoffset)*FU+x,173*FU+h.yoffset+y,4*FU/5,
+				v.cachePatch(TAKIS_HAPPYHOURFONT.."OT"),
+				V_SNAPTOBOTTOM|V_HUDTRANS
+			)
+		end
 	else
 		if (p.exiting) then return end
 		
@@ -1465,7 +1489,7 @@ end
 
 local function drawpizzatimer(v,p)
 
-	if (customhud.CheckType("ptje_bar") != modname) return end
+	if (customhud.CheckType("PTSR_bar") != modname) return end
 	
 	if (skins[p.skin].name ~= TAKIS_SKIN)
 	and (p.takistable.io.morehappyhour == 0)
@@ -1490,7 +1514,7 @@ local function drawtelebar(v,p)
 	
 	local takis = p.takistable
 	local me = p.mo
-	local h = takis.HUD.ptje
+	local h = takis.HUD.ptsr
 	
 	local charge = p.pizzacharge or 0
 	
@@ -1534,7 +1558,7 @@ end
 
 local function drawpizzatips(v,p)
 
-	if (customhud.CheckType("ptje_tooltips") != modname) return end
+	if (customhud.CheckType("PTSR_tooltips") != modname) return end
 	
 	if (skins[p.skin].name ~= TAKIS_SKIN)
 	and (p.takistable.io.morehappyhour == 0)
@@ -1542,21 +1566,21 @@ local function drawpizzatips(v,p)
 	end
 	
 	local takis = p.takistable
-	local h = takis.HUD.ptje
+	local h = takis.HUD.ptsr
 	
 	h.xoffset = 0
 	
-	if not ( ((PTJE) and (PTJE.pizzatime)) or (JISK_PIZZATIME))
+	if not ( ((PTSR) and (PTSR.pizzatime)) or (JISK_PIZZATIME))
 		return
 	end
 	
-	local tics = JISK_PIZZATIMETICS or PTJE.pizzatime_tics
+	local tics = JISK_PIZZATIMETICS or PTSR.pizzatime_tics
 
 	
 	local text,num = getlaptext(p)
 	local exitingCount, playerCount = JISK_COUNT()
 
-	if (not p.pizzaface) and (p.exiting) and (not PTJE.quitting) and (p.playerstate ~= PST_DEAD) and (exitingCount ~= playerCount)
+	if (not p.pizzaface) and (p.exiting) and (not PTSR.quitting) and (p.playerstate ~= PST_DEAD) and (exitingCount ~= playerCount)
 		v.drawString(160, 130, "\x85Press FIRE to try a new lap!", V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-center")
 	end
 	
@@ -1579,7 +1603,7 @@ local function drawpizzatips(v,p)
 	
 	if p.stuntime
 	and tics > 3
-		local ft = ((JISK_PIZZATIMESTUN) and (JISK_PIZZATIMESTUN.value)) or ((CV_PTJE) and (CV_PTJE.pizzatimestun.value))
+		local ft = ((JISK_PIZZATIMESTUN) and (JISK_PIZZATIMESTUN.value)) or ((CV_PTSR) and (CV_PTSR.pizzatimestun.value))
 		ft = $*TR
 		
 		local max = ft*FU
@@ -1627,13 +1651,13 @@ local rankheights = {
 
 local function drawpizzaranks(v,p)
 
-	if (customhud.CheckType("ptje_rank") != modname) return end
+	if (customhud.CheckType("PTSR_rank") != modname) return end
 	
 	if (skins[p.skin].name ~= TAKIS_SKIN)
 		return
 	end
 	
-	if gametype ~= GT_PIZZATIMEJISK then return end
+	if gametype ~= GT_PTSPICER then return end
 	if p.pizzaface then return end
 	
 	local takis = p.takistable
@@ -1642,82 +1666,36 @@ local function drawpizzaranks(v,p)
 	local x = (300-30)*FU
 	local y = 35*FU
 	
-	if p.ptje_rank
+	if p.ptsr_rank
 		v.drawScaled(x-(h.grow*25),y-(h.grow*20),FU/3+h.grow,
-			v.cachePatch("HUDRANK"..p.ptje_rank),
+			v.cachePatch("HUDRANK"..p.ptsr_rank),
 			V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP
 		)
 		if h.percent
-		and not ((p.ptje_rank == "S" and p.timeshit) or (p.ptje_rank == "P"))
+		and not ((p.ptsr_rank == "S" and p.timeshit) or (p.ptsr_rank == "P"))
 			//thanks jisk for the help lol
 			
 			local max = h.percent
 			local erm = FixedDiv((h.score),max)
 			
-			local scale2 = rankheights[p.ptje_rank]-(FixedMul(erm,rankheights[p.ptje_rank]))
+			local scale2 = rankheights[p.ptsr_rank]-(FixedMul(erm,rankheights[p.ptsr_rank]))
 			
  			if scale2 < 0 then scale2 = FU end
 			
 			v.drawCropped(x,y+(scale2/3),FU/3,FU/3,
-				v.cachePatch("RANKFILL"..p.ptje_rank),
+				v.cachePatch("RANKFILL"..p.ptsr_rank),
 				V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP, 
 				v.getColormap(nil, nil),
 				0,scale2,
-				rankwidths[p.ptje_rank],rankheights[p.ptje_rank]
+				rankwidths[p.ptsr_rank],rankheights[p.ptsr_rank]
 			)
 			
 		end
 		if p.timeshit
-		v.drawScaled(x-(h.grow*25),y-(h.grow*20),FU/3+h.grow,
-			v.cachePatch("HUDRANKBKN"),
-			V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP|V_50TRANS
-		)
-		end
-	end
-
-end
-
-local function drawnickranks(v,p)
-
-	if (customhud.CheckType("rank") != modname) return end
-	
-	if (skins[p.skin].name ~= TAKIS_SKIN)
-		return
-	end
-	
-	if gametype ~= GT_PIZZATIME2 then return end
-	if p.pt_mode.pizzaface then return end
-	
-	local takis = p.takistable
-	local h = takis.HUD.rank
-	
-	local x = (300-30)*FU
-	local y = 35*FU
-	
-	if p.ptje_rank
-		v.drawScaled(x-(h.grow*25),y-(h.grow*20),FU/3+h.grow,
-			v.cachePatch("HUDRANK"..p.ptje_rank),
-			V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP
-		)
-		if h.percent
-		and not ((p.ptje_rank == "S" and p.timeshit > 0) or (p.ptje_rank == "P"))
-			//thanks jisk for the help lol
-			
-			local max = h.percent
-			local erm = FixedDiv((h.score),max)
-			
-			local scale2 = rankheights[p.ptje_rank]-(FixedMul(erm,rankheights[p.ptje_rank]))
-			
- 			if scale2 < 0 then scale2 = FU end
-			
-			v.drawCropped(x,y+(scale2/3),FU/3,FU/3,
-				v.cachePatch("RANKFILL"..p.ptje_rank),
-				V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP, 
-				v.getColormap(nil, nil),
-				0,scale2,
-				rankwidths[p.ptje_rank],rankheights[p.ptje_rank]
+			v.drawScaled(x-(h.grow*25),y-(h.grow*20),FU/3+h.grow,
+				v.cachePatch("HUDRANKBKN"),
+				V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP|V_50TRANS
 			)
-			
 		end
 	end
 
@@ -2365,6 +2343,7 @@ local function drawdebug(v,p)
 		drawflag(v,x+45,y-50,"SL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SLIDE))
 		drawflag(v,x+60,y-50,"WD",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_WAVEDASH))
 		drawflag(v,x+75,y-50,"SG",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHOTGUN))
+		drawflag(v,x+85,y-50,"SH",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHIELD))
 		
 		v.drawString(x,y-38,"FSTASIS",flags|V_GREENMAP,"thin")
 		v.drawString(x,y-30,takis.stasistic,flags,"thin")
@@ -2423,11 +2402,6 @@ local function drawdebug(v,p)
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_ALIGNER)
 		v.draw(160,100,v.cachePatch("ALIGNER"),V_20TRANS)
-		v.drawString(hudinfo[HUD_LIVES].x+68,hudinfo[HUD_LIVES].y+8,
-			L_FixedDecimal(takis.accspeed,3),
-			V_HUDTRANS|V_SNAPTOBOTTOM|V_SNAPTOLEFT,
-			"thin"
-		)
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_PFLAGS)
 		drawflag(v,100,60,"FC",
@@ -2559,7 +2533,106 @@ local function drawdebug(v,p)
 		
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_DEATH)
+		v.drawString(100,100,"State: "..me.state,V_ALLOWLOWERCASE,"thin")
+		v.drawString(100,108,"Sprite2: "..me.sprite2,V_ALLOWLOWERCASE,"thin")
+		v.drawString(100,116,"PState: "..p.playerstate,V_ALLOWLOWERCASE,"thin")
+	end
+	if (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
 		
+		local speed = FixedDiv(takis.accspeed,100*FU)
+		local roll
+		local offy = 0
+		local scale = FU
+		if (speed ~= 0)
+			roll = FixedAngle(90*FU-FixedMul(90*FU,speed))
+		else
+			roll = FixedAngle(90*FU)
+		end
+		if (roll == 0)
+			offy = 4
+		end
+		if (takis.accspeed >= 100*FU)
+			scale = $+FixedDiv(takis.accspeed-100*FU,20*FU)
+		end
+		
+		for i = 0,5
+			local ra = FixedAngle(90*FU-(i*18)*FU)
+			v.drawScaled((hudinfo[HUD_LIVES].x+4)*FU,
+				(hudinfo[HUD_LIVES].y-8+offy)*FU,
+				FU,
+				v.getSpritePatch(SPR_THND,B,0,ra),
+				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
+			)
+		
+		end
+		
+		v.drawScaled((hudinfo[HUD_LIVES].x+4)*FU,
+			(hudinfo[HUD_LIVES].y-8+offy)*FU,
+			FU,
+			v.getSpritePatch(SPR_THND,A,0,roll),
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
+		)
+		
+		
+		local scorenum = "CMBCF"
+		local score = L_FixedDecimal(takis.accspeed,3)
+		
+		local prevw
+		if not prevw then prevw = 0 end
+		
+		for i = 1,string.len(score)
+			local n = string.sub(score,i,i)
+			//if n == "." then n = "DOT" end
+			v.drawScaled(hudinfo[HUD_LIVES].x*FU+(prevw*scale),
+				(hudinfo[HUD_LIVES].y)*FU-(v.cachePatch(scorenum+n).height*FixedDiv(scale-FU,2*FU)),
+				FixedDiv(scale,2*FU),
+				v.cachePatch(scorenum+n),
+				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
+			)
+				
+			prevw = $+v.cachePatch(scorenum+n).width*4/10
+		end
+		
+		local scale = FU/10
+		local floorz = me.floorz
+		local drawz = 175*FU-FixedMul(floorz,scale)
+		v.drawFill(105,175-(FixedMul(floorz,scale)/FU),60,2,
+			skincolors[ColorOpposite(p.skincolor)].ramp[4]|
+			V_SNAPTOBOTTOM
+		)
+		local dist = (me.z-floorz)
+		v.drawScaled(115*FU,
+			drawz-FixedMul(dist,scale),
+			FixedMul(scale,skins[me.skin].highresscale or FU),
+			v.getSprite2Patch(me.skin,me.sprite2,false,me.frame,
+				3,0
+			),
+			V_SNAPTOBOTTOM,
+			v.getColormap(nil,me.color)
+		)
+		for i = 0,2
+			v.drawScaled(122*FU+(i*FU*7),
+				drawz,
+				FixedMul(scale,skins[i].highresscale or FU),
+				v.getSprite2Patch(i,SPR2_STND,false,A,
+					3,0
+				),
+				V_SNAPTOBOTTOM,
+				v.getColormap(i,skins[i].prefcolor)
+			)		
+		end
+		v.drawScaled(146*FU,
+			drawz,
+			scale,
+			v.getSpritePatch(SPR_BRAK,A,3,0),
+			V_SNAPTOBOTTOM
+		)
+		v.drawString(115*FU,
+			drawz-4*FU-FixedMul(dist,FixedDiv(scale,2*FU)),
+			L_FixedDecimal(dist,3),
+			V_SNAPTOBOTTOM,
+			"thin-fixed"
+		)
 	end
 end
 
@@ -2629,15 +2702,15 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("takis_happyhourtime", 	modname/*,	drawlivesarea,	"game",	10*/)
 		
 			if takis.io.nohappyhour == 0
-				customhud.SetupItem("ptje_itspizzatime",modname)
-				customhud.SetupItem("ptje_bar",modname)
-				customhud.SetupItem("ptje_tooltips",modname)
+				customhud.SetupItem("PTSR_itspizzatime",modname)
+				customhud.SetupItem("PTSR_bar",modname)
+				customhud.SetupItem("PTSR_tooltips",modname)
 			elseif takis.io.nohappyhour == 1
-				customhud.SetupItem("ptje_itspizzatime","jiskpizzatime")
-				customhud.SetupItem("ptje_bar","jiskpizzatime")
-				customhud.SetupItem("ptje_tooltips","jiskpizzatime")
+				customhud.SetupItem("PTSR_itspizzatime","spicerunners")
+				customhud.SetupItem("PTSR_bar","spicerunners")
+				customhud.SetupItem("PTSR_tooltips","spicerunners")
 			end
-			customhud.SetupItem("ptje_rank", modname)
+			customhud.SetupItem("PTSR_rank", modname)
 			//customhud.SetupItem("rank", modname)
 			
 			if p.takis
@@ -2728,15 +2801,14 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("score","vanilla")
 			customhud.SetupItem("lives","vanilla")
 			if takis.io.morehappyhour == 0
-				customhud.SetupItem("ptje_itspizzatime","jiskpizzatime")
-				customhud.SetupItem("ptje_bar","jiskpizzatime")
+				customhud.SetupItem("PTSR_itspizzatime","spicerunners")
 			else
-				customhud.SetupItem("ptje_itspizzatime",modname)
+				customhud.SetupItem("PTSR_itspizzatime",modname)
 				drawhappyhour(v,p)			
 			end
-			customhud.SetupItem("ptje_bar","jiskpizzatime")
-			customhud.SetupItem("ptje_tooltips","jiskpizzatime")
-			customhud.SetupItem("ptje_rank", "jiskpizzatime")
+			customhud.SetupItem("PTSR_bar","spicerunners")
+			customhud.SetupItem("PTSR_tooltips","spicerunners")
+			customhud.SetupItem("PTSR_rank", "spicerunners")
 			//customhud.SetupItem("rank", "pizzatime2.0")
 			
 			//elfilin stuff
@@ -2756,7 +2828,7 @@ addHook("HUD", function(v,p,cam)
 						
 						if takis2.io.nohappyhour == 0
 						and takis.io.morehappyhour == 0
-							customhud.SetupItem("ptje_itspizzatime",modname)
+							customhud.SetupItem("PTSR_itspizzatime",modname)
 							drawhappyhour(v,p2)
 						end
 						

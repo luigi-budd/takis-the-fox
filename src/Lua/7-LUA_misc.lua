@@ -204,6 +204,7 @@ addHook("ThinkFrame", do
 	TAKIS_NET.playercount = numplayers
 	TAKIS_NET.exitingcount = exitors
 	
+	//PLEASE... I WANT MY EARS
 	if not (leveltime % 3*TR)
 		if numt >= 6
 		and ((multiplayer) and not splitscreen)
@@ -1647,7 +1648,8 @@ end
 local dontflinglist = {
 	MT_EGGMAN_GOLDBOX,
 	MT_EGGMAN_BOX,
-	MT_BIGMINE
+	MT_BIGMINE,
+	MT_SHELL
 }
 
 for k,type in ipairs(dontflinglist)

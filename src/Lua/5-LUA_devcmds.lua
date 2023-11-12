@@ -28,7 +28,7 @@ COM_AddCommand("setrank", function(p,rank)
 		return
 	end
 	
-	if (gametype ~= GT_PIZZATIMEJISK)
+	if (gametype ~= GT_PTSPICER)
 		return
 	end
 	
@@ -134,7 +134,6 @@ local shields = {
 	["t"] = SH_THUNDERCOIN,
 	["f"] = SH_FORCE|1,
 	["ff"] = SH_FIREFLOWER,
-	["n"] = SH_NONE,
 }
 
 COM_AddCommand("shield", function(p,sh)
@@ -153,6 +152,9 @@ COM_AddCommand("shield", function(p,sh)
 		p.powers[pw_shield] = shields[sh]
 		if shields[sh] ~= 0
 			P_SpawnShieldOrb(p)
+		end
+		if sh == "ff"
+			p.realmo.color = SKINCOLOR_WHITE
 		end
 	end
 	
@@ -173,6 +175,7 @@ COM_AddCommand("setdebug", function(p,...)
 	
 	if args == nil
 		CONS_Printf(p,"Current flag is "..TAKIS_DEBUGFLAG)
+		CONS_Printf(p,"Use: speedometer, happyhour, buttons")
 		return
 	end
 	
@@ -311,17 +314,27 @@ COM_AddCommand("setmaxhp",function(p,amt)
 		CONS_Printf(p,"You can't use this right now.")
 	end
 
-	amt = abs(tonumber(amt))
 
 	if (amt == nil)
 		CONS_Printf(p,"Type number lel")
 		return
 	else
+		amt = abs(tonumber(amt))
 		if amt == 0
 			CONS_Printf(p,"You do this you die")
 			return
 		end
 		TAKIS_MAX_HEARTCARDS = amt
+	end
+end,COM_ADMIN)
+
+COM_AddCommand("forcedialog",function(p,type)
+	if gamestate ~= GS_LEVEL
+		CONS_Printf(p,"You can't use this right now.")
+	end
+	
+	if TAKIS_TEXTBOXES[type] ~= nil
+		CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES[type])
 	end
 end,COM_ADMIN)
 

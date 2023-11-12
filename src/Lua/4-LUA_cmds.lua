@@ -34,11 +34,11 @@ COM_AddCommand("takis_nohappyhour", function(p)
 	
 	if p.takistable.io.nohappyhour == 0
 		p.takistable.io.nohappyhour = 1
-		prn(p,skins[TAKIS_SKIN].realname.." will no longer show Happy Hour things in Jisk's Pizza Time.")
+		prn(p,skins[TAKIS_SKIN].realname.." will no longer show Happy Hour things in Pizza Time Spice Runners.")
 		COM_BufInsertText(p,"tunes -default")
 	else
 		p.takistable.io.nohappyhour = 0
-		prn(p,skins[TAKIS_SKIN].realname.." will now show Happy Hour things in Jisk's Pizza Time.")
+		prn(p,skins[TAKIS_SKIN].realname.." will now show Happy Hour things in Pizza Time Spice Runners.")
 		COM_BufInsertText(p,"tunes -default")
 	end
 	
