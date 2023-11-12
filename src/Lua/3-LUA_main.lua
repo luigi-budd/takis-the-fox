@@ -57,7 +57,7 @@
 	-find out whats making the erz1 fof conveyors hyperspeed
 	-[done]only sweat if we're running
 	-make a function to add takis_menu pages
-	-move all hud related code in shoSrts to their respective hud
+	-move all hud related code in shorts to their respective hud
 	 drawing function
 	 actually,, maybe dont, thatll make it fps dependant
 	-spingebobb #1 hat option
@@ -107,7 +107,7 @@
 	
 */
 
-local flashingtics = flashingtics
+local flashingtics = flashingtics/2
 
 //thanks katsy for this function
 local function stupidbouncesectors(mobj, sector)
