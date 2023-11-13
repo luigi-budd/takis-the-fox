@@ -182,7 +182,7 @@ addHook("PlayerThink", function(p)
 	end
 	
 	--whatev
-	takis.isTakis = skins[p.skin].name == TAKIS_SKIN
+	p.takistable.isTakis = skins[p.skin].name == TAKIS_SKIN
 	
 	if ((p.mo) and (p.mo.valid))
 		local me = p.mo
