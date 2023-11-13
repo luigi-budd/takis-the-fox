@@ -45,7 +45,7 @@ COM_AddCommand("setrank", function(p,rank)
 	end
 	
 	
-	local per = (PTJE.maxrankpoints)/6
+	local per = (PTSR.maxrankpoints)/6
 	
 	p.score = per*(ranktonum[rank]-1)
 end,COM_ADMIN)
@@ -215,7 +215,7 @@ COM_AddCommand("panic", function(p,tics,flags)
 		tics = $*60*TR
 	end
 	
-	//erm,, whatevre, set it to the playher
+	--erm,, whatevre, set it to the playher
 	HH_Trigger(p.mo,tics)
 	
 end,COM_ADMIN)

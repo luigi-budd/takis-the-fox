@@ -1,4 +1,4 @@
-//happy hour stuff
+--happy hour stuff
 local function L_ZCollide(mo1,mo2)
 	if mo1.z > mo2.height+mo2.z then return false end
 	if mo2.z > mo1.height+mo1.z then return false end
@@ -57,7 +57,7 @@ addHook("ThinkFrame",function()
 			return
 		end
 		
-		//cool
+		--cool
 		if (gametype == GT_PTSPICER)
 			hh.happyhour = PTSR.pizzatime
 			hh.timelimit = CV_PTSR.timelimit.value*TICRATE*60 or 0
@@ -89,7 +89,7 @@ addHook("ThinkFrame",function()
 						for p in players.iterate
 							if not (p and p.valid) then continue end
 							if not (p.mo and p.mo.valid) then continue end
-							//already dead
+							--already dead
 							if (not p.mo.health) or (p.playerstate ~= PST_LIVE) then continue end
 							if (p.exiting or p.pflags & PF_FINISHED) then continue end
 							P_KillMobj(p.mo)
@@ -149,12 +149,12 @@ mobjinfo[MT_HHTRIGGER] = {
 	deathstate = S_HHTRIGGER_PRESSED,
 	deathsound = sfx_mclang,
 	height = 60*FU,
-	radius = 35*FU, //FixedDiv(35*FU,2*FU),
+	radius = 35*FU, --FixedDiv(35*FU,2*FU),
 	flags = MF_SOLID,
 }
 
 addHook("MobjSpawn",function(mo)
-//	mo.height,mo.radius = $1*2,$2*2
+--	mo.height,mo.radius = $1*2,$2*2
 	mo.shadowscale = mo.scale*9/10
 	mo.spritexoffset = 19*FU
 	mo.spriteyoffset = 26*FU

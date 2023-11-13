@@ -205,7 +205,7 @@ rawset(_G, "TakisAnimateHappyHour", function(p)
 					hud.happyhour.hour.yadd = 2*$/5
 				end
 				
-				//elseif hud.happyhour.face.yadd ~= 0
+				--elseif hud.happyhour.face.yadd ~= 0
 				hud.happyhour.face.yadd = 4*$/5
 			else
 			
@@ -302,7 +302,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 		dontdo = takis.io.nohappyhour == 1
 	end
 	
-	//happy hour hud and stuff
+	--happy hour hud and stuff
 	if HAPPY_HOUR.time
 	and not (dontdo)
 		local tics = HAPPY_HOUR.time
@@ -400,9 +400,9 @@ rawset(_G, "TakisHUDStuff", function(p)
 				hud.flyingscore.scorenum = $+5
 				
 				random = dorandom()
-				hud.flyingscore.xshake = getdec(random) //v.RandomFixed()*random
+				hud.flyingscore.xshake = getdec(random) --v.RandomFixed()*random
 				random = dorandom()
-				hud.flyingscore.yshake = getdec(random) //v.RandomFixed()*random
+				hud.flyingscore.yshake = getdec(random) --v.RandomFixed()*random
 				
 				for i = 1,1000
 					if (score-hud.flyingscore.scorenum >= 5*(i+1))
@@ -410,9 +410,9 @@ rawset(_G, "TakisHUDStuff", function(p)
 						hud.flyingscore.scorenum = $+5
 						
 						random = dorandom(v)
-						hud.flyingscore.xshake = $+getdec(random) //FixedDiv(v.RandomFixed(),2*FU)*random
+						hud.flyingscore.xshake = $+getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
 						random = dorandom(v)
-						hud.flyingscore.yshake = $+getdec(random) //FixedDiv(v.RandomFixed(),2*FU)*random
+						hud.flyingscore.yshake = $+getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
 					
 					end
 				end
@@ -434,9 +434,9 @@ rawset(_G, "TakisHUDStuff", function(p)
 						hud.flyingscore.scorenum = $-5
 						
 						random = dorandom()
-						hud.flyingscore.xshake = $-getdec(random) //FixedDiv(v.RandomFixed(),2*FU)*random
+						hud.flyingscore.xshake = $-getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
 						random = dorandom()
-						hud.flyingscore.yshake = $-getdec(random) //FixedDiv(v.RandomFixed(),2*FU)*random
+						hud.flyingscore.yshake = $-getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
 					
 					end
 				end
@@ -492,7 +492,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 		local t = TAKIS_ACHIEVEMENTINFO
 		local x = va.xadd
 		if va.xadd ~= 0
-			va.xadd = $*2/3 //ease.outquad(( FU / et )*(takis.HUD.steam.tics-(3*TR)), 9324919, 0)
+			va.xadd = $*2/3 --ease.outquad(( FU / et )*(takis.HUD.steam.tics-(3*TR)), 9324919, 0)
 		end
 		va.tics = $-1
 				
@@ -512,7 +512,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.noability = 0
 	end
 	
-	//fake pw_flashing
+	--fake pw_flashing
 	if takis.fakeflashing > 0
 		p.powers[pw_flashing] = takis.fakeflashing
 		takis.fakeflashing = $-1
@@ -525,12 +525,12 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.ticsforpain = $-1
 	end
 	
-	//no more spinning while jumping
+	--no more spinning while jumping
 	if p.pflags & PF_JUMPED
 		p.pflags = $ &~PF_SPINNING
 	end
 
-	//clutch stuff
+	--clutch stuff
 	if takis.clutchtime > 0
 		takis.clutchtime = $-1
 	elseif takis.clutchingtime == 0
@@ -548,7 +548,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if (p.powers[pw_shield]&SH_NOSTACK) == SH_ATTRACT
 	and t and t.valid
 	and not (me.state >= 59 and me.state <= 64)
-	//and not ((p.pflags & PF_THOKKED) or takis.thokked or takis.dived)
+	--and not ((p.pflags & PF_THOKKED) or takis.thokked or takis.dived)
 		takis.attracttarg = t
 		P_SpawnLockOn(p, t, S_LOCKON2)
 	end
@@ -571,11 +571,11 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.slidetime = 0
 	end
 	
-	//cancel slide when slow
+	--cancel slide when slow
 	if (p.pflags & PF_SPINNING)
 	and takis.accspeed <= 24*FU
 	and takis.slidetime >= TR
-	//try to sustain our slide if we're holding c2
+	--try to sustain our slide if we're holding c2
 	and not (takis.c2)
 		p.pflags = $ &~PF_SPINNING
 		if takis.accspeed >= p.runspeed
@@ -647,8 +647,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 			spark.color = me.color
 			spark.angle = p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT ))
 		end
-	else
-		takis.critcharged = false
 	end
 	
 	if p.playerstate == PST_REBORN
@@ -663,7 +661,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.accspeed = abs(FixedHypot(FixedHypot(me.momx,me.momy),me.momz))
 	end
 	
-	//wind effect
+	--wind effect
 	for i = 1,10
 		if takis.accspeed > (spd*2)*i
 			TakisDoWindLines(me)
@@ -689,7 +687,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 	end
 	
-	
+	--nights stuff
 	if ((p.drilltimer
 	and p.drillmeter
 	and not p.drilldelay)
@@ -714,6 +712,10 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 			P_RemoveMobj(takis.drilleffect)
 		end
 		p.powers[pw_strong] = $ &~(STR_PUNCH|STR_STOMP|STR_UPPER)
+		if (p.powers[pw_carry] == CR_NIGHTSMODE)
+			takis.afterimaging = false
+			takis.clutchingtime = 0
+		end
 	end
 	
 	if p.powers[pw_carry] ~= CR_NIGHTSMODE
@@ -750,8 +752,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if takis.yeahwait
 		takis.yeahwait = $-1
 		if (p.pflags & PF_FINISHED)
-			// shouldve just kept this at 99 :/
-			// thanks for the help SMS Alfredo!
+			-- shouldve just kept this at 99 :/
+			-- thanks for the help SMS Alfredo!
 			p.exiting = 99
 		end
 	end
@@ -810,7 +812,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.goingfast = false
 	end
 	
-	//spawn sweat mobj
+	--spawn sweat mobj
 	if takis.wentfast ~= 0
 		if not ((takis.sweat) and (takis.sweat.valid))
 			takis.sweat = P_SpawnMobjFromMobj(me,0,0,0,MT_TAKIS_SWEAT)
@@ -832,7 +834,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 	end
 	
-	//elfilin cheers refill combo
+	--elfilin cheers refill combo
 	if (p.elfride)
 	and (p.elfride.cheerdur/5 > 0)
 		TakisGiveCombo(p,takis,false,true)
@@ -843,7 +845,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		me.flags = $|MF_NOCLIPHEIGHT
 	end
 
-	//ffoxd's smoothspintrilas
+	--ffoxd's smoothspintrilas
 	if not me.prevz
 	or not me.prevleveltime 
 	or (me.prevleveltime ~= leveltime - 1) then
@@ -856,7 +858,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	takis.rmomz = rmomz
 	
-	//animate slide
+	--animate slide
 	if me.state == S_PLAY_TAKIS_SLIDE
 	and me.health
 	and (me.sprite2 == SPR2_SLID)
@@ -877,7 +879,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.fakesprung = false
 	end
 		
-	//happy hour hud and stuff
+	--happy hour hud and stuff
 	local dontdo = false
 	if (HAPPY_HOUR.othergt)
 		dontdo = takis.io.nohappyhour == 1
@@ -893,8 +895,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 		
 		if (me.health)
-		//how convienient that 8 tics just so happens to be
-		//exactly 22 centiseconds!
+		--how convienient that 8 tics just so happens to be
+		--exactly 22 centiseconds!
 		and (tics == 8)
 			if (p.happyhourscream
 			and p.happyhourscream.skin == me.skin)
@@ -944,7 +946,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		*/
 	end
 	
-	//end of happy hour quakes
+	--end of happy hour quakes
 	if HAPPY_HOUR.timelimit
 	
 		if HAPPY_HOUR.timeleft
@@ -973,7 +975,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		
 		takis.afterimaging = true
 		
-		//ffoxd's smooth spintrails
+		--ffoxd's smooth spintrails
 		
 		local freq = FRACUNIT*30
 		local mospeed = R_PointToDist2(0, 0, R_PointToDist2(0, 0, me.momx, me.momy), me.momz)
@@ -986,7 +988,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		-- The loop, repeats until it spawns all the thok objects.			
 		for i = dist, 1, -1 do
 
-		//	local ghost = P_SpawnMobjFromMobj(me, (me.momx/dist)*i, (me.momy/dist)*i, (me.momz/dist)*i, MT_THOK)
+		--	local ghost = P_SpawnMobjFromMobj(me, (me.momx/dist)*i, (me.momy/dist)*i, (me.momz/dist)*i, MT_THOK)
 			local ghost = P_SpawnGhostMobj(me)
 			ghost.scale = 7*me.scale/5
 			ghost.fuse = 8
@@ -1014,7 +1016,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.glowyeffects = $-1
 	end
 	
-	//spin steer
+	--spin steer
 	if ((p.pflags & PF_SPINNING)
 	and not (p.pflags & PF_STARTDASH)
 	and (takis.onGround))
@@ -1036,11 +1038,11 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 			local dx = me.x-m2.x
 			local dy = me.y-m2.y
 			
-			//in range!
+			--in range!
 			if FixedHypot(dx,dy) <= TAKIS_TAUNT_DIST
 			and (not takis.taunttime)				
 				if p2.takistable.tauntjoinable
-					//this is stupid,,,, :/
+					--this is stupid,,,, :/
 					local tics = 6
 					if ((takis.tauntjoin) and (takis.tauntjoin.valid))
 					and not (takis.accspeed or me.momz)
@@ -1057,29 +1059,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if (takis.shotgunned)
 		takis.afterimaging = false
-		if takis.critcharged
-			me.colorized = true
-			local g = P_SpawnGhostMobj(me)
-			g.angle = p.drawangle
-			g.blendmode = AST_ADD
-			g.destscale = me.scale+(FU/5)
-			if not (camera.chase)
-				g.flags2 = $|MF2_DONTDRAW
-			end
-			takis.clutchingtime = 0
-			
-		else
-			if me.colorized
-				me.colorized = false
-			end
-		end
 		takis.shotguntime = $+1
-	else
-		if takis.critcharged
-		and me.colorized
-			me.colorized = false
-		end
-		
+	else		
 		takis.shotguntime = 0
 	end
 	
@@ -1145,7 +1126,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 	end
 	
-	//no continue state
+	--no continue state
 	if (me.sprite2 == SPR2_CNT1)
 	or (me.sprite2 == SPR2_CNT2)
 	or (me.sprite2 == SPR2_CNT3)
@@ -1196,19 +1177,19 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	p.alreadyhascombometer = 2
 	
-//shorts end
-//shortsend
+--shorts end
+--shortsend
 end)
 
-//from clairebun
-//https://wiki.srb2.org/wiki/User:Clairebun/Sandbox/Common_Lua_Functions#L_Choose
+--from clairebun
+--https:--wiki.srb2.org/wiki/User:Clairebun/Sandbox/Common_Lua_Functions#L_Choose
 local function choosething(...)
 	local args = {...}
 	local choice = P_RandomRange(1,#args)
 	return args[choice]
 end
 
-//soaps createafterimage modified to include multiple colors
+--soaps createafterimage modified to include multiple colors
 rawset(_G, "TakisCreateAfterimage", function(p,me)
 	if not me
 	or not me.valid
@@ -1217,7 +1198,7 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	
 	local ghost = P_SpawnMobjFromMobj(me,0,0,0,MT_TAKIS_AFTERIMAGE)
 	ghost.target = me
-	//ghost.fuse = SoapFetchConstant("afterimages_fuse")
+	--ghost.fuse = SoapFetchConstant("afterimages_fuse")
 	
 	ghost.skin = me.skin
 	ghost.scale = me.scale
@@ -1234,7 +1215,7 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	
 	/*
 	local color = P_RandomRange(1,#skincolors-1)
-	//keep rolling until we get an accessable color!
+	--keep rolling until we get an accessable color!
 	if skincolors[color].accessible == false
 		color = P_RandomRange(1,#skincolors-1)
 	end
@@ -1255,11 +1236,11 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 end)
 
 rawset(_G, "CreateWindRing", function(p,me)
-	//trig NOO!OOOO
+	--trig NOO!OOOO
 	local x = cos(me.angle)
 	local y = sin(me.angle)
 	
-	//thanks rebound dash!	
+	--thanks rebound dash!	
 	local circle = P_SpawnMobjFromMobj(me, 0, 0, me.scale * 24, MT_WINDRINGLOL)
 	circle.angle = p.drawangle + ANGLE_90
 	circle.fuse = 14
@@ -1285,7 +1266,7 @@ rawset(_G, "DoTakisSquashAndStretch", function(p, me, takis)
 	end
 	
 	if p.jt == nil then
-		//jt is the only thing responsible for the stretching!?!?
+		--jt is the only thing responsible for the stretching!?!?
 		p.jt = 0
 		p.jp = 0
 		p.sp = 0
@@ -1339,7 +1320,7 @@ rawset(_G, "DoTakisSquashAndStretch", function(p, me, takis)
 	me.spritexscale = p.maths + FU
 end)
 
-//thank you Tatsuru for this thing on the srb2 discord!
+--thank you Tatsuru for this thing on the srb2 discord!
 local function CheckAndCrumble(me, sec)
 	for fof in sec.ffloors()
 		if not (fof.flags & FF_EXISTS) continue end -- Does it exist?
@@ -1395,7 +1376,7 @@ rawset(_G, "CanPlayerHurtPlayer", function(p1,p2,nobs)
 	local ff = CV_FindVar("friendlyfire").value
 	
 	if not (nobs)
-		//no griefing!
+		--no griefing!
 		if TAKIS_NET.inspecialstage
 			return false
 		end
@@ -1456,7 +1437,7 @@ rawset(_G, "TakisTeamNewShields", function(player)
 		return
 	end
 	
-	//if player.pflags & PF_JUMPED
+	--if player.pflags & PF_JUMPED
 	if (f or player.powers[pw_super])
 	and not (player.mo.state >= 59 and player.mo.state <= 64)
 		local t = P_LookForEnemies(player,true,false)
@@ -1510,8 +1491,8 @@ rawset(_G, "TakisTeamNewShields", function(player)
 					player.mo.momy = 0
 					S_StartSound(player.mo, sfx_s3k43)
 				else
-					//player.mo.momx = $-(player.mo.momx/3)
-					//player.mo.momy = $-(player.mo.momy/3)
+					--player.mo.momx = $-(player.mo.momx/3)
+					--player.mo.momy = $-(player.mo.momy/3)
 					P_Thrust(me,p.drawangle,2*me.scale)
 					player.pflags = $|PF_SHIELDABILITY &~(PF_NOJUMPDAMAGE)
 					player.mo.state = S_PLAY_ROLL
@@ -1548,7 +1529,7 @@ rawset(_G, "TakisNoShield", function(player)
 	end
 	
 	if not (not takis.onGround
-	//and (p.pflags & PF_JUMPED)
+	--and (p.pflags & PF_JUMPED)
 	and p.powers[pw_shield] ~= SH_NONE
 	and not (takis.hammerblastdown))
 		takis.noability = $|NOABIL_SHIELD
@@ -1591,7 +1572,7 @@ rawset(_G, "TakisHealPlayer", function(p,me,takis,healtype,healamt)
 		healamt = 1
 	end
 	
-	//hurt
+	--hurt
 	if healtype == 3
 		if takis.heartcards ~= 0
 			takis.heartcards = $-(abs(healamt))
@@ -1601,7 +1582,7 @@ rawset(_G, "TakisHealPlayer", function(p,me,takis,healtype,healamt)
 		end
 		takis.HUD.heartcards.shake = TAKIS_HEARTCARDS_SHAKETIME
 		return
-	//full heal
+	--full heal
 	elseif healtype == 2
 		if takis.heartcards == TAKIS_MAX_HEARTCARDS
 			return
@@ -1625,7 +1606,7 @@ rawset(_G, "TakisHealPlayer", function(p,me,takis,healtype,healamt)
 		return
 	end
 	
-	//S_StartSound(me,sfx_takhel,p)
+	--S_StartSound(me,sfx_takhel,p)
 	local maxturn = P_RandomRange(12,18)
 	for i = 0,maxturn
 		local radius = 35
@@ -1706,7 +1687,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 	if not (tm.flags & MF_BOSS)
 		if (tm.flags & MF_ENEMY)
 		or (tm.takis_flingme)
-			//spawn ragdoll thing here
+			--spawn ragdoll thing here
 			local ragdoll = P_SpawnMobjFromMobj(tm,0,0,0,MT_TAKIS_BADNIK_RAGDOLL)
 			tm.tics = -1
 			ragdoll.sprite = tm.sprite
@@ -1735,7 +1716,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 		elseif (tm.flags & MF_MONITOR)
 			
 			
-			//but are we allowed to break it?
+			--but are we allowed to break it?
 			if ((tm.type == MT_RING_REDBOX) or
 			(tm.type == MT_RING_BLUEBOX))
 				if monitorctfteam[tm.type] ~= t.player.ctfteam
@@ -1743,7 +1724,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 				end
 			end
 			
-			//spawn ragdoll thing here
+			--spawn ragdoll thing here
 			local ragdoll = P_SpawnMobjFromMobj(tm,0,0,0,MT_TAKIS_BADNIK_RAGDOLL)
 			tm.tics = -1
 			ragdoll.sprite = tm.sprite
@@ -1768,11 +1749,11 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 		end
 		
 		P_KillMobj(tm,t,source)
-		//S_StopSound(tm)
+		--S_StopSound(tm)
 		if ((tm) and (tm.valid))
 		and (tm.flags & MF_ENEMY
 		or tm.takis_flingme)
-			//hide deathstate
+			--hide deathstate
 			tm.flags2 = $|MF2_DONTDRAW
 			if tm.tics == -1
 				tm.tics = 1
@@ -1844,7 +1825,7 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 			takis.HUD.combo.scale = $+(FU/5)
 			if takis.combo.outrotics
 				takis.combo.outrotointro = takis.combo.gravity
-				if takis.combo.failcount >= 50 //TAKIS_NET.partdestoy
+				if takis.combo.failcount >= 50 --TAKIS_NET.partdestoy
 					TakisAwardAchievement(p,ACHIEVEMENT_COMBOALMOST)
 				end
 			end
@@ -1878,7 +1859,7 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 				if (p2.mo.skin ~= TAKIS_SKIN) then continue end
 				if (p2.takistable.io.sharecombos == 0) then continue end
 				
-				//forgot radius
+				--forgot radius
 				if not P_CheckSight(p.mo,p2.mo) then continue end
 				local dx = p2.mo.x-p.mo.x
 				local dy = p2.mo.y-p.mo.y
@@ -1914,7 +1895,7 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 	end
 end)
 
-//delf!!
+--delf!!
 rawset(_G, "TakisDoWindLines", function(me)
 	if not me.health then return end
 	
@@ -1933,15 +1914,15 @@ rawset(_G, "TakisDoWindLines", function(me)
     wind.angle = R_PointToAngle2(0, 0, me.momx, me.momy)
 	wind.spritexscale,wind.spriteyscale = me.scale,me.scale
 	
-	//remove the "-" beforfe the "me.momz" or else the wind will point down
-	//when you go up
-	//and vice versa
+	--remove the "-" beforfe the "me.momz" or else the wind will point down
+	--when you go up
+	--and vice versa
     wind.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0, 0, me.momx, me.momy), me.player.takistable.rmomz) + ANGLE_90
 	
 	wind.source = me
     wind.blendmode = AST_ADD
 	
-	//P_Thrust(wind,wind.angle,-(FixedMul(p.takistable.accspeed,me.scale)))
+	--P_Thrust(wind,wind.angle,-(FixedMul(p.takistable.accspeed,me.scale)))
 end)
 
 rawset(_G, "TakisSpawnDeadBody", function(p, me, soap)
@@ -1973,7 +1954,7 @@ rawset(_G, "TakisSpawnDeadBody", function(p, me, soap)
 end)
 
 rawset(_G, "TakisDeathThinker",function(p,me,takis)
-	//explosion anim
+	--explosion anim
 	if me.sprite2 == SPR2_TDED
 		if p.deadtimer < 21
 			A_BossScream(me,0,MT_SONIC3KBOSSEXPLODE)
@@ -2242,7 +2223,7 @@ rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 	
 end)
 
-//i hope you dont mind if i copy this jisk
+--i hope you dont mind if i copy this jisk
 rawset(_G, "GetInternalFontWidth", function(str, font)
 
 	-- No string
@@ -2341,7 +2322,7 @@ rawset(_G, "TakisDrawPatchedText", function(v, x, y, str, parms)
 
 			-- TODO: custom skincolors will make a mess of this since the charlimit is 255
 			-- Set text color, inputs, and more through special characters
-			-- Referencing skincolors https://wiki.srb2.org/wiki/List_of_skin_colors
+			-- Referencing skincolors https:--wiki.srb2.org/wiki/List_of_skin_colors
 
 			-- TODO: effects?
 			-- if (char:byte() == 161) then
@@ -2423,7 +2404,7 @@ rawset(_G,"TakisPowerfulArma",function(p)
 			end
 		end
 		
-		//kill!
+		--kill!
 		local px = me.x
 		local py = me.y
 		local br = rad
@@ -2446,7 +2427,7 @@ rawset(_G,"TakisPowerfulArma",function(p)
 		
 		me = p.mo
 		
-		//sparks
+		--sparks
 		for i = 1, 40 do
 			local fa = (i*FixedAngle(9*FU))
 			local x = FixedMul(cos(fa), 22*(me.scale/FU))*FU
@@ -2475,7 +2456,7 @@ rawset(_G,"TakisPowerfulArma",function(p)
 		P_BlackOw(p)
 	end
 	
-	//get an extra combo from the shield
+	--get an extra combo from the shield
 	TakisGiveCombo(p,takis,true)
 end)
 
@@ -2513,9 +2494,9 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 	
 	local ssmul = 10
 	
-	//rs neo
+	--rs neo
 	
-	//horiz
+	--horiz
 	local spread = 2
 	for i = -2, 2
 		local r = P_RandomFixed
@@ -2524,7 +2505,7 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 		
 		local shotspread = FixedAngle( FixedMul( FixedMul( r(), r() ), r() ) * ran) * ssmul
 		
-		//the first shot is always accurate
+		--the first shot is always accurate
 		if takis.timesincelastshot == 0
 			shotspread = 0
 		end
@@ -2539,18 +2520,10 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 			shot.shotbytakis = true
 			P_Thrust(shot,shot.angle,takis.accspeed)
 			
-			if takis.critcharged
-			//	print("A")
-				shot.momx = $*2
-				shot.momy = $*2
-				shot.momz = $*2
-				shot.critcharged = true
-			end
-			
 		end
 		
 	end
-	//vert
+	--vert
 	for i = -2, 2
 		if i == 0
 			continue
@@ -2562,7 +2535,7 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 		
 		local shotspread = FixedAngle( FixedMul( FixedMul( r(), r() ), r() ) * ran) * ssmul
 
-		//the first shot is always accurate
+		--the first shot is always accurate
 		if takis.timesincelastshot == 0
 			shotspread = 0
 		end
@@ -2571,7 +2544,7 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 		p.aiming = $ + i * ANG1*spread
 		local shot = P_SPMAngle(me, MT_THROWNSCATTER, p.drawangle+shotspread, 1, 0)
 		
-		//extra horiz
+		--extra horiz
 		if ((i == -1) or (i == 1))
 			for j = -1, 1
 				shotspread = FixedAngle( FixedMul( FixedMul( r(), r() ), r() ) * ran) * ssmul
@@ -2585,14 +2558,6 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 					shot.momz = $*2
 					shot.shotbytakis = true
 					P_Thrust(shot,shot.angle,takis.accspeed)
-					
-					if takis.critcharged
-					//	print("A")
-						shot.momx = $*2
-						shot.momy = $*2
-						shot.momz = $*2
-						shot.critcharged = true
-					end
 					
 				end
 				
@@ -2608,13 +2573,6 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 			shot.momy = $*2
 			shot.momz = $*2
 			shot.shotbytakis = true
-			
-			if takis.critcharged
-				shot.momx = $*2
-				shot.momy = $*2
-				shot.momz = $*2
-				shot.critcharged = true
-			end
 			
 		end
 	end
@@ -2841,8 +2799,8 @@ local musdefaults = {
 	["_conga"] = "_chsel",
 	["war"] = "vsbrak"
 }
-//returns the music name for a takis song, returns '' if the
-//player doesnt have takismusic.pk3
+--returns the music name for a takis song, returns '' if the
+--player doesnt have takismusic.pk3
 rawset(_G, "ReturnTakisMusic",function(mus,p)
 
 	if not p.takistable.io.ihavemusicwad
@@ -2906,7 +2864,7 @@ rawset(_G, 'L_FixedDecimal', function(str,maxdecimal)
 	return str_polarity..str_whole..'.'..str_decimal
 end)
 
-//reset hammerblast
+--reset hammerblast
 rawset(_G, "TakisResetHammerTime", function(p)
 	local takis = p.takistable
 	takis.hammerblastdown = 0

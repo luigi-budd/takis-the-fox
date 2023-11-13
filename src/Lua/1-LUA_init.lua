@@ -1,8 +1,8 @@
-//Funny init
+--Funny init
 
-//welcome to sonic robo blast 2.
-//after 40 years in development, hopefully it will be worth the wait.
-//thanks, and have fun.
+--welcome to sonic robo blast 2.
+--after 40 years in development, hopefully it will be worth the wait.
+--thanks, and have fun.
 
 /*
 	SPECIAL THANKS/CONTRIBUTORS
@@ -63,7 +63,7 @@ rawset(_G, "TAKIS_MAX_HEARTCARDS", 6)
 rawset(_G, "TAKIS_HEARTCARDS_SHAKETIME", 17)
 rawset(_G, "TAKIS_MAX_COMBOTIME", 7*TR)
 rawset(_G, "TAKIS_PART_COMBOTIME", 4*TR/5)
-//just soap lol!
+--just soap lol!
 rawset(_G, "TAKIS_COMBO_RANKS", {
 	"Lame...",
 	"\x83Soapy",
@@ -102,7 +102,7 @@ rawset(_G, "TAKIS_TITLETIME", 0)
 rawset(_G, "TAKIS_TITLEFUNNY", 0)
 rawset(_G, "TAKIS_TITLEFUNNYY", 0)
 
-//hurtmsg stuff
+--hurtmsg stuff
 local hurtmsgenum = {
 	"CLUTCH",
 	"SLIDE",
@@ -121,19 +121,19 @@ local noabflags = {
 	"DIVE",
 	"SLIDE",
 	"WAVEDASH",
-	"SHOTGUN",		//generally for anything shotgunned
+	"SHOTGUN",		--generally for anything shotgunned
 	"SHIELD",
 }
 for k,v in ipairs(noabflags)
 	rawset(_G,"NOABIL_"..v,1<<(k-1))
 	print("Enummed NOABIL_"..v.." ("..1<<(k-1)..")")
 end
-//anything that uses spin
+--anything that uses spin
 rawset(_G,"NOABIL_SPIN",NOABIL_CLUTCH|NOABIL_HAMMER|NOABIL_SHOTGUN|NOABIL_WAVEDASH)
 
 
-//spike stuff according tro source
-// https://github.com/STJr/SRB2/blob/a4a3b5b0944720a536a94c9d471b64c822cdac61/src/p_map.c#L838
+--spike stuff according tro source
+-- https://github.com/STJr/SRB2/blob/a4a3b5b0944720a536a94c9d471b64c822cdac61/src/p_map.c#L838
 rawset(_G, "SPIKE_LIST", {
 	[MT_SPIKE] = true,
 	[MT_WALLSPIKE] = true,
@@ -161,7 +161,7 @@ rawset(_G, "TAKIS_NET", {
 	
 	ideyadrones = {},
 	
-	//DONT change to happy hour if the song is any one of these
+	--DONT change to happy hour if the song is any one of these
 	specsongs = {
 		["_1up"] = true,
 		["_shoes"] = true,
@@ -179,6 +179,8 @@ rawset(_G, "TAKIS_NET", {
 		["_conga"] = true,
 		["ovrtme"] = true,
 	},
+	
+	noachs = false, --dont let players get achs in netgames
 
 })
 rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
@@ -198,11 +200,11 @@ states[S_TAKIS_TAUNT_HITBOX] = {
 }
 
 rawset(_G, "TakisInitTable", function(p)
-	//why print?
+	--why print?
 	CONS_Printf(p,"\x86"+"Initializing Takis' table...")
 
 	p.takistable = {
-		//buttons
+		--buttons
 		jump = 0,
 		use = 0,
 		tossflag = 0,
@@ -216,7 +218,7 @@ rawset(_G, "TakisInitTable", function(p)
 		weaponnext = 0,
 		weaponprev = 0,
 		
-		//vars
+		--vars
 		accspeed = 0,
 		prevspeed = 0,
 		clutchcombo = 0,
@@ -249,8 +251,8 @@ rawset(_G, "TakisInitTable", function(p)
 		sweat = 0,
 		body = 0,
 		stoprolling = false,
-		//the only "InX" variable thats all lowercase 
-		//(and not with the bools)
+		--the only "InX" variable thats all lowercase 
+		--(and not with the bools)
 		inwaterslide = false,
 		glowyeffects = 0,
 		sethappyend = false,
@@ -261,7 +263,6 @@ rawset(_G, "TakisInitTable", function(p)
 		lastmomz = 0,
 		recovwait = 0,
 		wascolorized = false,
-		critcharged = false,
 		dropdashstale = 0,
 		dropdashstaletime = 0,
 		lastmap = 1,
@@ -278,7 +279,7 @@ rawset(_G, "TakisInitTable", function(p)
 		dustspawnwait = 0,
 		timetouchingground = 0,
 		resettingtoslide = false,
-		//NIGHT SEX PLODE!?!?!?
+		--NIGHT SEX PLODE!?!?!?
 		nightsexplode = false,
 		bashtime = 0,
 		bashtics = 0,
@@ -286,19 +287,19 @@ rawset(_G, "TakisInitTable", function(p)
 		taunttime = 0,
 		tauntid = 0,
 		tauntspecial = false,
-		//join mobj
+		--join mobj
 		tauntjoin = 0,
 		tauntjoinable = false,
-		//quick taunts activated by
-		//tossflag+c2/c3
-		//uses taunt ids
-		//these are actually io but they arent in the io table :trol:
+		--quick taunts activated by
+		--tossflag+c2/c3
+		--uses taunt ids
+		--these are actually io but they arent in the io table :trol:
 		tauntquick1 = 0,
 		tauntquick2 = 0,
 		tauntcanparry = false,
-		//holds the player doing a partner taunt with us
+		--holds the player doing a partner taunt with us
 		tauntpartner = 0,
-		//dont put the other player in tauntpartner if this is false
+		--dont put the other player in tauntpartner if this is false
 		tauntacceptspartners = false,
 		
 		hammerblastdown = 0,
@@ -326,7 +327,7 @@ rawset(_G, "TakisInitTable", function(p)
 			awardable = false,
 			failcount = 0,
 			
-			//anim stuff
+			--anim stuff
 			introtics = 0,
 			outrotics = 0,
 			outrotointro = 0,
@@ -340,20 +341,20 @@ rawset(_G, "TakisInitTable", function(p)
 			
 			nostrafe = 0,
 			nohappyhour = 0,
-			happyhourstyle = 1, //1 for new, 2 for old
+			happyhourstyle = 1, --1 for new, 2 for old
 			morehappyhour = 0,
-			tmcursorstyle = 1, //taunt menu cursor style, 1 for nums, 2 for cursor
+			tmcursorstyle = 1, --taunt menu cursor style, 1 for nums, 2 for cursor
 			quakes = 1,
 			flashes = 1,
-			windowstyle = 'win10', //for cosmenu, all lowercase
+			windowstyle = 'win10', --for cosmenu, all lowercase
 			additiveai = 0,
-			ihavemusicwad = 0, //samus-like check for music stuff
-			clutchstyle = 1, //0 for bar, 1 for meter
+			ihavemusicwad = 0, --samus-like check for music stuff
+			clutchstyle = 1, --0 for bar, 1 for meter
 			sharecombos = 1,
-			dontshowach = 0, //1 to not show ach messages
+			dontshowach = 0, --1 to not show ach messages
 		},
-		//tf2 taunt menu lol
-		//up to 7 taunts, detected with BT_WEAPONMASK
+		--tf2 taunt menu lol
+		--up to 7 taunts, detected with BT_WEAPONMASK
 		tauntmenu = {
 			open = false,
 			closingtime = 0,
@@ -365,20 +366,20 @@ rawset(_G, "TakisInitTable", function(p)
 				[3] = "Conga",
 				[4] = "Home-run\n     Bat",
 			},
-			//1-7 x pos
+			--1-7 x pos
 			cursor = 1,
 			gfx = {
-				//the associated taunt icon for each taunt
-				//MUST BE HUD PATCHES!!
+				--the associated taunt icon for each taunt
+				--MUST BE HUD PATCHES!!
 				pix = {
 					[1] = "TAHY_FACE0",	
 				},
-				//fixed point scales
+				--fixed point scales
 				scales = {
 					[1] = FU/5,
 				},
 			},
-			//text x offsets
+			--text x offsets
 			xoffsets = {
 				[1] = 11,
 				[4] = 12,
@@ -390,7 +391,7 @@ rawset(_G, "TakisInitTable", function(p)
 			y = 0,
 			page = 0,
 			
-			//btn
+			--btn
 			up = 0,
 			down = 0,
 			left = 0,
@@ -435,14 +436,14 @@ rawset(_G, "TakisInitTable", function(p)
 		},
 		
 		shotgunned = false,
-		//the shotgun mobj
+		--the shotgun mobj
 		shotgun = 0,
 		shotguncooldown = 0,
 		shotguntime = 0,
 		timesincelastshot = 0,
 		shotguntuttic = 0,
 		
-		//bools
+		--bools
 		onGround = false,
 		inPain = false,
 		isTakis = false,
@@ -458,7 +459,7 @@ rawset(_G, "TakisInitTable", function(p)
 		justHitFloor = false,
 		inSRBZ = false,
 		
-		//fake powers
+		--fake powers
 		fakeflashing = 0,
 		stasistic = 0,
 		thokked = false,
@@ -468,7 +469,7 @@ rawset(_G, "TakisInitTable", function(p)
 		nocontrol = 0,
 		noability = 0,
 		
-		//quakes
+		--quakes
 		quakeint = 0, 
 		quake = {
 			/*
@@ -478,8 +479,8 @@ rawset(_G, "TakisInitTable", function(p)
 			*/
 		},
 		
-		//hud
-		//useful if this gets in yalls modmakers' ways
+		--hud
+		--useful if this gets in yalls modmakers' ways
 		HUD = {
 			timeshake = 0,
 			showingletter = false,
@@ -512,7 +513,7 @@ rawset(_G, "TakisInitTable", function(p)
 				FIXED = { 90*FU-(13*FU*6)+(7*FU), 62*FU-(6*FU) },
 				int = {90-(13*6)+75+15+15, 49-6}
 			},
-			//timer has 2 different sets for spectator and when finished
+			--timer has 2 different sets for spectator and when finished
 			timer = {
 				text = 90-(13*6)+7-5,
 				int = {90-(13*6)+75+15 +15, (62-6)+4},		
@@ -582,8 +583,8 @@ rawset(_G, "TakisInitTable", function(p)
 			},
 			rank = {
 				grow = 0,
-				percent = 0, //we use this for the fills
-				score = 0, //same here
+				percent = 0, --we use this for the fills
+				score = 0, --same here
 			},
 				/*
 			scoretext = {
@@ -599,7 +600,7 @@ rawset(_G, "TakisInitTable", function(p)
 		
 	}
 
-	//now we can tell if this actually worked or not
+	--now we can tell if this actually worked or not
 	CONS_Printf(p, "\n"+"\x82"+"Initialized Takis' stuff!")
 	CONS_Printf(p, "Check out the enclosed instruction book!")
 	CONS_Printf(p, "	https://tinyurl.com/mr45rtzz")
@@ -613,7 +614,7 @@ rawset(_G, "TakisInitTable", function(p)
 	return true
 end)
 
-//from chrispy chars!!! by Lach!!!!
+--from chrispy chars!!! by Lach!!!!
 local function SafeFreeslot(...)
 	for _, item in ipairs({...})
 		if rawget(_G, item) == nil
@@ -745,7 +746,7 @@ SafeFreeslot("sfx_shgnl")
 sfxinfo[sfx_shgnl].caption = "\x86Time to kick ass!\x80"
 SafeFreeslot("sfx_shgns")
 sfxinfo[sfx_shgns].caption = "\x85".."BLAMMO!!\x80"
-//shotgun kill/detransfo
+--shotgun kill/detransfo
 SafeFreeslot("sfx_shgnk")
 sfxinfo[sfx_shgnk].caption = "/"
 SafeFreeslot("sfx_tsplat")
@@ -789,17 +790,17 @@ SafeFreeslot("sfx_shgnbs")
 sfxinfo[sfx_shgnbs].caption = "Shoulder Bash"
 SafeFreeslot("sfx_hrtcdt")
 sfxinfo[sfx_hrtcdt].caption = "Tink"
-//tb = textbox
-//open
+--tb = textbox
+--open
 SafeFreeslot("sfx_tb_opn")
 sfxinfo[sfx_tb_opn].caption = "/"
-//close
+--close
 SafeFreeslot("sfx_tb_cls")
 sfxinfo[sfx_tb_cls].caption = "/"
-//tween in
+--tween in
 SafeFreeslot("sfx_tb_tin")
 sfxinfo[sfx_tb_tin].caption = "/"
-//tween out
+--tween out
 SafeFreeslot("sfx_tb_tot")
 sfxinfo[sfx_tb_tot].caption = "/"
 SafeFreeslot("sfx_s_tak1")
@@ -819,15 +820,15 @@ SafeFreeslot("SPR_STB3")
 SafeFreeslot("SPR_STB4")
 SafeFreeslot("SPR_STB5")
 SafeFreeslot("SPR_TPTN")
-//these are my own sprites so i am allowed to use them
+--these are my own sprites so i am allowed to use them
 SafeFreeslot("SPR_SHGN")
 SafeFreeslot("SPR_WDWT")
 SafeFreeslot("SPR_CDST")
-//i guess i can use this for the  hud now
+--i guess i can use this for the  hud now
 SafeFreeslot("SPR_HTCD")
 SafeFreeslot("SPR_CMBB")
 SafeFreeslot("SPR_TNDE")
-SafeFreeslot("SPR_RGDA") //ragdoll A
+SafeFreeslot("SPR_RGDA") --ragdoll A
 SafeFreeslot("SPR_THND")
 
 --
@@ -842,12 +843,12 @@ spr2defaults[SPR2_THUP] = SPR2_STND
 SafeFreeslot("SPR2_TDD2")
 spr2defaults[SPR2_TDD2] = SPR2_TDED
 SafeFreeslot("SPR2_SLID")
-//happy hour face
+--happy hour face
 SafeFreeslot("SPR2_HHF_")
 SafeFreeslot("SPR2_SGBS")
 SafeFreeslot("SPR2_SGST")
 SafeFreeslot("SPR2_CLKB")
-//PLACEHOLH
+--PLACEHOLH
 SafeFreeslot("SPR2_PLHD")
 
 --
@@ -857,14 +858,14 @@ SafeFreeslot("SPR2_PLHD")
 freeslot("S_PLAY_TAKIS_SHOULDERBASH")
 states[S_PLAY_TAKIS_SHOULDERBASH] = {
     sprite = SPR_PLAY,
-    frame = SPR2_PLHD, //SPR2_SGBS,
+    frame = SPR2_PLHD, --SPR2_SGBS,
     tics = TR,
     nextstate = S_PLAY_STND
 }
 freeslot("S_PLAY_TAKIS_SHOULDERBASH_JUMP")
 states[S_PLAY_TAKIS_SHOULDERBASH_JUMP] = {
     sprite = SPR_PLAY,
-    frame = SPR2_PLHD, //SPR2_SGBS,
+    frame = SPR2_PLHD, --SPR2_SGBS,
     tics = 4,
     nextstate = S_PLAY_TAKIS_SHOULDERBASH
 }
@@ -872,14 +873,14 @@ states[S_PLAY_TAKIS_SHOULDERBASH_JUMP] = {
 freeslot("S_PLAY_TAKIS_SHOTGUNSTOMP")
 states[S_PLAY_TAKIS_SHOTGUNSTOMP] = {
     sprite = SPR_PLAY,
-    frame = SPR2_PLHD, //SPR2_SGST,
+    frame = SPR2_PLHD, --SPR2_SGST,
     tics = -1,
     nextstate = S_PLAY_STND
 }
 freeslot("S_PLAY_TAKIS_KILLBASH")
 states[S_PLAY_TAKIS_KILLBASH] = {
     sprite = SPR_PLAY,
-    frame = SPR2_PLHD, //SPR2_CLKB,
+    frame = SPR2_PLHD, --SPR2_CLKB,
     tics = 12,
     nextstate = S_PLAY_FALL
 }
@@ -905,7 +906,7 @@ freeslot("S_TAKIS_SWEAT2")
 freeslot("S_TAKIS_SWEAT3")
 freeslot("S_TAKIS_SWEAT4")
 states[S_TAKIS_SWEAT1] = {
-    //sprite = SPR_RING,
+    --sprite = SPR_RING,
 	sprite = SPR_SWET,
     frame = A|FF_ANIMATE,
 	var1 = 6,
@@ -938,7 +939,7 @@ states[S_TAKIS_SWEAT4] = {
     nextstate = S_TAKIS_SWEAT1
 }
 
-//jeez
+--jeez
 SafeFreeslot("S_SOAP_SUPERTAUNT_FLYINGBOLT1")
 SafeFreeslot("S_SOAP_SUPERTAUNT_FLYINGBOLT2")
 SafeFreeslot("S_SOAP_SUPERTAUNT_FLYINGBOLT3")
@@ -985,8 +986,8 @@ freeslot("S_PLAY_TAKIS_SLIDE")
 states[S_PLAY_TAKIS_SLIDE] = {
     sprite = SPR_PLAY,
     frame = SPR2_SLID,
-    //var1 = 2,
-	//var2 = 2,
+    --var1 = 2,
+	--var2 = 2,
 	tics = -1,
     nextstate = S_PLAY_STND
 }
@@ -1162,7 +1163,7 @@ freeslot("MT_TAKIS_DEADBODY")
 mobjinfo[MT_TAKIS_DEADBODY] = {
 	doomednum = -1,
 	spawnstate = S_NULL,
-	//mt_playuer
+	--mt_playuer
 	flags = MF_NOCLIP|MF_SLIDEME|MF_NOCLIPTHING|MF_NOGRAVITY,
 	height = 5*FU,
 	radius = 5*FU,
@@ -1172,7 +1173,7 @@ freeslot("MT_TAKIS_SHOTGUN")
 mobjinfo[MT_TAKIS_SHOTGUN] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_SHOTGUN,
-	//mt_playuer
+	--mt_playuer
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING|MF_NOGRAVITY,
 	height = 5*FU,
 	radius = 5*FU,
@@ -1201,7 +1202,7 @@ freeslot("MT_TAKIS_SHOTGUN_HITBOX")
 mobjinfo[MT_TAKIS_SHOTGUN_HITBOX] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_SHOTGUN_HITBOX,
-	//mt_playuer
+	--mt_playuer
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID,
 	height = 60*FU,
 	radius = 60*FU,
@@ -1214,7 +1215,7 @@ addHook("NetVars",function(n)
 	TAKIS_DEBUGFLAG = n($)
 	TAKIS_ACHIEVEMENTINFO = n($)
 	SPIKE_LIST = n($)
-	//weird stuff happening in ptd... maybe ded serv issue?
+	--weird stuff happening in ptd... maybe ded serv issue?
 	if (gametype ~= GT_PTSPICER)
 		HAPPY_HOUR = n($)
 	end

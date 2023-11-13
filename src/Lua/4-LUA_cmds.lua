@@ -224,7 +224,7 @@ end)
 
 COM_AddCommand("takis_instructions", function(p)
 	CONS_Printf(p, "Check out the enclosed instruction book!")
-	CONS_Printf(p, "	https://tinyurl.com/mr45rtzz")
+	CONS_Printf(p, "	https:--tinyurl.com/mr45rtzz")
 	CONS_Printf(p, "Open your latest-log.txt and copy the link into your browser!")
 end)
 
@@ -313,7 +313,7 @@ COM_AddCommand("takis_importantletter", function(p)
 	end
 	
 	takis.HUD.showingletter = true
-	//maybe this one too?
+	--maybe this one too?
 	ChangeTakisMusic("letter",true,p)
 end)
 

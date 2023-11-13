@@ -1,6 +1,6 @@
-//textbox lib, original is by clonefighter!
-//modified to resemble the banjo games
-// https://mb.srb2.org/addons/c-fighters-textbox-library.4487/
+--textbox lib, original is by clonefighter!
+--modified to resemble the banjo games
+-- https://mb.srb2.org/addons/c-fighters-textbox-library.4487/
 local function choosething(...)
 	local args = {...}
 	local choice = P_RandomRange(1,#args)
@@ -490,7 +490,7 @@ hud.add(function(v, player)
 	end
     
     if tb.render then
-		//actually draw the text
+		--actually draw the text
         textboxStringDrawer(v, 7, 153, tb.render, V_SNAPTOBOTTOM|V_ALLOWLOWERCASE, tb)
     end
     
@@ -652,7 +652,7 @@ end,"TAK_TBOX")
 		}
 	}
 	
-	//for stuff that isnt loaded alongside takis, use this
+	--for stuff that isnt loaded alongside takis, use this
 	
 	local addeddia = false
 	addHook("ThinkFrame",do

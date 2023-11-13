@@ -1,6 +1,6 @@
 rawset(_G, "TAKIS_TAUNT_DIST",75*FU)
 
-//taunt inits
+--taunt inits
 
 local function init_ouch(p)
 	local me = p.mo
@@ -31,7 +31,7 @@ local function init_conga(p)
 	takis.taunttime = 2
 	takis.stasistic = 2
 	takis.tauntacceptspartners = false
-	//maybe put this in with takis?
+	--maybe put this in with takis?
 	ChangeTakisMusic("_CONGA",true,p)
 	S_StartMusicCaption("Conga!!",300*TR,p)
 end
@@ -52,7 +52,7 @@ local function init_bat(p)
 	takis.tauntcanparry = false
 end
 
-//taunt thinks
+--taunt thinks
 
 local function think_ouch(p)
 	local me = p.mo
@@ -94,7 +94,7 @@ local function think_conga(p)
 	end
 	
 	
-	//cancel conga
+	--cancel conga
 	if (p.cmd.buttons & BT_CUSTOM1)
 		TakisResetTauntStuff(takis)
 		S_StartMusicCaption("Conga!!",TR,p)

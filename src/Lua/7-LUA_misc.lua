@@ -100,13 +100,13 @@ addHook("MapLoad", function(mapid)
 	
 end)
 
-//thinkframe for netvars
+--thinkframe for netvars
 addHook("ThinkFrame", do
 	
 	if gamestate == GS_TITLESCREEN
 		TAKIS_TITLETIME = $+1
 		
-		//you probably wont get this without stalling
+		--you probably wont get this without stalling
 		if TAKIS_TITLETIME == (120*FU)
 			S_ChangeMusic("D",false)
 			S_StartSound(nil,sfx_jumpsc)
@@ -204,7 +204,7 @@ addHook("ThinkFrame", do
 	TAKIS_NET.playercount = numplayers
 	TAKIS_NET.exitingcount = exitors
 	
-	//PLEASE... I WANT MY EARS
+	--PLEASE... I WANT MY EARS
 	if not (leveltime % 3*TR)
 		if numt >= 6
 		and ((multiplayer) and not splitscreen)
@@ -229,14 +229,14 @@ addHook("ThinkFrame", do
 	
 end)
 
-//after image
+--after image
 addHook("MobjThinker", function(ai)
 	if not ai
 	or not ai.valid
 		return
 	end
 	
-	//we need a thing to follow
+	--we need a thing to follow
 	if not ai.target
 	or not ai.target.valid
 		P_RemoveMobj(ai)
@@ -246,7 +246,7 @@ addHook("MobjThinker", function(ai)
 	local p = ai.target.player or server
 	local me = p.mo
 	
-	//bruh
+	--bruh
 	if not me
 	or not me.valid
 		P_RemoveMobj(ai)
@@ -286,7 +286,7 @@ addHook("MobjThinker", function(ai)
 	*/
 	
 	if not (camera.chase)
-		//only dontdraw afterimages that are too close to the player
+		--only dontdraw afterimages that are too close to the player
 		local dist = TAKIS_TAUNT_DIST*3
 		
 		local dx = me.x-ai.x
@@ -309,7 +309,7 @@ addHook("MobjThinker", function(ai)
 	
 	local fuselimit = 5
 
-	//because fuse doesnt wanna work
+	--because fuse doesnt wanna work
 	if ai.timealive > fuselimit
 		P_RemoveMobj(ai)
 		return
@@ -357,8 +357,8 @@ addHook("MobjThinker", function(rag)
 		poof.scalespeed = FRACUNIT/4
 		poof.fuse = 10				
 	end
-	//do hitboxes
-	//make hitting stuff more generous
+	--do hitboxes
+	--make hitting stuff more generous
 	local oldbox = {rag.radius,rag.height}
 	rag.radius,rag.height = $1*2, $2*2
 	
@@ -386,7 +386,7 @@ addHook("MobjThinker", function(rag)
 	end, rag, px-br, px+br, py-br, py+br)
 	rag.radius,rag.height = unpack(oldbox)
 	P_SetOrigin(rag,oldpos[1],oldpos[2],oldpos[3])
-	//
+	--
 	
 	rag.angle = $-ANG10
 	if rag.speed == 0
@@ -395,7 +395,7 @@ addHook("MobjThinker", function(rag)
 			A_BossScream(rag,1,MT_SONIC3KBOSSEXPLODE)
 		end
 		
-		//collaterals
+		--collaterals
 		local px = rag.x
 		local py = rag.y
 		local br = 420*rag.scale
@@ -473,7 +473,7 @@ addHook("MobjThinker", function(rag)
 	end
 end, MT_TAKIS_BADNIK_RAGDOLL)
 
-//starposts refill combo bar
+--starposts refill combo bar
 addHook("MobjSpawn", function(post)
 	post.activators = {
 		cards = {},
@@ -551,7 +551,7 @@ addHook("TouchSpecial", function(post,touch)
 		post.activators.combo = {}
 	end
 	
-	//thanks amperbee
+	--thanks amperbee
 	if not post.activators.cards[touch]
 		
 		if ((post.activators.cards[touch] == false) or (post.activators.cards[touch] == nil))
@@ -646,7 +646,7 @@ addHook("MobjThinker", function(bolt)
 	
 end,MT_SOAP_SUPERTAUNT_FLYINGBOLT)
 
-//eject from carts
+--eject from carts
 addHook("MobjThinker",function(cart)
 	if not cart
 	or not cart.valid
@@ -751,7 +751,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 			isspecsong = TAKIS_NET.specsongs[newname]
 		end
 		
-		//stop any lap music
+		--stop any lap music
 		if pizzatime 
 		and (not isspecsong)
 		
@@ -976,38 +976,6 @@ addHook("MobjThinker",function(shot)
 	
 	TakisBreakAndBust(nil,shot)
 	
-	if not shot.critcharged
-		return
-	end
-	
-	P_InstaThrust(shot,shot.angle,FU*10)
-	shot.momz = FU
-	
-	shot.colorized = true
-	shot.color = shot.tracer.player.skincolor
-	
-	if not (leveltime % 5)
-		local rad = shot.radius/FRACUNIT
-		local hei = shot.height/FRACUNIT
-		local x = P_RandomRange(-rad,rad)*FRACUNIT
-		local y = P_RandomRange(-rad,rad)*FRACUNIT
-		local z = P_RandomRange(0,hei)*FRACUNIT
-		local rang = P_RandomRange(-25,25)
-		local xa,ya = ReturnTrigAngles(shot.angle)
-		local spark = P_SpawnMobjFromMobj(shot,x+(rang*xa),y+(rang*ya),z,MT_SOAP_SUPERTAUNT_FLYINGBOLT)
-		spark.tracer = shot
-		spark.state = P_RandomRange(S_SOAP_SUPERTAUNT_FLYINGBOLT1,S_SOAP_SUPERTAUNT_FLYINGBOLT5)			
-		spark.blendmode = AST_ADD
-		spark.color = shot.color
-		spark.angle = shot.angle
-		spark.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0, 0, shot.momx, shot.momy), shot.momz) + ANGLE_90
-		
-		local g = P_SpawnGhostMobj(shot)
-		g.colorized = true
-		g.frame = shot.frame|FF_TRANS50
-		g.angle = shot.angle
-	end
-	
 end,MT_THROWNSCATTER)
 
 addHook("MobjDeath",function(shot,i,s)
@@ -1017,7 +985,7 @@ addHook("MobjDeath",function(shot,i,s)
 	end
 end,MT_THROWNSCATTER)
 
-//specials
+--specials
 
 -- combo
 local types = {
@@ -1064,7 +1032,7 @@ for k,type in pairs(types2)
 end
 --
 
-//
+--
 addHook("PreThinkFrame",function()
 	for p in players.iterate
 		if not p
@@ -1072,7 +1040,7 @@ addHook("PreThinkFrame",function()
 			continue
 		end
 		
-		//p.HAPPY_HOURscream = {}
+		--p.HAPPY_HOURscream = {}
 		
 		if not p.takistable
 			continue
@@ -1125,7 +1093,7 @@ addHook("MobjThinker",function(s)
 				P_Thrust(spark,spark.angle,P_RandomRange(1,5)*s.scale)
 			end
 			
-			//die
+			--die
 	/*
 			local trans = 0
 			local lt = (leveltime % 10)
@@ -1251,7 +1219,7 @@ addHook("MobjThinker",function(me)
 				continue
 			end
 			
-			//thanks Monster Iestyn for this!
+			--thanks Monster Iestyn for this!
 			if (p and p == displayplayer)
 				local found = p.mo
 				
@@ -1307,7 +1275,7 @@ addHook("MobjThinker",function(me)
 	
 end,MT_STARPOST)
 
-//disable yd if we're in a bossstage
+--disable yd if we're in a bossstage
 addHook("BossThinker", function(mo)
 	if (not TAKIS_NET.inbossmap)
 	and (mapheaderinfo[gamemap].muspostbossname ~= '')
@@ -1375,7 +1343,7 @@ addHook("HurtMsg", function(p, inf, sor)
 	end
 end)
 
-//fix this stupid zfighting issue in opengl
+--fix this stupid zfighting issue in opengl
 addHook("MobjSpawn",function(drone)
 	if (maptol & TOL_NIGHTS)
 		drone.dispoffset = -1
@@ -1408,7 +1376,7 @@ addHook("MobjThinker",function(drone)
 			end
 			i = $+1
 		end
-		//only on the final mare
+		--only on the final mare
 		if coolp.mare ~= #TAKIS_NET.ideyadrones-1
 			return
 		end
@@ -1454,10 +1422,10 @@ addHook("MobjMoveCollide",function(effect,t)
 	
 end,MT_TAKIS_DRILLEFFECT)
 
-//i couldve sworn i had a postthink in here
-//that may just be thinking this is soap lol
-//anyway, thanks to Unmatched Bracket for this code!!!
-//:iwantsummadat:
+--i couldve sworn i had a postthink in here
+--that may just be thinking this is soap lol
+--anyway, thanks to Unmatched Bracket for this code!!!
+--:iwantsummadat:
 addHook("PostThinkFrame", function ()
     for p in players.iterate() do
         if not (p and p.valid) then continue end
@@ -1485,7 +1453,7 @@ addHook("MobjThinker",function(ring)
 		return
 	end
 	
-	//idk why regular fuse cant do this
+	--idk why regular fuse cant do this
 	local start = ring.startingtrans
 	local startn = transtonum[ring.startingtrans]
 	if ring.fuse < 10-startn
@@ -1531,7 +1499,7 @@ for k,type in pairs(flinglist)
 	addHook("MobjSpawn",makefling,type)
 end
 
-//heartcards mt
+--heartcards mt
 addHook("MobjSpawn",function(card)
 	local cardscale = 2*FU
 	

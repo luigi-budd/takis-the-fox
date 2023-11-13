@@ -290,7 +290,7 @@ function customhud.SetupItem(itemName, modName, itemFunc, hook, layer)
 	end
 
 	if (itemFunc != nil) then
-		// Change the function it uses
+		-- Change the function it uses
 		item.funcs[modName] = itemFunc;
 	end
 	item.type = modName;

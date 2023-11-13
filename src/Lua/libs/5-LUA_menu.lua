@@ -18,7 +18,7 @@ tm.entries = {
 			"importantletter",
 		}
 	},
-	//hardcoded so you cant mess with it
+	--hardcoded so you cant mess with it
 	[1] = {
 		title = "Achievements",
 		color = SKINCOLOR_CARBON,

@@ -1,23 +1,36 @@
-//io file
+--io file
 
-//thank you SMS reborn for being reusable!
-//Y7GDSUYFHIDJPK AAAAAAAAAAAHHHHHHHHH!!!!!!!!
+--we load other people's config sometimes, maybe add another file
+--with the player name? dont load if they mismatch?
+--obv we cant put it in the config file, we need to be...
+--conservative with file size
 
-//if you use this manually and mess something up, its not my fault!
-COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a9,a10,a11,a12,a13)
+--thank you SMS reborn for being reusable!
+--Y7GDSUYFHIDJPK AAAAAAAAAAAHHHHHHHHH!!!!!!!!
 
+--if you use this manually and mess something up, its not my fault!
+COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,a13)
+	
+	--something suspicious...
+	if (p ~= consoleplayer) 
+		error("\x85takis_load tried loading on non console player: "..
+			tostring(p).." vs. "..tostring(consoleplayer),
+			0
+		)
+	end
+	
 	if a1 == nil
-	CONS_Printf(p,"\x85"+"Do not use this command manually! You may risk messing up Takis or your config!")
-	return
+		CONS_Printf(p,"\x85"+"Do not use this command manually! You may risk messing up Takis or your config!")
+		return
 	end
 
 	print("Loading "..p.name.."'s config...")
 
-	a1 = tonumber($) //Turn all of you to numbers!
+	a1 = tonumber($) --Turn all of you to numbers!
 	a2 = tonumber($)
 	a3 = tonumber($)
 	a4 = tonumber($)
-	//quick taunts
+	--quick taunts
 	t1 = tonumber($)
 	t2 = tonumber($)
 
@@ -30,8 +43,8 @@ COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a9,a10,a1
 	a12 = tonumber($)
 	a13 = tonumber($)
 
-	//insert to buffer or set vars directly?
-	//well i say set vars as to  not clutter up the player's console
+	--insert to buffer or set vars directly?
+	--well i say set vars as to  not clutter up the player's console
 	local takis = p.takistable
 
 	if a1 == 1
@@ -66,7 +79,7 @@ COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a9,a10,a1
 		CONS_Printf(p,"\x85"+"Error loading More Happy Hour! Defaulting to 0...")
 	end
 
-	//1-7 pls
+	--1-7 pls
 	print("quick taunt1 : "..t1)
 	if t1 ~= nil
 	and (t1 < 8)
@@ -76,7 +89,7 @@ COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a9,a10,a1
 	end
 
 	print("quick taunt2 : "..t2)
-	//1-7 pls
+	--1-7 pls
 	if t2 ~= nil
 	and (t2 < 8)
 		takis.tauntquick2 = t2
@@ -165,7 +178,9 @@ COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a9,a10,a1
 end)
 
 rawset(_G, "TakisSaveStuff", function(p, silent)
-	//write
+	if (p ~= consoleplayer) then return end
+	
+	--write
 	local a1 = 0 
 	local a2 = 0 
 	local a3 = 0
@@ -194,7 +209,6 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	a5 = t.tmcursorstyle
 	a6 = t.quakes
 	a7 = t.flashes
-	a8 = '_'
 	a9 = t.additiveai
 	a10 = t.ihavemusicwad
 	a11 = t.clutchstyle
@@ -208,7 +222,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 		
 		local file = io.openlocal("client/takisthefox/config.dat", "w+")
 		file:write(" "..a1.." "..a2.." "..a3.." "..a4.." "..t1.." "
-			..t2.." "..a5.." "..a6.." "..a7.." "..a8.." "..a9.." "
+			..t2.." "..a5.." "..a6.." "..a7.." "..a9.." "
 			..a10.." "..a11.." "..a12.." "..a13
 		)
 		
@@ -222,6 +236,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 end)
 
 rawset(_G, "TakisLoadStuff", function(p)
+	if (p ~= consoleplayer) then return end
 	
 	if p.takistable.io.loaded
 		return
@@ -233,7 +248,7 @@ rawset(_G, "TakisLoadStuff", function(p)
 		local file = io.openlocal("client/takisthefox/config.dat")
 		
 		
-		//load file
+		--load file
 		if file 
 		
 			p.takistable.io.hasfile = true
@@ -250,7 +265,7 @@ rawset(_G, "TakisLoadStuff", function(p)
 		else
 		
 			p.takistable.HUD.cfgnotifstuff = 6*TR+18
-			//whatever...
+			--whatever...
 			p.takistable.io.loaded = true
 			
 		end

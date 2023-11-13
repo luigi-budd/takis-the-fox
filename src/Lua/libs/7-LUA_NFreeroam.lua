@@ -1,5 +1,5 @@
-//buggiethebug wants this in so here it is!!!
-// https://mb.srb2.org/addons/nights-free-roam.5657/
+--buggiethebug wants this in so here it is!!!
+-- https://mb.srb2.org/addons/nights-free-roam.5657/
 
 rawset(_G,"NiGHTSFreeroam",function(player)
 	local mo = player.mo

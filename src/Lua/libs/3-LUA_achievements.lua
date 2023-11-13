@@ -1,4 +1,4 @@
-//pretty buggy, maybe rewrite?
+--pretty buggy, maybe rewrite?
 
 local achs = {
 	"COMBO",
@@ -169,7 +169,7 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	
 	local number = TakisReadAchievements(p)
 	
-	//we already have the achievement
+	--we already have the achievement
 	if (number & (achieve))
 		return
 	end
