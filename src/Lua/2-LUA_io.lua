@@ -11,13 +11,7 @@
 --if you use this manually and mess something up, its not my fault!
 COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,a13)
 	
-	--something suspicious...
-	if (p ~= consoleplayer) 
-		error("\x85takis_load tried loading on non console player: "..
-			tostring(p).." vs. "..tostring(consoleplayer),
-			0
-		)
-	end
+	if (p ~= consoleplayer) then return end
 	
 	if a1 == nil
 		CONS_Printf(p,"\x85"+"Do not use this command manually! You may risk messing up Takis or your config!")

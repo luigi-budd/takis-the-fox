@@ -274,6 +274,21 @@ COM_AddCommand("takis_nerfarma", function(p)
 	TAKIS_NET.nerfarma = not $
 	print("Nerfed Armas to "..tostring(TAKIS_NET.nerfarma))
 end)
+COM_AddCommand("takis_noachs", function(p)
+	local takis = p.takistable
+	
+	if not takis
+		return
+	end
+	
+	if not takis.isElevated
+		prn(p,"You need to be the server or an admin to use this.")
+		return
+	end
+	
+	TAKIS_NET.noachs = not $
+	print("Takis Achievements have been set to "..tostring(not TAKIS_NET.noachs))
+end)
 
 COM_AddCommand("takis_showmenuhints", function(p)
 	local takis = p.takistable

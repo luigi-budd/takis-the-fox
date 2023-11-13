@@ -157,6 +157,8 @@ local function writeach(p,ach,num)
 end
 
 rawset(_G,"TakisAwardAchievement",function(p,achieve)
+	if (TAKIS_NET.noachs) then return end
+	
 	if achieve == nil
 		error("TakisAwardAchievement was not given an achievement!")
 	end
