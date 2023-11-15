@@ -96,16 +96,19 @@ tm.entries = {
 			"Don't Speed Boost",
 			"Nerf Armas",
 			"Tauntkills",
+			"No Achs."
 		},
 		values = {
 			"dontspeedboost",
 			"nerfarma",
 			"tauntkillsenabled",
+			"noachs",
 		},
 		commands = {
 			"speedboosts",
 			"nerfarma",
 			"tauntkills",
+			"noachs",
 		}
 	}
 }

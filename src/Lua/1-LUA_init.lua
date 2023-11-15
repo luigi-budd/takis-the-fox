@@ -14,6 +14,7 @@
 	
 */
 
+--quit loading the musicwad so many times
 CV_RegisterVar({
 	"takis_loadedmus",
 	"false",
@@ -152,6 +153,7 @@ rawset(_G, "TAKIS_NET", {
 	dontspeedboost = false,
 	nerfarma = false,
 	tauntkillsenabled = true,
+	noachs = false, --dont let players get achs in netgames
 	
 	numdestroyables = 0,
 	partdestroy = 0,
@@ -180,8 +182,6 @@ rawset(_G, "TAKIS_NET", {
 		["ovrtme"] = true,
 	},
 	
-	noachs = false, --dont let players get achs in netgames
-
 })
 rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
 
@@ -388,6 +388,7 @@ rawset(_G, "TakisInitTable", function(p)
 		cosmenu = {
 			menuinaction = false,
 			
+			--cursor pos
 			y = 0,
 			page = 0,
 			

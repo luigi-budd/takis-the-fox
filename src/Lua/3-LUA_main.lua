@@ -92,6 +92,7 @@
 	-[done]pt spice runners support
 	-replace menu patches with drawfill
 	-takisfest ach being buggy as hell, keeps doign every tiem
+	-redo the cos menu. antonblast styled?
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -511,6 +512,7 @@ addHook("PlayerThink", function(p)
 						me.state = S_PLAY_MELEE
 						me.tics = -1
 						takis.hammerblastangle = p.drawangle
+						p.pflags = $ &~PF_SHIELDABILITY
 						--P_SetObjectMomZ(me,-9*FU)
 					end
 					
@@ -1919,7 +1921,7 @@ addHook("PlayerThink", function(p)
 			*/
 			
 			if p.ptsr_rank
-			and gametype == GT_PTSPICER
+			and (HAPPY_HOUR.othergt)
 				local per = (PTSR.maxrankpoints)/6
 				takis.HUD.rank.percent = per
 				
@@ -2292,8 +2294,11 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	--BUT!!
 	if (p.powers[pw_shield] == SH_ARMAGEDDON)
 		TakisPowerfulArma(p)
+		takis.fakeflashing = flashingtics
 		return true
 	end
+	
+	p.pflags = $ &~PF_SHIELDABILITY
 	
 	--do parry
 	if (takis.taunttime > 0)

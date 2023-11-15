@@ -1854,6 +1854,7 @@ local function drawwareffect(v,p)
 end
 
 --TODO: rewrite this all lel
+--		needa make a font for this
 local function drawcosmenu(v,p)
 	if (customhud.CheckType("takis_cosmenu") != modname) return end
 	
@@ -1861,10 +1862,56 @@ local function drawcosmenu(v,p)
 	local me = p.mo
 	
 	local menu = takis.cosmenu
-	local windowtext = TAKIS_MENU.entries[menu.page].title.." ("..tostring(menu.page+1).."/"..tostring(#TAKIS_MENU.entries+1)..")"
-	local maxbar = (string.len(windowtext)/4)+3
+	local page = TAKIS_MENU.entries[menu.page]
 	
-	v.drawString(160,100,"todo",0,"center")
+	local function happyshakelol(v,pos)
+		pos = $ or 0
+		local s = 5
+		local shakex,shakey = v.RandomFixed()/2,v.RandomFixed()/2
+		
+		local d1 = v.RandomRange(-1,1)
+		local d2 = v.RandomRange(-1,1)
+		if d1 == 0
+			d1 = v.RandomRange(-1,1)
+		end
+		if d2 == 0
+			d2 = v.RandomRange(-1,1)
+		end
+
+		shakex = $*s*d1
+		shakey = $*s*d2
+		
+		local oncur = 0
+		if pos-1 == takis.cosmenu.y then oncur = FU end
+		
+		shakex,shakey = FixedDiv($1,2*FU),FixedDiv($2,2*FU)
+		shakex,shakey = FixedMul($1,oncur),FixedMul($2,oncur)
+		
+		return shakex,shakey
+	end
+	
+	local pos = {x = 15,y = 10}
+	local shakex,shakey = happyshakelol(v)
+	
+	--drawfill my favorite :kindlygimmesummadat:
+	v.drawFill(0,0,v.width(),v.height(),31|V_SNAPTOLEFT|V_SNAPTOTOP)
+	
+	--draw title
+	v.drawString(pos.x,pos.y,page.title,V_SNAPTOLEFT|V_SNAPTOTOP,"left")
+	
+	--the TEXT. BITCH!
+	for i = 1,#page.text
+		shakex,shakey = happyshakelol(v,i)
+		if (page.text[i] == "$$$$$")
+		
+		else
+			v.drawString(pos.x*FU+shakex, pos.y*FU+10*FU*i+shakey,
+				page.text[i],
+				V_SNAPTOLEFT|V_SNAPTOTOP,
+				"thin-fixed"
+			)
+		end
+	end
 	
 	/*
 	local hinttrans = V_HUDTRANS
@@ -2415,6 +2462,7 @@ local function drawdebug(v,p)
 			prevw = $+v.cachePatch(scorenum+n).width*4/10
 		end
 		
+		//height debug
 		local scale = FU/10
 		local floorz = me.floorz
 		local drawz = 175*FU-FixedMul(floorz,scale)
@@ -2426,7 +2474,9 @@ local function drawdebug(v,p)
 		v.drawScaled(115*FU,
 			drawz-FixedMul(dist,scale),
 			FixedMul(scale,skins[me.skin].highresscale or FU),
-			v.getSprite2Patch(me.skin,me.sprite2,false,me.frame,
+			v.getSprite2Patch(me.skin,me.sprite2,
+			p.powers[pw_super] > 0,
+			me.frame,
 				3,me.rollangle
 			),
 			V_SNAPTOBOTTOM,

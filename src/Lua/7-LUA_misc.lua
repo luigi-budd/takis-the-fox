@@ -206,9 +206,11 @@ addHook("ThinkFrame", do
 	
 	--PLEASE... I WANT MY EARS
 	if not (leveltime % 3*TR)
+	and ((multiplayer) and not splitscreen)
+	and not (TAKIS_NET.noachs)
 		if numt >= 6
-		and ((multiplayer) and not splitscreen)
 			for p in players.iterate
+				if (p ~= consoleplayer) then continue end
 				if skins[p.skin].name == TAKIS_SKIN
 					TakisAwardAchievement(p,ACHIEVEMENT_TAKISFEST)
 				end
