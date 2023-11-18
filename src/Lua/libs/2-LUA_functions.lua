@@ -2568,10 +2568,12 @@ rawset(_G,"TakisMenuThinker",function(p)
 	
 	if p.spectator
 	or not (me and me.valid)
+		/*
 		customhud.enable("score")
 		customhud.enable("time")
 		customhud.enable("rings")
 		customhud.enable("lives")
+		*/
 		menu.menuinaction = false
 		takis.HUD.showingletter = false
 		if not (takis.shotgunned)
@@ -2585,10 +2587,12 @@ rawset(_G,"TakisMenuThinker",function(p)
 	p.pflags = $ |PF_FULLSTASIS|PF_FORCESTRAFE
 	
 	if (p.cmd.buttons & BT_CUSTOM1)
+		/*
 		customhud.enable("score")
 		customhud.enable("time")
 		customhud.enable("rings")
 		customhud.enable("lives")
+		*/
 		menu.menuinaction = false
 		takis.HUD.showingletter = false
 		P_RestoreMusic(p)

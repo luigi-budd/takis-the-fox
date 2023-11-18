@@ -943,6 +943,12 @@ addHook("MobjThinker",function(mo)
 			P_MoveOrigin(mo, mo.target.x+(16*x), mo.target.y+(16*y), mo.target.z+(mo.target.height/2) )
 		end
 		
+		if not (camera.chase)
+			mo.flags2 = $|MF2_DONTDRAW
+		else
+			mo.flags2 = $ &~MF2_DONTDRAW
+		end
+		
 		mo.frame = A|trans
 	else
 		local rag = mo
@@ -1251,12 +1257,12 @@ addHook("MobjThinker",function(me)
 		and p.realmo.health
 		and P_CheckSight(me,p.realmo)
 				
-			if p.mo.skin ~= TAKIS_SKIN
+			if p.realmo.skin ~= TAKIS_SKIN
 				continue
 			end
 			
-			local dx = me.x-p.mo.x
-			local dy = me.y-p.mo.y
+			local dx = me.x-p.realmo.x
+			local dy = me.y-p.realmo.y
 			
 			if FixedHypot(dx,dy) > br
 				continue
@@ -1264,7 +1270,7 @@ addHook("MobjThinker",function(me)
 			
 			--thanks Monster Iestyn for this!
 			if (p and p == displayplayer)
-				local found = p.mo
+				local found = p.realmo
 				
 				local x,y = ReturnTrigAngles(R_PointToAngle2(me.x,me.y, found.x,found.y))
 				if found.flags2 & MF2_TWOD
@@ -1577,6 +1583,15 @@ addHook("MobjThinker",function(card)
 		card.timealive = 1
 	else
 		card.timealive = $+1
+	end
+	
+	--end of life blinking
+	if (card.timealive >= 50*TR)
+		if (card.timealive%2)
+			card.flags2 = $ &~MF2_DONTDRAW
+		else
+			card.flags2 = $|MF2_DONTDRAW
+		end
 	end
 	
 	if grounded

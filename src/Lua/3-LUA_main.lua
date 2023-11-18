@@ -92,7 +92,7 @@
 	-[done]pt spice runners support
 	-replace menu patches with drawfill
 	-takisfest ach being buggy as hell, keeps doign every tiem
-	-redo the cos menu. antonblast styled?
+	-[done]redo the cos menu. antonblast styled?
 	-remove disciplinary action
 	
 	--ANIM TODO
@@ -2263,7 +2263,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		return
 	end
 	
-	local p = mo.player
+	local p = mo.player 
 	local takis = p.takistable
 
 	if takis.inFakePain
@@ -2279,15 +2279,16 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		return
 	end
 	
-	--if a player died...
+	if (sor and sor.valid)
+	and (sor.skin == TAKIS_SKIN)
+	and( not (gametyperules & GTR_FRIENDLY))
+	and (sor.player.takistable.heartcards ~= TAKIS_MAX_HEARTCARDS)
+	and not (mo.health)
+		TakisHealPlayer(sor.player,sor,1,1)
+		S_StartSound(mo,sfx_takhel,sor.player)
+	end
+	
 	if mo.skin ~= TAKIS_SKIN
-		--and they died to a takis...
-		if (sor.skin == TAKIS_SKIN)
-		and not (gametyperules & GTR_FRIENDLY)
-		and (sor.takistable.heartcards ~= TAKIS_MAX_HEARTCARDS)
-			TakisHealPlayer(sor.player,sor,1,1)
-			S_StartSound(mo,sfx_takhel,sor.player)
-		end
 		return
 	end
 
@@ -2957,6 +2958,7 @@ local function hurtbytakis(mo,inf,sor)
 		if (mo.flags & MF_ENEMY)
 		or (mo.takis_flingme == true)
 			if P_RandomChance(FU/2)
+			and (TAKIS_NET.cards)
 				local card = P_SpawnMobjFromMobj(mo,0,0,mo.height*P_MobjFlip(mo),MT_TAKIS_HEARTCARD)
 				P_SetObjectMomZ(card,10*mo.scale)
 				mo.heartcard = card
@@ -3043,7 +3045,6 @@ local function hurtbytakis(mo,inf,sor)
 		or (mo.takis_flingme)
 		and (not mo.ragdoll)
 			if not mo.health
-			and not mo.ragdoll
 				if not (mo.flags & MF_BOSS)
 					TakisGiveCombo(sor.player,sor.player.takistable,true)
 					if mo.partofdestoys
@@ -3055,6 +3056,9 @@ local function hurtbytakis(mo,inf,sor)
 						TakisGiveCombo(sor.player,sor.player.takistable,true)
 					end
 				end
+			--only damaged
+			else
+				TakisGiveCombo(sor.player,sor.player.takistable,false,true)
 			end
 			
 			if mo.type == MT_PLAYER

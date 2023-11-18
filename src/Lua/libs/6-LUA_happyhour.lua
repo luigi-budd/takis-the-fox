@@ -115,6 +115,8 @@ addHook("ThinkFrame",function()
 							if (p.exiting or p.pflags & PF_FINISHED) then continue end
 							P_KillMobj(p.mo)
 							p.deadtimer = 200*TR
+							--still wanna get through the level
+							P_DoPlayerExit(p)
 						end
 					end
 					return

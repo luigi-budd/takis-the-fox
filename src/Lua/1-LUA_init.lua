@@ -167,6 +167,7 @@ rawset(_G, "TAKIS_NET", {
 	tauntkillsenabled = true,
 	noachs = false, --dont let players get achs in netgames
 	collaterals = true, --let ragdolls kill other ragdolls
+	cards = true, --only spawn heartcards if this is true
 	
 	//{name = playername, type = IO_WHATEVER}
 	iousage = {},
@@ -192,7 +193,6 @@ rawset(_G, "TAKIS_NET", {
 		["_abclr"] = true,
 		["hpyhre"] = true,
 		["hapyhr"] = true,
-		["hpyhr2"] = true,
 		["letter"] = true,
 		["creds"] = true,
 		["_conga"] = true,
@@ -1074,13 +1074,15 @@ freeslot("S_TAKIS_HEARTCARD_SPIN")
 states[S_TAKIS_HEARTCARD_SPIN] = {
     sprite = SPR_HTCD,
     frame = A|FF_PAPERSPRITE,
-	tics = -1,
+	tics = 60*TR,
 }
 
 --
 
 --mobj freeslot
 
+--i would like to make these last forever like banjo, but
+--server sustainability comes first!
 freeslot("MT_TAKIS_HEARTCARD")
 mobjinfo[MT_TAKIS_HEARTCARD] = {
 	doomednum = 3001,

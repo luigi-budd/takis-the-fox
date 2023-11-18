@@ -1866,7 +1866,7 @@ local function drawcosmenu(v,p)
 	local menu = takis.cosmenu
 	local page = TAKIS_MENU.entries[menu.page]
 	
-	local function happyshakelol(v,pos)
+	local function happyshakelol(v,pos,evenless)
 		pos = $ or 0
 		local s = 5
 		local shakex,shakey = v.RandomFixed()/2,v.RandomFixed()/2
@@ -1888,6 +1888,9 @@ local function drawcosmenu(v,p)
 		
 		shakex,shakey = FixedDiv($1,2*FU),FixedDiv($2,2*FU)
 		shakex,shakey = FixedMul($1,oncur),FixedMul($2,oncur)
+		if (evenless)
+			shakex,shakey = FixedDiv($1,2*FU),FixedDiv($2,2*FU)		
+		end
 		
 		return shakex,shakey
 	end
@@ -2043,7 +2046,7 @@ local function drawcosmenu(v,p)
 	if (page.hints ~= nil)
 	and (#page.hints)
 		if (page.hints[menu.y+1] ~= nil)
-			shakex,shakey = happyshakelol(v,menu.y+1)
+			shakex,shakey = happyshakelol(v,menu.y+1,true)
 			v.drawString(pos.x*FU+shakex, (200-pos.y)*FU-10*FU+shakey,
 				page.hints[menu.y+1],
 				V_GRAYMAP|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE,
@@ -2060,25 +2063,25 @@ local function drawcosmenu(v,p)
 		if menu.hintfade < 10
 			hinttrans = (10-menu.hintfade)<<V_ALPHASHIFT
 		end
-		shakex,shakey = happyshakelol(v,menu.y+1)
+		shakex,shakey = happyshakelol(v,menu.y+1,true)
 		v.drawString(pos.x*FU+shakex, ((200-pos.y)*FU)-42*FU+shakey,
 			"[C1] - Exit",
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_GRAYMAP|V_RETURN8|V_ALLOWLOWERCASE|hinttrans,
 			"thin-fixed"
 		)
-		shakex,shakey = happyshakelol(v,menu.y+1)
+		shakex,shakey = happyshakelol(v,menu.y+1,true)
 		v.drawString(pos.x*FU+shakex, ((200-pos.y)*FU)-34*FU+shakey,
 			"[Jump] - Select",
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_GRAYMAP|V_RETURN8|V_ALLOWLOWERCASE|hinttrans,
 			"thin-fixed"
 		)
-		shakex,shakey = happyshakelol(v,menu.y+1)
+		shakex,shakey = happyshakelol(v,menu.y+1,true)
 		v.drawString(pos.x*FU+shakex, ((200-pos.y)*FU)-26*FU+shakey,
 			"[Up/Down] - Move Cursor",
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_GRAYMAP|V_RETURN8|V_ALLOWLOWERCASE|hinttrans,
 			"thin-fixed"
 		)
-		shakex,shakey = happyshakelol(v,menu.y+1)
+		shakex,shakey = happyshakelol(v,menu.y+1,true)
 		v.drawString(pos.x*FU+shakex, ((200-pos.y)*FU)-18*FU+shakey,
 			"[Left/Right] - Flip page",
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_GRAYMAP|V_RETURN8|V_ALLOWLOWERCASE|hinttrans,

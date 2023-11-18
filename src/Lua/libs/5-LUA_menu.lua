@@ -107,7 +107,8 @@ tm.entries = {
 			"Nerf Armas",
 			"Tauntkills",
 			"No Achs.",
-			"Ragdoll collaterals"
+			"Ragdoll collaterals",
+			"Heartcards",
 		},
 		values = {
 			"dontspeedboost",
@@ -115,6 +116,7 @@ tm.entries = {
 			"tauntkillsenabled",
 			"noachs",
 			"collaterals",
+			"cards",
 		},
 		commands = {
 			"speedboosts",
@@ -122,13 +124,15 @@ tm.entries = {
 			"tauntkills",
 			"noachs",
 			"collaterals",
+			"heartcards",
 		},
 		hints = {
 			"Toggles Takis giving players speed boosts in Co-op.",
 			"Toggles Powerful Arma & normal Arma for Takis.",
 			"Toggles tauntkills for Takis.",
 			"Toggles Takis being able to get achievements.",
-			"Toggles ragdolls being able to kill other things."
+			"Toggles ragdolls being able to kill other things.",
+			"Toggles things dropping Heart Cards on death."
 		}
 	}
 }

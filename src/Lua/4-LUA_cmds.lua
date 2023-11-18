@@ -227,7 +227,7 @@ end)
 COM_AddCommand("takis_instructions", function(p)
 	CONS_Printf(p, "Check out the enclosed instruction book!")
 	CONS_Printf(p, "	https://tinyurl.com/mr45rtzz")
-	CONS_Printf(p, "Open your latest-log.txt and copy the link into your browser!")
+	CONS_Printf(p, "Open your latest-log.txt and copy the link into your browser! (Google Docs link)")
 end)
 
 COM_AddCommand("takis_tauntkills", function(p)
@@ -305,6 +305,21 @@ COM_AddCommand("takis_collaterals", function(p)
 	
 	TAKIS_NET.collaterals = not $
 	print("Ragdoll collaterals have been set to "..tostring(TAKIS_NET.collaterals))
+end)
+COM_AddCommand("takis_heartcards", function(p)
+	local takis = p.takistable
+	
+	if not takis
+		return
+	end
+	
+	if not takis.isElevated
+		prn(p,"You need to be the server or an admin to use this.")
+		return
+	end
+	
+	TAKIS_NET.cards = not $
+	print("Dropped Heart Cards have been set to "..tostring(TAKIS_NET.cards))
 end)
 
 COM_AddCommand("takis_showmenuhints", function(p)
