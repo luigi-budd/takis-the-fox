@@ -121,7 +121,7 @@ rawset(_G,"TakisReadAchievements",function(p)
 	end
 	
 	if io
-		DEBUG_print(p,"Using I/O, Reading Achs.")
+		DEBUG_print(p,IO_ACH)
 		
 		local file = io.openlocal(ACHIEVEMENT_PATH)
 		
@@ -144,7 +144,7 @@ local function writeach(p,ach,num)
 	
 	if io
 		
-		DEBUG_print(p,"Using I/O, Writing Achs.")
+		DEBUG_print(p,IO_ACH|IO_SAVE)
 		
 		local file = io.openlocal(ACHIEVEMENT_PATH, "w+")
 		local pro = num|ach

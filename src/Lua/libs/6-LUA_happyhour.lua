@@ -77,6 +77,27 @@ addHook("ThinkFrame",function()
 		
 		if hh.happyhour
 			
+			if (G_EnoughPlayersFinished())
+				HH_Reset()
+			end
+			
+			for p in players.iterate
+				if not (p and p.valid) then continue end
+				if not (p.mo and p.mo.valid) then continue end
+				if (not p.mo.health) or (p.playerstate ~= PST_LIVE) then continue end
+				if (p.exiting or p.pflags & PF_FINISHED) then continue end
+				
+				if not (hh.time % TR)
+				and (hh.time)
+					if (p.score > 5)
+						p.score = $-5
+					else
+						p.score = 0
+					end
+				end
+				
+			end
+			
 			if (hh.timelimit ~= nil or hh.timelimit ~= 0)
 				if hh.timelimit < 0
 					hh.timelimit = 3*60*TR
@@ -93,6 +114,7 @@ addHook("ThinkFrame",function()
 							if (not p.mo.health) or (p.playerstate ~= PST_LIVE) then continue end
 							if (p.exiting or p.pflags & PF_FINISHED) then continue end
 							P_KillMobj(p.mo)
+							p.deadtimer = 200*TR
 						end
 					end
 					return

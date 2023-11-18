@@ -553,8 +553,6 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			sound = takisvox,
 			soundchance = takischance,
 			delay = 2*TICRATE,
-			script = function(player)
-			end,
 			next = 2
 		},
 		[2] = { 
@@ -566,8 +564,6 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
 			soundchance = takischance,
 			delay = 2*TICRATE,
-			script = function(player)
-			end,
 			next = 3
 		},
 		[3] = { 
@@ -579,8 +575,6 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
 			soundchance = takischance,
 			delay = 3*TICRATE,
-			script = function(player)
-			end,
 			next = 4
 		},
 		[4] = { 
@@ -593,8 +587,6 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
 			soundchance = takischance,
 			delay = 4*TICRATE,
-			script = function(player)
-			end,
 			next = 5
 		},
 		[5] = { 
@@ -605,8 +597,6 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
 			soundchance = takischance,
 			delay = 2*TICRATE,
-			script = function(player)
-			end,
 			next = 0
 		},
 	},

@@ -44,6 +44,7 @@ COM_AddCommand("takis_nohappyhour", function(p)
 	
 	TakisSaveStuff(p)
 end)
+/*
 COM_AddCommand("takis_happyhourstyle", function(p)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
@@ -67,6 +68,7 @@ COM_AddCommand("takis_happyhourstyle", function(p)
 	
 	TakisSaveStuff(p)
 end)
+*/
 
 COM_AddCommand("takis_morehappyhour", function(p)
 	if gamestate ~= GS_LEVEL
@@ -224,7 +226,7 @@ end)
 
 COM_AddCommand("takis_instructions", function(p)
 	CONS_Printf(p, "Check out the enclosed instruction book!")
-	CONS_Printf(p, "	https:--tinyurl.com/mr45rtzz")
+	CONS_Printf(p, "	https://tinyurl.com/mr45rtzz")
 	CONS_Printf(p, "Open your latest-log.txt and copy the link into your browser!")
 end)
 
@@ -289,6 +291,21 @@ COM_AddCommand("takis_noachs", function(p)
 	TAKIS_NET.noachs = not $
 	print("Takis Achievements have been set to "..tostring(not TAKIS_NET.noachs))
 end)
+COM_AddCommand("takis_collaterals", function(p)
+	local takis = p.takistable
+	
+	if not takis
+		return
+	end
+	
+	if not takis.isElevated
+		prn(p,"You need to be the server or an admin to use this.")
+		return
+	end
+	
+	TAKIS_NET.collaterals = not $
+	print("Ragdoll collaterals have been set to "..tostring(TAKIS_NET.collaterals))
+end)
 
 COM_AddCommand("takis_showmenuhints", function(p)
 	local takis = p.takistable
@@ -341,10 +358,13 @@ COM_AddCommand("takis_openmenu", function(p)
 	
 	if takis.cosmenu.menuinaction
 		takis.cosmenu.menuinaction = false
+		--no need to hide it if we're drawing over it, right?
+		/*
 		customhud.enable("score")
 		customhud.enable("time")
 		customhud.enable("rings")
 		customhud.enable("lives")
+		*/
 		takis.HUD.showingletter = false
 		P_RestoreMusic(p)
 		p.pflags = $ &~PF_FORCESTRAFE		
@@ -352,10 +372,13 @@ COM_AddCommand("takis_openmenu", function(p)
 	end
 	
 	if takis.otherskin
+		--no need to hide it if we're drawing over it, right?
+		/*
 		customhud.disable("score")
 		customhud.disable("time")
 		customhud.disable("rings")
 		customhud.disable("lives")
+		*/
 	end
 	
 	takis.cosmenu.menuinaction = true

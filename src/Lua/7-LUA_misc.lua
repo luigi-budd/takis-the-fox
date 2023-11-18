@@ -100,8 +100,38 @@ addHook("MapLoad", function(mapid)
 	
 end)
 
+local iotab = {}
+
 --thinkframe for netvars
 addHook("ThinkFrame", do
+	
+	--fine for now
+	if #iotab > TR
+		table.remove(iotab,1)
+	end
+	
+	table.insert(iotab,#TAKIS_NET.iousage)
+	local numios = 0
+	for k,v in ipairs(iotab)
+		numios = $+v
+	end
+	local iorate = numios/TR
+	if (TAKIS_DEBUGFLAG & DEBUG_IO)
+		print(iorate)
+	end
+	
+	
+	--delete entries
+	for k,v in ipairs(TAKIS_NET.iousage)
+		if v == nil then table.remove(TAKIS_NET.iousage,k) continue end
+		
+		if v.tics ~= 0
+			v.tics = $-1
+		else
+			table.remove(TAKIS_NET.iousage,k)
+			continue
+		end
+	end
 	
 	if gamestate == GS_TITLESCREEN
 		TAKIS_TITLETIME = $+1
@@ -168,12 +198,14 @@ addHook("ThinkFrame", do
 			continue
 		end
 		
+		/*
 		if p.quittime
 			continue
 		end
 		if p.bot
 			continue
 		end
+		*/
 		
 		nump = $+1
 		if skins[p.skin].name == TAKIS_SKIN
@@ -229,6 +261,11 @@ addHook("ThinkFrame", do
 		end
 	end
 	
+	//copy iousage into previo
+	TAKIS_NET.previo = {}
+	for k,v in ipairs(TAKIS_NET.iousage)
+		TAKIS_NET.previo[k] = v
+	end
 end)
 
 --after image
@@ -360,34 +397,36 @@ addHook("MobjThinker", function(rag)
 		poof.fuse = 10				
 	end
 	--do hitboxes
-	--make hitting stuff more generous
-	local oldbox = {rag.radius,rag.height}
-	rag.radius,rag.height = $1*2, $2*2
-	
-	local oldpos = {rag.x,rag.y,rag.z}
-	P_SetOrigin(rag,oldpos[1],oldpos[2],
-		oldpos[3]-(rag.height/2*P_MobjFlip(rag))
-	)
-	local px = rag.x
-	local py = rag.y
-	local br = FixedDiv(rag.radius*5/2,2*FU)
-	searchBlockmap("objects", function(rag, found)
-		if found and found.valid
-		and (found.health)
-		and (L_ZCollide(rag,found))
-			if (found.takis_flingme ~= false)
-				if (found.flags & (MF_ENEMY|MF_BOSS))
-				or (found.flags & MF_MONITOR)
-				or (found.takis_flingme)
-					SpawnRagThing(found,rag,rag.parent2)
-				elseif (SPIKE_LIST[found.type] == true)
-					P_KillMobj(found,rag,rag.parent2)
+	if (TAKIS_NET.collaterals)
+		--make hitting stuff more generous
+		local oldbox = {rag.radius,rag.height}
+		rag.radius,rag.height = $1*2, $2*2
+		
+		local oldpos = {rag.x,rag.y,rag.z}
+		P_SetOrigin(rag,oldpos[1],oldpos[2],
+			oldpos[3]-(rag.height/2*P_MobjFlip(rag))
+		)
+		local px = rag.x
+		local py = rag.y
+		local br = FixedDiv(rag.radius*5/2,2*FU)
+		searchBlockmap("objects", function(rag, found)
+			if found and found.valid
+			and (found.health)
+			and (L_ZCollide(rag,found))
+				if (found.takis_flingme ~= false)
+					if (found.flags & (MF_ENEMY|MF_BOSS))
+					or (found.flags & MF_MONITOR)
+					or (found.takis_flingme)
+						SpawnRagThing(found,rag,rag.parent2)
+					elseif (SPIKE_LIST[found.type] == true)
+						P_KillMobj(found,rag,rag.parent2)
+					end
 				end
 			end
-		end
-	end, rag, px-br, px+br, py-br, py+br)
-	rag.radius,rag.height = unpack(oldbox)
-	P_SetOrigin(rag,oldpos[1],oldpos[2],oldpos[3])
+		end, rag, px-br, px+br, py-br, py+br)
+		rag.radius,rag.height = unpack(oldbox)
+		P_SetOrigin(rag,oldpos[1],oldpos[2],oldpos[3])
+	end
 	--
 	
 	rag.angle = $-ANG10
@@ -398,58 +437,61 @@ addHook("MobjThinker", function(rag)
 		end
 		
 		--collaterals
-		local px = rag.x
-		local py = rag.y
-		local br = 420*rag.scale
-		local h = 20
-		
-		if (TAKIS_DEBUGFLAG & DEBUG_BLOCKMAP)
-			local me = rag
-			for i = 0,10
-				local f1 = P_SpawnMobj(px-br,py-br,me.z+((h*FU)*i),MT_THOK)
-				f1.tics = -1
-				f1.fuse = TR
-				f1.sprite = SPR_RING
-			end
-			for i = 0,10
-				local f2 = P_SpawnMobj(px-br,py+br,me.z+((h*FU)*i),MT_THOK)
-				f2.tics = -1
-				f2.fuse = TR
-				f2.sprite = SPR_RING
-			end
-			for i = 0,10
-				local f3 = P_SpawnMobj(px+br,py-br,me.z+((h*FU)*i),MT_THOK)
-				f3.tics = -1
-				f3.fuse = TR
-				f3.sprite = SPR_RING
-			end
-			for i = 0,10
-				local f4 = P_SpawnMobj(px+br,py+br,me.z+((h*FU)*i),MT_THOK)
-				f4.tics = -1
-				f4.fuse = TR
-				f4.sprite = SPR_RING
-			end
-		end
-		
-		local helper = P_SpawnGhostMobj(rag)
-		helper.flags2 = $|MF2_DONTDRAW
-		helper.fuse = 5
-		helper.parent2 = rag.parent2
-		searchBlockmap("objects", function(helper, found)
-			if found and found.valid
-			and (found.health)
-				if (found.takis_flingme ~= false)
-					if (found.flags & (MF_ENEMY|MF_BOSS))
-					or (found.flags & MF_MONITOR)
-					or (found.takis_flingme)
-						SpawnRagThing(found,helper,helper.parent2)
-					elseif (SPIKE_LIST[found.type] == true)
-						P_KillMobj(found,helper,helper.parent2)
-					end
+		if (TAKIS_NET.collaterals)
+			local px = rag.x
+			local py = rag.y
+			local br = 420*rag.scale
+			local h = 20
+			
+			if (TAKIS_DEBUGFLAG & DEBUG_BLOCKMAP)
+				local me = rag
+				for i = 0,10
+					local f1 = P_SpawnMobj(px-br,py-br,me.z+((h*FU)*i),MT_THOK)
+					f1.tics = -1
+					f1.fuse = TR
+					f1.sprite = SPR_RING
+				end
+				for i = 0,10
+					local f2 = P_SpawnMobj(px-br,py+br,me.z+((h*FU)*i),MT_THOK)
+					f2.tics = -1
+					f2.fuse = TR
+					f2.sprite = SPR_RING
+				end
+				for i = 0,10
+					local f3 = P_SpawnMobj(px+br,py-br,me.z+((h*FU)*i),MT_THOK)
+					f3.tics = -1
+					f3.fuse = TR
+					f3.sprite = SPR_RING
+				end
+				for i = 0,10
+					local f4 = P_SpawnMobj(px+br,py+br,me.z+((h*FU)*i),MT_THOK)
+					f4.tics = -1
+					f4.fuse = TR
+					f4.sprite = SPR_RING
 				end
 			end
-		end, helper, px-br, px+br, py-br, py+br)		
+			
+			local helper = P_SpawnGhostMobj(rag)
+			helper.flags2 = $|MF2_DONTDRAW
+			helper.fuse = 5
+			helper.parent2 = rag.parent2
+			searchBlockmap("objects", function(helper, found)
+				if found and found.valid
+				and (found.health)
+					if (found.takis_flingme ~= false)
+						if (found.flags & (MF_ENEMY|MF_BOSS))
+						or (found.flags & MF_MONITOR)
+						or (found.takis_flingme)
+							SpawnRagThing(found,helper,helper.parent2)
+						elseif (SPIKE_LIST[found.type] == true)
+							P_KillMobj(found,helper,helper.parent2)
+						end
+					end
+				end
+			end, helper, px-br, px+br, py-br, py+br)		
+		end
 		
+		/*
 		for i = 0,4
 			local ring = P_SpawnMobjFromMobj(rag,
 				0,0,0,MT_WINDRINGLOL
@@ -466,12 +508,14 @@ addHook("MobjThinker", function(rag)
 				ring.color = SKINCOLOR_WHITE
 			end
 		end
-		
+		*/
+
 		local f = P_SpawnGhostMobj(rag)
 		f.flags2 = $|MF2_DONTDRAW
 		f.fuse = 2*TR
 		S_StartSound(f,sfx_tkapow)
 		P_RemoveMobj(rag)
+		
 	end
 end, MT_TAKIS_BADNIK_RAGDOLL)
 
@@ -741,9 +785,6 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 	
 		
 		local song = "hapyhr"
-		if (consoleplayer.takistable.io.happyhourstyle == 2)
-			song = "hpyhr2"
-		end
 		
 		local pizzatime = HAPPY_HOUR.happyhour
 		newname = string.lower(newname)
@@ -760,7 +801,6 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 			local changetohappy = true
 			
 			if HAPPY_HOUR.timelimit
-			and (consoleplayer.takistable.io.happyhourstyle == 1)
 				
 				if HAPPY_HOUR.timeleft
 					local tics = HAPPY_HOUR.timeleft
@@ -1074,6 +1114,7 @@ addHook("MobjThinker",function(s)
 		local takis = p.takistable
 		
 		if takis.io.flashes
+		and not (TAKIS_NET.nerfarma)
 			/*
 			choose(AST_ADD,AST_TRANSLUCENT,AST_MODULATE
 				AST_ADD,AST_ADD,AST_TRANSLUCENT,AST_TRANSLUCENT,AST_MODULATE)
@@ -1582,7 +1623,9 @@ addHook("MobjDeath",function(card,_,sor)
 		end
 		if (sor.player.takistable.combo.time)
 		and (ttime > 4)
-			TakisGiveCombo(sor.player,sor.player.takistable,false)
+			for i = 0, 1
+				TakisGiveCombo(sor.player,sor.player.takistable,false)
+			end
 			S_StartSound(sor,sfx_ncitem,sor.player)
 			local spark = P_SpawnMobjFromMobj(card,0,0,0,MT_THOK)
 			spark.fuse = -1
@@ -1619,7 +1662,8 @@ local dontflinglist = {
 	MT_EGGMAN_GOLDBOX,
 	MT_EGGMAN_BOX,
 	MT_BIGMINE,
-	MT_SHELL
+	MT_SHELL,
+	MT_STEAM	--thz steam
 }
 
 for k,type in ipairs(dontflinglist)

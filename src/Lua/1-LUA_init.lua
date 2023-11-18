@@ -47,16 +47,28 @@ for k,v in ipairs(dbgflags)
 	print("Enummed DEBUG_"..v.." ("..1<<(k-1)..")")
 end
 
-rawset(_G, "DEBUG_print",function(p,...)
-	if not (TAKIS_DEBUGFLAG & DEBUG_IO)
-		return
-	end
+local ioflags = {
+	"ACH",
+	"CONFIG",
 	
-	local txt = {...}
-	for k,v in pairs(txt)
-		print(p.name..": "..v)
-	end
+	"SAVE",
+	"LOAD",
 	
+	"MENU",
+}
+for k,v in ipairs(ioflags)
+	rawset(_G,"IO_"..v,1<<(k-1))
+	print("Enummed IO_"..v.." ("..1<<(k-1)..")")
+end
+
+//only for IO debug, despite the name implying its for all
+rawset(_G, "DEBUG_print",function(p,enum)
+	--log this
+	table.insert(TAKIS_NET.iousage,{
+		player = p,
+		type = tonumber(enum) or 0,
+		tics = TR,
+	})
 end)
 
 rawset(_G, "TAKIS_SKIN", "takisthefox")
@@ -154,6 +166,11 @@ rawset(_G, "TAKIS_NET", {
 	nerfarma = false,
 	tauntkillsenabled = true,
 	noachs = false, --dont let players get achs in netgames
+	collaterals = true, --let ragdolls kill other ragdolls
+	
+	//{name = playername, type = IO_WHATEVER}
+	iousage = {},
+	previo = {},
 	
 	numdestroyables = 0,
 	partdestroy = 0,
@@ -341,7 +358,6 @@ rawset(_G, "TakisInitTable", function(p)
 			
 			nostrafe = 0,
 			nohappyhour = 0,
-			happyhourstyle = 1, --1 for new, 2 for old
 			morehappyhour = 0,
 			tmcursorstyle = 1, --taunt menu cursor style, 1 for nums, 2 for cursor
 			quakes = 1,
@@ -823,7 +839,6 @@ SafeFreeslot("SPR_STB5")
 SafeFreeslot("SPR_TPTN")
 --these are my own sprites so i am allowed to use them
 SafeFreeslot("SPR_SHGN")
-SafeFreeslot("SPR_WDWT")
 SafeFreeslot("SPR_CDST")
 --i guess i can use this for the  hud now
 SafeFreeslot("SPR_HTCD")
@@ -1217,9 +1232,8 @@ addHook("NetVars",function(n)
 	TAKIS_ACHIEVEMENTINFO = n($)
 	SPIKE_LIST = n($)
 	--weird stuff happening in ptd... maybe ded serv issue?
-	if (gametype ~= GT_PTSPICER)
-		HAPPY_HOUR = n($)
-	end
+	--???
+	--HAPPY_HOUR = n($)
 	TAKIS_TEXTBOXES = n($)
 end)
 

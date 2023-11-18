@@ -4,9 +4,7 @@ local tm = TAKIS_MENU
 tm.entries = {
 	[0] = {
 		title = "Takis Help",
-		color = SKINCOLOR_CLOUDY,
-		curcolor = SKINCOLOR_SUPERGOLD4,
-		icon = "MISSING",
+		color = SKINCOLOR_SILVER,
 		text = {
 			"Menu Help",
 			"Takis Manual",
@@ -16,23 +14,25 @@ tm.entries = {
 			"showmenuhints",
 			"instructions",
 			"importantletter",
+		},
+		hints = {
+			"Show the controls.",
+			"Print the manual URL in console.",
+			"..."
 		}
 	},
 	--hardcoded so you cant mess with it
 	[1] = {
 		title = "Achievements",
 		color = SKINCOLOR_CARBON,
-		nocursor = true,
 		text = {},
 	},
 	[2] = {
 		title = "Takis Options",
-		color = SKINCOLOR_CLOUDY,
-		curcolor = SKINCOLOR_SUPERGOLD4,
+		color = SKINCOLOR_FOREST,
 		text = {
 			"No Strafe",
 			"No PT Happy Hour",
-			"Happy Hour Style",
 			"More Happy Hour",
 			"Taunt Menu Cursor",
 			"Quakes",
@@ -47,7 +47,6 @@ tm.entries = {
 		values = {
 			"nostrafe",
 			"nohappyhour",
-			"happyhourstyle",
 			"morehappyhour",
 			"tmcursorstyle",
 			"quakes",
@@ -61,7 +60,6 @@ tm.entries = {
 		commands = {
 			"nostrafe",
 			"nohappyhour",
-			"happyhourstyle",
 			"morehappyhour",
 			"tauntmenucursor",
 			"quakes",
@@ -71,12 +69,24 @@ tm.entries = {
 			"clutchstyle",
 			"sharecombos",
 			"dontshowach"
+		},
+		hints = {
+			"Toggles forced strafing.",
+			"Toggles Happy Hour in Pizza Time Spice Runners.",
+			"Toggles other characters getting Happpy Hour in PTSR.",
+			"Toggles the cursor in the Taunt Menu. (TF+C1)",
+			"Toggles screen quakes.",
+			"Toggles screen flashes.",
+			"Toggles additive blending for the afterimages.",
+			"Do you have the music wad?",
+			"Clutch Bar or Clutch Meter.",
+			"Share combos with other Takis.",
+			"Don't show other Takis' achievements."
 		}
 	},
 	[3] = {
 		title = "I/O Stuff",
-		color = SKINCOLOR_CLOUDY,
-		curcolor = SKINCOLOR_SUPERGOLD4,
+		color = SKINCOLOR_GREY,
 		text = {
 			"Save Config",
 			"Load Config",
@@ -96,19 +106,29 @@ tm.entries = {
 			"Don't Speed Boost",
 			"Nerf Armas",
 			"Tauntkills",
-			"No Achs."
+			"No Achs.",
+			"Ragdoll collaterals"
 		},
 		values = {
 			"dontspeedboost",
 			"nerfarma",
 			"tauntkillsenabled",
 			"noachs",
+			"collaterals",
 		},
 		commands = {
 			"speedboosts",
 			"nerfarma",
 			"tauntkills",
 			"noachs",
+			"collaterals",
+		},
+		hints = {
+			"Toggles Takis giving players speed boosts in Co-op.",
+			"Toggles Powerful Arma & normal Arma for Takis.",
+			"Toggles tauntkills for Takis.",
+			"Toggles Takis being able to get achievements.",
+			"Toggles ragdolls being able to kill other things."
 		}
 	}
 }

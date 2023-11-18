@@ -9,7 +9,7 @@
 --Y7GDSUYFHIDJPK AAAAAAAAAAAHHHHHHHHH!!!!!!!!
 
 --if you use this manually and mess something up, its not my fault!
-COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,a13)
+COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,a13)
 	
 	if (p ~= consoleplayer) then return end
 	
@@ -22,7 +22,6 @@ COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a9,a10,a11,a
 
 	a1 = tonumber($) --Turn all of you to numbers!
 	a2 = tonumber($)
-	a3 = tonumber($)
 	a4 = tonumber($)
 	--quick taunts
 	t1 = tonumber($)
@@ -56,7 +55,9 @@ COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a9,a10,a11,a
 	else
 		CONS_Printf(p,"\x85"+"Error loading No Happy Hour! Defaulting to 0...")
 	end
-
+	
+	--who even uses this
+	/*
 	if a3 == 1
 		takis.io.happyhourstyle = 1
 	elseif a3 == 2
@@ -64,7 +65,8 @@ COM_AddCommand("takis_load", function(p, a1,a2,a3,a4,t1,t2,a5,a6,a7,a9,a10,a11,a
 	else
 		CONS_Printf(p,"\x85"+"Error loading Happy Hour Style! Defaulting to new...")
 	end
-
+	*/
+	
 	if a4 == 1
 		takis.io.morehappyhour = 1
 	elseif a4 == 0
@@ -196,7 +198,6 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	
 	a1 = t.nostrafe
 	a2 = t.nohappyhour
-	a3 = t.happyhourstyle
 	a4 = t.morehappyhour
 	t1 = tay.tauntquick1
 	t2 = tay.tauntquick2
@@ -210,12 +211,12 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	a13 = t.dontshowach
 	
 	if io
-		DEBUG_print(p,"Using I/O, Writing")
+		DEBUG_print(p,IO_CONFIG|IO_SAVE)
 		
 		t.hasfile = true
 		
 		local file = io.openlocal("client/takisthefox/config.dat", "w+")
-		file:write(" "..a1.." "..a2.." "..a3.." "..a4.." "..t1.." "
+		file:write(" "..a1.." "..a2.." "..a4.." "..t1.." "
 			..t2.." "..a5.." "..a6.." "..a7.." "..a9.." "
 			..a10.." "..a11.." "..a12.." "..a13
 		)
@@ -237,7 +238,7 @@ rawset(_G, "TakisLoadStuff", function(p)
 	end
 	
 	if io --load savefile
-		DEBUG_print(p,"Using I/O, Loading")
+		DEBUG_print(p,IO_CONFIG|IO_SAVE)
 		
 		local file = io.openlocal("client/takisthefox/config.dat")
 		

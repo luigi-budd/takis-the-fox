@@ -339,7 +339,6 @@ rawset(_G, "TakisHUDStuff", function(p)
 			and not (dontdo)
 				hud.timeshake = $+1
 				if not takis.sethappyend
-				and (takis.io.happyhourstyle == 1)
 					ChangeTakisMusic("hpyhre",false,p,0,0,3*MUSICRATE)
 					takis.sethappyend = true
 				end
@@ -353,6 +352,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 		
 	else
 		hud.timeshake = 0
+		takis.sethappyend = false
 	end
 
 	if hud.flyingscore.tics > 0
@@ -946,31 +946,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		*/
 	end
 	
-	--end of happy hour quakes
-	if HAPPY_HOUR.timelimit
-	
-		if HAPPY_HOUR.timeleft
-			local tics = HAPPY_HOUR.timeleft
-			local time = takis.HUD.timeshake
-			
-			if tics <= (56*TR)
-			and (takis.io.nohappyhour == 0)
-				if not takis.sethappyend
-				and (takis.io.happyhourstyle == 1)
-					S_ChangeMusic("HPYHRE",false,p,0,0,3*MUSICRATE)
-					takis.sethappyend = true
-				end
-				DoQuake(p,(time*FU)/50,1,0)
-			end
-			
-		else
-			takis.sethappyend = false
-		end
-		
-	else
-		takis.sethappyend = false
-	end
-
 	if takis.glowyeffects
 		
 		takis.afterimaging = true
@@ -2606,14 +2581,7 @@ rawset(_G,"TakisMenuThinker",function(p)
 		return
 	end
 	
-	local x,y = ReturnTrigAngles(p.drawangle)
-	local manual = P_SpawnMobjFromMobj(me, 16*x, 16*y, me.height/2, MT_THOK)
-	manual.tics = 2
-	manual.sprite = SPR_WDWT
-	manual.frame = A
-	manual.color = p.skincolor
-	
-	takis.nocontrol = 3
+ 	takis.nocontrol = 3
 	p.pflags = $ |PF_FULLSTASIS|PF_FORCESTRAFE
 	
 	if (p.cmd.buttons & BT_CUSTOM1)
@@ -2792,7 +2760,6 @@ end)
 */
 
 local musdefaults = {
-	["hpyhr2"] = "vsmetl",
 	["hapyhr"] = "mp_mrz",
 	["hpyhre"] = "spec7",
 	["letter"] = "_chsel",

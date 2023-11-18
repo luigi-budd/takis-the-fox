@@ -93,6 +93,7 @@
 	-replace menu patches with drawfill
 	-takisfest ach being buggy as hell, keeps doign every tiem
 	-redo the cos menu. antonblast styled?
+	-remove disciplinary action
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -397,6 +398,7 @@ addHook("PlayerThink", function(p)
 						
 						--not too fast, now
 						if thrust >= 13*FU
+						and not (p.powers[pw_sneakers])
 							thrust = 13*FU
 						end
 						
@@ -1791,7 +1793,7 @@ addHook("PlayerThink", function(p)
 				if not (takis.inwaterslide)
 					takis.afterimaging = false
 				end
-				takis.hammerblastdown = 0
+				TakisResetHammerTime(p)
 			end
 			
 			--this is actually stupid
@@ -2044,7 +2046,6 @@ addHook("PlayerThink", function(p)
 					and (takis.io.nohappyhour == 0)
 						hud.timeshake = $+1
 						if not takis.sethappyend
-						and (takis.io.happyhourstyle == 1)
 							ChangeTakisMusic("hpyhre",false,p,0,0,3*MUSICRATE)
 							takis.sethappyend = true
 						end
@@ -2116,8 +2117,7 @@ end)
 
 addHook("PlayerSpawn", function(p)
 	local x,y = ReturnTrigAngles(p.mo.angle)
-	if not multiplayer
-	and (TAKIS_DEBUGFLAG & DEBUG_HAPPYHOUR)
+	if (TAKIS_DEBUGFLAG & DEBUG_HAPPYHOUR)
 		P_SpawnMobjFromMobj(p.mo,100*x,100*y,0,MT_HHTRIGGER)
 	end
 	
@@ -2930,11 +2930,17 @@ local function givecardpieces(mo, _, source)
 			TakisGiveCombo(source.player,source.player.takistable,false)
 		end
 		
-		if mo.takis_givecombotime
-		or mo.takis_givecardpieces
-		and not (gametyperules & GTR_RINGSLINGER or G_RingSlingerGametype())
-		and not (HAPPY_HOUR.othergt)
-			P_AddPlayerScore(source.player,((source.player.takistable.accspeed>>16)/2) * 10)
+		local givescore = true
+		if ((gametyperules & GTR_RINGSLINGER) or G_RingSlingerGametype())
+			givescore = false
+		end
+		if (HAPPY_HOUR.othergt) then givescore = false end
+		
+		--stop being OP >:(
+		if (mo.takis_givecombotime
+		or mo.takis_givecardpieces)
+		and (givescore == true)
+			P_AddPlayerScore(source.player,10)
 		end
 		
 	end
