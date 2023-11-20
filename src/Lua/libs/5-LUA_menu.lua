@@ -4,7 +4,7 @@ local tm = TAKIS_MENU
 tm.entries = {
 	[0] = {
 		title = "Takis Help",
-		color = SKINCOLOR_SILVER,
+		color = "p.skincolor",
 		text = {
 			"Menu Help",
 			"Takis Manual",
@@ -134,8 +134,70 @@ tm.entries = {
 			"Toggles ragdolls being able to kill other things.",
 			"Toggles things dropping Heart Cards on death."
 		}
-	}
+	},
 }
+
+if (TAKIS_ISDEBUG)
+	tm.entries[5] = {
+		title = "Debug",
+		color = SKINCOLOR_SEAFOAM,
+		noprefix = true,
+		text = {
+			"Debug Flags",
+			"Instant exit",
+			"Panic!",
+			"Shotgunify",
+			"\x82".."Debug Flags:",
+		},
+		table = "_G",
+		values = {
+			"TAKIS_DEBUGFLAG",
+			nil,
+			nil,
+			nil,
+			nil
+		},
+		commands = {
+			nil,
+			"leave",
+			"panic 3 2",
+			"shotgun",
+			nil,
+		},
+		hints = {
+			"The current value of the debug flags.",
+			"Leave the level instantly.",
+			"Triggers Happy Hour with 3 minutes.",
+			"Instant shotgunify.",
+			"",
+		}
+	}
+	local dbgflags = {
+		"BUTTONS",
+		"PAIN",
+		"ACH",
+		"QUAKE",
+		"HAPPYHOUR",
+		"ALIGNER",
+		"PFLAGS",
+		"BLOCKMAP",
+		"DEATH",
+		"SPEEDOMETER",
+	}
+	for k,v in ipairs(dbgflags)
+		tm.entries[5].text[5+k] = v
+	end
+	for k,v in ipairs(dbgflags)
+		tm.entries[5].commands[5+k] = "setdebug "..v
+	end
+	addHook("ThinkFrame",do
+		for i = 1,#dbgflags
+			local bit = 1<<(i-1)
+			tm.entries[5].values[5+i] = (TAKIS_DEBUGFLAG&bit)==bit
+		end
+	end)
+	
+end
 
 for i = 1,NUMACHIEVEMENTS
 	if i > 7

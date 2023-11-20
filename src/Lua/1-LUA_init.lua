@@ -39,7 +39,6 @@ local dbgflags = {
 	"PFLAGS",
 	"BLOCKMAP",
 	"DEATH",
-	"IO",
 	"SPEEDOMETER",
 }
 for k,v in ipairs(dbgflags)
@@ -64,14 +63,25 @@ end
 //only for IO debug, despite the name implying its for all
 rawset(_G, "DEBUG_print",function(p,enum)
 	--log this
+	/*
 	table.insert(TAKIS_NET.iousage,{
 		player = p,
 		type = tonumber(enum) or 0,
 		tics = TR,
 	})
+	*/
 end)
 
 rawset(_G, "TAKIS_SKIN", "takisthefox")
+
+local setname = false
+addHook("ThinkFrame",do
+	if OLDC and not setname
+		OLDC.SetSkinFullName(TAKIS_SKIN,"Takis the Fox")
+		setname = true
+	end
+end)
+
 rawset(_G, "TAKIS_MAX_HEARTCARDS", 6)
 rawset(_G, "TAKIS_HEARTCARDS_SHAKETIME", 17)
 rawset(_G, "TAKIS_MAX_COMBOTIME", 7*TR)
@@ -169,10 +179,6 @@ rawset(_G, "TAKIS_NET", {
 	collaterals = true, --let ragdolls kill other ragdolls
 	cards = true, --only spawn heartcards if this is true
 	
-	//{name = playername, type = IO_WHATEVER}
-	iousage = {},
-	previo = {},
-	
 	numdestroyables = 0,
 	partdestroy = 0,
 	
@@ -255,6 +261,7 @@ rawset(_G, "TakisInitTable", function(p)
 		prevmomz = 0,
 		dontlanddust = false,
 		ticsforpain = 0,
+		ticsinpain = 0,
 		timesdeathpitted = 0,
 		saveddmgt = 0,
 		yeahwait = 0, 
@@ -407,6 +414,7 @@ rawset(_G, "TakisInitTable", function(p)
 			--cursor pos
 			y = 0,
 			page = 0,
+			scroll = 0,
 			
 			--btn
 			up = 0,
@@ -1231,12 +1239,10 @@ addHook("NetVars",function(n)
 	TAKIS_NET = n($)
 	TAKIS_MAX_HEARTCARDS = n($)
 	TAKIS_DEBUGFLAG = n($)
-	TAKIS_ACHIEVEMENTINFO = n($)
 	SPIKE_LIST = n($)
 	--weird stuff happening in ptd... maybe ded serv issue?
 	--???
 	--HAPPY_HOUR = n($)
-	TAKIS_TEXTBOXES = n($)
 end)
 
 filesdone = $+1

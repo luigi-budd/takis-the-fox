@@ -1197,13 +1197,21 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	print("@@",color,#skincolors-1,#skincolors)
 	*/
 	
-	local salnum = #skincolors[SKINCOLOR_SALMON]
+	local color = SKINCOLOR_GREEN
+	
+	--not everyone is salmon
+	local salnum = #skincolors[ColorOpposite(p.skincolor)]
 	p.takistable.afterimagecolor = $+1
 	if (p.takistable.afterimagecolor > #skincolors-1-salnum)
 		p.takistable.afterimagecolor = 1
 	end
+	color = salnum+p.takistable.afterimagecolor
 	
-	ghost.color = salnum+p.takistable.afterimagecolor
+	if G_GametypeHasTeams()
+		color = p.skincolor-1
+	end
+	
+	ghost.color = color
 	ghost.takis_spritexscale,ghost.takis_spriteyscale = me.spritexscale, me.spriteyscale
 	ghost.takis_spritexoffset,ghost.takis_spriteyoffset = me.spritexoffset, me.spriteyoffset
 	ghost.takis_rollangle = me.rollangle
@@ -2001,6 +2009,15 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 			
 			TakisSpawnDeadBody(p, me, takis)
 			return
+		
+		elseif takis.saveddmgt == DMG_DROWNED
+			
+			if (takis.inWater)
+				me.momz = me.scale
+			end
+			me.rollangle = $-FixedAngle(FU/2)
+			TakisSpawnDeadBody(p,me,takis)
+			return
 			
 		elseif takis.saveddmgt == DMG_FIRE
 			if me.color ~= SKINCOLOR_JET
@@ -2027,7 +2044,7 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 
 	if (me.rollangle ~= 0)
 	or not (takis.onGround)
-		p.deadtimer = min(TR,$)
+		p.deadtimer = min(5,$)
 	end
 	
 	if takis.justHitFloor
@@ -2568,12 +2585,6 @@ rawset(_G,"TakisMenuThinker",function(p)
 	
 	if p.spectator
 	or not (me and me.valid)
-		/*
-		customhud.enable("score")
-		customhud.enable("time")
-		customhud.enable("rings")
-		customhud.enable("lives")
-		*/
 		menu.menuinaction = false
 		takis.HUD.showingletter = false
 		if not (takis.shotgunned)
@@ -2587,12 +2598,6 @@ rawset(_G,"TakisMenuThinker",function(p)
 	p.pflags = $ |PF_FULLSTASIS|PF_FORCESTRAFE
 	
 	if (p.cmd.buttons & BT_CUSTOM1)
-		/*
-		customhud.enable("score")
-		customhud.enable("time")
-		customhud.enable("rings")
-		customhud.enable("lives")
-		*/
 		menu.menuinaction = false
 		takis.HUD.showingletter = false
 		P_RestoreMusic(p)
@@ -2616,12 +2621,14 @@ rawset(_G,"TakisMenuThinker",function(p)
 	if (p.cmd.sidemove > 19) and not (menu.up or menu.down)
 		menu.right = $+1
 		menu.left = 0
+		menu.scroll = 0
 	else
 		menu.right = 0
 	end
 	if (p.cmd.sidemove < -19) and not (menu.up or menu.down)
 		menu.left = $+1
 		menu.right = 0
+		menu.scroll = 0
 	else
 		menu.left = 0
 	end
@@ -2681,7 +2688,10 @@ rawset(_G,"TakisMenuThinker",function(p)
 	end
 	if menu.jump == 1
 		if TAKIS_MENU.entries[menu.page].commands[menu.y+1] ~= nil
-			COM_BufInsertText(p,"takis_"..TAKIS_MENU.entries[menu.page].commands[menu.y+1])
+			local pre = "takis_"
+			if (TAKIS_MENU.entries[menu.page].noprefix) then pre = '' end
+			
+			COM_BufInsertText(p,pre..TAKIS_MENU.entries[menu.page].commands[menu.y+1])
 			S_StartSound(nil,sfx_menu1,p)
 		end
 	end

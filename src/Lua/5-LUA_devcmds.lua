@@ -216,7 +216,7 @@ COM_AddCommand("panic", function(p,tics,flags)
 	end
 	
 	--erm,, whatevre, set it to the playher
-	HH_Trigger(p.mo,tics)
+	HH_Trigger(p.realmo,tics)
 	
 end,COM_ADMIN)
 
@@ -336,6 +336,21 @@ COM_AddCommand("forcedialog",function(p,type)
 	if TAKIS_TEXTBOXES[type] ~= nil
 		CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES[type])
 	end
+end,COM_ADMIN)
+
+COM_AddCommand("killme",function(p,type)
+	if gamestate ~= GS_LEVEL
+		CONS_Printf(p,"You can't use this right now.")
+	end
+	
+	if type == nil then return end
+	
+	type = string.upper($)
+	type = _G["DMG_"..type] or DMG_INSTAKILL
+	P_KillMobj(p.realmo,nil,nil,type)
+	p.takistable.saveddmgt = type
+	p.deadtimer = 1
+	
 end,COM_ADMIN)
 
 filesdone = $+1

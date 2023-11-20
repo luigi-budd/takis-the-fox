@@ -12,15 +12,18 @@ rawset(_G,"HAPPY_HOUR",{
 	time = 0,
 	othergt = false,
 	trigger = 0,
+	exit = 0,
 	overtime = false,
 })
 local hh = HAPPY_HOUR
 
 rawset(_G,"HH_Trigger",function(actor,timelimit)
+	/*
 	if actor == nil
 		print("HH_Trigger() needs a trigger mobj to run")
 		return
 	end
+	*/
 	
 	if hh.happyhour == true
 		return
@@ -29,17 +32,29 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 	if timelimit == nil
 		timelimit = 3*60*TR
 	end
-	
 	hh.timelimit = timelimit
 	hh.happyhour = true
+	
 	for p in players.iterate
 		ChangeTakisMusic("HAPYHR",p)
 	end
+	
+	if not (actor and actor.valid) then return end
+	
 	local tag = actor.lastlook
 	if (actor.type == MT_HHTRIGGER)
 		tag = AngleFixed(actor.angle)/FU
 		P_LinedefExecute(tag,actor,nil)
 	end
+	
+	for mobj in mobjs.iterate()
+		if (mobj.type == MT_NIGHTSDRONE)
+			hh.exit = mobj
+		else
+			continue
+		end
+	end
+	
 	hh.trigger = actor
 end)
 
@@ -49,13 +64,11 @@ rawset(_G,"HH_Reset",function()
 	hh.timeleft = 0
 	hh.time = 0
 	hh.trigger = 0
+	hh.exit = 0
 end)
 
-addHook("ThinkFrame",function()
+addHook("ThinkFrame",do
 	if (gamestate == GS_LEVEL)
-		if (leveltime < 3)
-			return
-		end
 		
 		--cool
 		if (gametype == GT_PTSPICER)
@@ -65,6 +78,24 @@ addHook("ThinkFrame",function()
 			hh.time = PTSR.pizzatime_tics
 			hh.othergt = true
 			hh.overtime = hh.timeleft == 0 and hh.happyhour
+			if hh.happyhour
+				for p in players.iterate
+					if not (p and p.valid) then continue end
+					if not (p.mo and p.mo.valid) then continue end
+					if (not p.mo.health) or (p.playerstate ~= PST_LIVE) then continue end
+					if (p.exiting or p.pflags & PF_FINISHED) then continue end
+					
+					if not (hh.time % TR)
+					and (hh.time)
+						if (p.score > 5)
+							p.score = $-5
+						else
+							p.score = 0
+						end
+					end
+					
+				end
+			end
 			return
 		else
 			if (hh.overtime)
@@ -79,6 +110,7 @@ addHook("ThinkFrame",function()
 			
 			if (G_EnoughPlayersFinished())
 				HH_Reset()
+				return
 			end
 			
 			for p in players.iterate

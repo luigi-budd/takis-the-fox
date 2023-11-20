@@ -11,8 +11,6 @@
 --if you use this manually and mess something up, its not my fault!
 COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,a13)
 	
-	if (p ~= consoleplayer) then return end
-	
 	if a1 == nil
 		CONS_Printf(p,"\x85"+"Do not use this command manually! You may risk messing up Takis or your config!")
 		return
@@ -231,7 +229,6 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 end)
 
 rawset(_G, "TakisLoadStuff", function(p)
-	if (p ~= consoleplayer) then return end
 	
 	if p.takistable.io.loaded
 		return

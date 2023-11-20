@@ -94,6 +94,9 @@
 	-takisfest ach being buggy as hell, keeps doign every tiem
 	-[done]redo the cos menu. antonblast styled?
 	-remove disciplinary action
+	-happy hour is weird when it is synched
+	-replace hud items only when switching, like engi
+	-cosmenu scrolling if text goes past hints
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -110,6 +113,7 @@
 	
 */
 
+--leave some invuln for the rest of the cast, you greedy jerk!
 local flashingtics = flashingtics/2
 
 --thanks katsy for this function
@@ -230,6 +234,11 @@ addHook("PlayerThink", function(p)
 			if (takis.otherskin)
 				takis.otherskin = false
 				takis.otherskintime = 0
+			end
+			
+			--dude stop!!!
+			if (p.charflags & SF_SUPER)
+				p.charflags = $ &~SF_SUPER
 			end
 			
 			--forced strafe
@@ -645,14 +654,14 @@ addHook("PlayerThink", function(p)
 				end
 				
 			end
-						
+			
 			--quick taunts
 			if ((takis.tossflag > 0) and ((takis.c2 > 0) or (takis.c3 > 0)))
 			and takis.onGround
 			and p.panim == PA_IDLE
 			and takis.taunttime == 0
 			and not takis.yeahed
-			and not (takis.tauntmenu.open)	
+			and not (takis.tauntmenu.open)
 				if ((takis.c2) and (not takis.c3))
 					if takis.tauntquick1
 						if ((TAKIS_TAUNT_INIT[takis.tauntquick1] ~= nil)
@@ -996,6 +1005,8 @@ addHook("PlayerThink", function(p)
 			--stuff to do while in pain
 			if takis.inPain
 			or takis.inFakePain
+				takis.ticsinpain = $+1
+				
 				takis.noability = $|NOABIL_SHOTGUN
 				
 				TakisResetTauntStuff(takis)
@@ -1023,7 +1034,9 @@ addHook("PlayerThink", function(p)
 				end
 			else
 				takis.recovwait = 0
+				takis.ticsinpain = 0
 			end
+			
 			if me.sprite2 == SPR2_PAIN
 			and me.health
 				me.frame = (leveltime%4)/2
@@ -1485,13 +1498,16 @@ addHook("PlayerThink", function(p)
 					me.state = S_PLAY_ROLL
 				end
 				
-				takis.ticsforpain = 0
 				if takis.inFakePain
 					takis.fakeflashing = 4*flashingtics/5
 				end
+				
 				if not (takis.justHitFloor)
+				and (takis.ticsinpain >= 2)
+				and takis.inFakePain
 					takis.inFakePain = false
 				end
+				takis.ticsforpain = 0
 				
 				if not P_CheckDeathPitCollide(me)
 					takis.timesdeathpitted = 0
@@ -1659,6 +1675,7 @@ addHook("PlayerThink", function(p)
 				
 				if ((takis.body) and (takis.body.valid))
 					P_MoveOrigin(takis.body,me.x,me.y,me.z)
+					takis.body.rollangle = me.rollangle
 				end
 				
 				takis.wentfast = 0
@@ -1667,8 +1684,8 @@ addHook("PlayerThink", function(p)
 				--TakisDoShorts
 				
 				takis.heartcards = 0
-				takis.hammerblastjumped = 0
-				takis.taunttime = 0
+				TakisResetHammerTime(p)
+				TakisResetTauntStuff(takis)
 				
 				takis.clutchingtime = 0
 				takis.afterimaging = false
@@ -2750,12 +2767,12 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 			takis.timesdeathpitted = $+1
 			TakisResetHammerTime(p)
 			
-			P_SetObjectMomZ(mo,15*mo.scale*takis.timesdeathpitted)
+			P_SetObjectMomZ(mo,20*mo.scale*takis.timesdeathpitted)
 			mo.state = S_PLAY_ROLL
 			p.pflags = $|PF_JUMPED &~(PF_THOKKED|PF_SPINNING)
 			takis.thokked = false
 			takis.dived = false
-			takis.fakeflashing = flashingtics
+			takis.fakeflashing = flashingtics*2
 			takis.HUD.statusface.painfacetic = 3*TR
 			
 			return false
@@ -3101,6 +3118,13 @@ addHook("MobjDeath", function(mo,_,_,dmgt)
 	
 	mo.player.takistable.combo.time = 0
 	mo.player.takistable.saveddmgt = dmgt
+	if (mo.eflags & MFE_UNDERWATER)
+		mo.player.takistable.saveddmgt = DMG_DROWNED
+	end
+	if P_InSpaceSector(mo)
+		mo.player.takistable.saveddmgt = DMG_SPACEDROWN
+	end
+	
 	if mo.player.takistable.saveddmgt == DMG_DROWNED
 		if (not mo.player.takistable.inWater) and mo.player.powers[pw_spacetime]
 			--we need to set this because srb2 is silly
@@ -3193,8 +3217,20 @@ addHook("MobjMoveCollide",function(tm,t)
 		if ((t.type == MT_SALOONDOOR) or (t.type == MT_SALOONDOORCENTER))
 			if ((t.valid) and (t.health) and not (t.flags & MF_NOCLIP))
 			and (takis.afterimaging)
+			and (gametyperules & GTR_FRIENDLY)
 				S_StartSound(t,sfx_wbreak)
 				S_StartSound(t,sfx_s3k59)
+				
+				for i = 0,P_RandomRange(5,10)
+					local x,y = ReturnTrigAngles(t.angle)
+					local debris = P_SpawnMobjFromMobj(t,
+						P_RandomRange(-(t.radius/t.scale),(t.radius/t.scale))*x,
+						P_RandomRange(-(t.radius/t.scale),(t.radius/t.scale))*y,
+						0,
+						MT_THOK
+					)
+					debris.fuse = TR
+				end
 				
 				SpawnBam(t)
 				

@@ -100,39 +100,9 @@ addHook("MapLoad", function(mapid)
 	
 end)
 
-local iotab = {}
-
 --thinkframe for netvars
 addHook("ThinkFrame", do
-	
-	--fine for now
-	if #iotab > TR
-		table.remove(iotab,1)
-	end
-	
-	table.insert(iotab,#TAKIS_NET.iousage)
-	local numios = 0
-	for k,v in ipairs(iotab)
-		numios = $+v
-	end
-	local iorate = numios/TR
-	if (TAKIS_DEBUGFLAG & DEBUG_IO)
-		print(iorate)
-	end
-	
-	
-	--delete entries
-	for k,v in ipairs(TAKIS_NET.iousage)
-		if v == nil then table.remove(TAKIS_NET.iousage,k) continue end
 		
-		if v.tics ~= 0
-			v.tics = $-1
-		else
-			table.remove(TAKIS_NET.iousage,k)
-			continue
-		end
-	end
-	
 	if gamestate == GS_TITLESCREEN
 		TAKIS_TITLETIME = $+1
 		
@@ -261,11 +231,6 @@ addHook("ThinkFrame", do
 		end
 	end
 	
-	//copy iousage into previo
-	TAKIS_NET.previo = {}
-	for k,v in ipairs(TAKIS_NET.iousage)
-		TAKIS_NET.previo[k] = v
-	end
 end)
 
 --after image
@@ -998,6 +963,27 @@ addHook("MobjMoveCollide",function(shot,mo)
 		return true
 	end
 	
+	--spice runners' pf ai
+	/*
+	if (_G["MT_PIZZA_ENEMY"])
+	and (mo.type == MT_PIZZA_ENEMY)
+		local ang = R_PointToAngle2(mo.x,mo.y, shot.x,shot.y)
+		local tics = TR
+		local xy,z = 15*FU,15*FU
+		if (CV_PTSR)
+			tics = CV_PTSR.parrystuntime.value
+			xy = CV_PTSR.parryknockback_xy.value
+			z = CV_PTSR.parryknockback_z.value
+		end
+		
+		mo.pfstunmomentum = true
+		mo.pfstuntime = tics
+		P_SetObjectMomZ(mo, z)
+		P_InstaThrust(mo, ang - ANGLE_180, xy)
+		
+	end
+	*/
+	
 end,MT_THROWNSCATTER)
 
 addHook("MobjDeath",function(gun,i)
@@ -1363,6 +1349,7 @@ end,MT_TAKIS_DRILLEFFECT)
 
 addHook("HurtMsg", function(p, inf, sor)
 	if (gametype == GT_COOP) or not (p.mo and p.mo.valid)
+	or not (gametyperules & GTR_HURTMESSAGES)
 		return
 	end
 	if not inf
@@ -1569,6 +1556,8 @@ addHook("MobjThinker",function(card)
 	or not card.valid
 		return
 	end
+	
+	if not (TAKIS_NET.cards) then P_RemoveMobj(card) return end
 	
 	local grounded = P_IsObjectOnGround(card)
 	card.angle = $+FixedAngle(5*FU)
