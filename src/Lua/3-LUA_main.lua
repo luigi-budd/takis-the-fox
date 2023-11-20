@@ -2398,6 +2398,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	
 	if (p.timeshit == 1)
 	and p.ptsr_rank
+	and (HAPPY_HOUR.othergt)
 		takis.HUD.rank.grow = FRACUNIT/3
 		S_StartSound(nil,sfx_didbad,p)
 	end
@@ -2445,6 +2446,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		
 		if (p.timeshit == 1)
 		and p.ptsr_rank
+		and (HAPPY_HOUR.othergt)
 			takis.HUD.rank.grow = FRACUNIT/3
 			S_StartSound(nil,sfx_didbad,p)
 		end
@@ -2760,6 +2762,7 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 			end
 			if (p.timeshit == 1)
 			and p.ptsr_rank
+			and (HAPPY_HOUR.othergt)
 				takis.HUD.rank.grow = FRACUNIT/3
 				S_StartSound(nil,sfx_didbad,p)
 			end
@@ -2917,7 +2920,7 @@ local function tauntbox(t,tm)
 			
 			if tm.flags & (MF_ENEMY|MF_BOSS)
 			or (tm.flags & MF_MONITOR)
-			or (tm.takis_flingme)
+			or (tm.takis_flingme ~= false)
 				spawnragthing(tm,t.tracer)
 				local ghs = P_SpawnGhostMobj(t)
 				ghs.fuse = 10*TR

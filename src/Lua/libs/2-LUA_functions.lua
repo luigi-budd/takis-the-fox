@@ -2783,9 +2783,19 @@ local musdefaults = {
 --returns the music name for a takis song, returns '' if the
 --player doesnt have takismusic.pk3
 rawset(_G, "ReturnTakisMusic",function(mus,p)
-
+	mus = string.lower(tostring(mus))
+	
+	--if we CAN play it
+	if (S_MusicExists(mus,false,true))
+		if string.lower(CV_FindVar("takis_loadedmus").string) == "false"
+			CV_StealthSet(CV_FindVar("takis_loadedmus"),"true")
+		end
+		
+		return mus
+	end
+	
 	if not p.takistable.io.ihavemusicwad
-		mus = musdefaults[string.lower(tostring(mus))] or ''
+		mus = musdefaults[mus] or ''
 	end
 	
 	if mus == ''

@@ -158,6 +158,13 @@ addHook("ThinkFrame", do
 		end
 	end
 	
+	if (HAPPY_HOUR ~= TAKIS_NET.happyhour)
+	and (TAKIS_NET.happyhour)
+		HAPPY_HOUR = TAKIS_NET.happyhour
+	end
+	
+	TAKIS_NET.happyhour = HAPPY_HOUR
+	
 	local nump = 0
 	local numt = 0
 	local exitors = 0
@@ -1673,4 +1680,5 @@ local dontflinglist = {
 for k,type in ipairs(dontflinglist)
 	addHook("MobjSpawn",dontfling,type)
 end
+
 filesdone = $+1

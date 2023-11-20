@@ -335,8 +335,6 @@ rawset(_G, "TakisInitTable", function(p)
 		
 		gravflip = 1,
 		
-		lastgroundedpos = {},
-		
 		heartcards = TAKIS_MAX_HEARTCARDS,
 		
 		combo = {

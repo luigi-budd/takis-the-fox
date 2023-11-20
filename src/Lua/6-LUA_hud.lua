@@ -1231,6 +1231,7 @@ local function drawcombostuff(v,p)
 		local x = (300-30)*FU
 		local y = 35*FU
 		if p.ptsr_rank
+		and HAPPY_HOUR.othergt
 			x = $-20*FU
 		end
 		local grow = takis.HUD.combo.tokengrow
@@ -2868,8 +2869,13 @@ addHook("HUD", function(v,p,cam)
 			end
 		else
 			customhud.SetupItem("rings","vanilla")
-			customhud.SetupItem("time","vanilla")
-			customhud.SetupItem("score","vanilla")
+			if not (HAPPY_HOUR.othergt)
+				customhud.SetupItem("time","vanilla")
+				customhud.SetupItem("score","vanilla")
+			else
+				customhud.SetupItem("time","spicerunners")
+				customhud.SetupItem("score","spicerunners")			
+			end
 			customhud.SetupItem("lives","vanilla")
 			if takis.io.morehappyhour == 0
 				customhud.SetupItem("PTSR_itspizzatime","spicerunners")

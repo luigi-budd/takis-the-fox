@@ -34,6 +34,7 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 	end
 	hh.timelimit = timelimit
 	hh.happyhour = true
+	hh.time = 1
 	
 	for p in players.iterate
 		ChangeTakisMusic("HAPYHR",p)
@@ -240,14 +241,18 @@ addHook("MobjThinker",function(trig)
 	if trig.spriteyscaleadd ~= 0
 		trig.spriteyscaleadd = 4*$/5
 	end
-	
+	--trig.height = FixedMul(60*trig.scale,FixedDiv(trig.spriteyscale,2*FU))
 end,MT_HHTRIGGER)
 
 addHook("MobjCollide",function(trig,mo)
+	if (HAPPY_HOUR.othergt) then return end
+	
 	if not mo
 	or not mo.valid
 		return
 	end
+	
+	if (mo.type ~= MT_PLAYER) then return end
 	
 	if HAPPY_HOUR.happyhour
 		if L_ZCollide(trig,mo)
