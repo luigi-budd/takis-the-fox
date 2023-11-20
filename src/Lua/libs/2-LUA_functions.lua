@@ -2710,10 +2710,10 @@ rawset(_G, "prtable", function(text, t, doprint, prefix, cycles)
 	if doprint
 		print(prefix..text.." = {")
 	end
-	
 	table.insert(stringtext,prefix..text.." = {")
 	
     for k, v in pairs(t)
+		local colorcode = ''
         if type(v) == "table"
             if cycles[v]
 				if doprint
@@ -2725,18 +2725,27 @@ rawset(_G, "prtable", function(text, t, doprint, prefix, cycles)
                 prtable(k, v, doprint, prefix.."    ", cycles)
             end
         elseif type(v) == "string"
+			colorcode = "\x8D"
 			if doprint
-				print(prefix.."    "..tostring(k)..' = "'..v..'"')
+				print(prefix.."    "..tostring(k)..' = '..colorcode..'"'..v..'"')
 			end
-			table.insert(stringtext,prefix.."    "..tostring(k)..' = "'..v..'"')
+			table.insert(stringtext,prefix.."    "..tostring(k)..' = '..colorcode..'"'..v..'"')
         else
-			if type(v) == "userdata" and v.valid and v.name
-				v = v.name
+			if type(v) == "userdata" and v.valid
+				colorcode = "\x86"
+				if (v.name)
+					v = v.name
+				end
 			end
+			if (type(v) == "boolean")
+			or (type(v) == "function")
+				colorcode = "\x84"
+			end
+			
 			if doprint
-				print(prefix.."    "..tostring(k).." = "..tostring(v))
+				print(prefix.."    "..tostring(k).." = "..colorcode..tostring(v))
 			end
-			table.insert(stringtext,prefix.."    "..tostring(k).." = "..tostring(v))
+			table.insert(stringtext,prefix.."    "..tostring(k).." = "..colorcode..tostring(v))
         end
     end
 	

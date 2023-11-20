@@ -15,48 +15,41 @@ rawset(_G,"HAPPY_HOUR",{
 	exit = 0,
 	overtime = false,
 })
+
 local hh = HAPPY_HOUR
 
 rawset(_G,"HH_Trigger",function(actor,timelimit)
-	/*
-	if actor == nil
-		print("HH_Trigger() needs a trigger mobj to run")
-		return
-	end
-	*/
+	if not hh.happyhour
 	
-	if hh.happyhour == true
-		return
-	end
-	
-	if timelimit == nil
-		timelimit = 3*60*TR
-	end
-	hh.timelimit = timelimit
-	hh.happyhour = true
-	hh.time = 1
-	
-	for p in players.iterate
-		ChangeTakisMusic("HAPYHR",p)
-	end
-	
-	if not (actor and actor.valid) then return end
-	
-	local tag = actor.lastlook
-	if (actor.type == MT_HHTRIGGER)
-		tag = AngleFixed(actor.angle)/FU
-		P_LinedefExecute(tag,actor,nil)
-	end
-	
-	for mobj in mobjs.iterate()
-		if (mobj.type == MT_NIGHTSDRONE)
-			hh.exit = mobj
-		else
-			continue
+		if timelimit == nil
+			timelimit = 3*60*TR
 		end
+		hh.timelimit = timelimit
+		hh.happyhour = true
+		hh.time = 1
+		
+		for p in players.iterate
+			ChangeTakisMusic("HAPYHR",p)
+		end
+		
+		if not (actor and actor.valid) then return end
+		
+		local tag = actor.lastlook
+		if (actor.type == MT_HHTRIGGER)
+			tag = AngleFixed(actor.angle)/FU
+			P_LinedefExecute(tag,actor,nil)
+		end
+		
+		for mobj in mobjs.iterate()
+			if (mobj.type == MT_NIGHTSDRONE)
+				hh.exit = mobj
+			else
+				continue
+			end
+		end
+		
+		hh.trigger = actor
 	end
-	
-	hh.trigger = actor
 end)
 
 rawset(_G,"HH_Reset",function()
@@ -69,46 +62,47 @@ rawset(_G,"HH_Reset",function()
 end)
 
 addHook("ThinkFrame",do
-	if (gamestate == GS_LEVEL)
-		
-		--cool
-		if (gametype == GT_PTSPICER)
-			hh.happyhour = PTSR.pizzatime
-			hh.timelimit = CV_PTSR.timelimit.value*TICRATE*60 or 0
-			hh.timeleft = PTSR.timeleft
-			hh.time = PTSR.pizzatime_tics
-			hh.othergt = true
-			hh.overtime = hh.timeleft == 0 and hh.happyhour
-			if hh.happyhour
-				for p in players.iterate
-					if not (p and p.valid) then continue end
-					if not (p.mo and p.mo.valid) then continue end
-					if (not p.mo.health) or (p.playerstate ~= PST_LIVE) then continue end
-					if (p.exiting or p.pflags & PF_FINISHED) then continue end
-					
-					if not (hh.time % TR)
-					and (hh.time)
-						if (p.score > 5)
-							p.score = $-5
-						else
-							p.score = 0
-						end
+
+	hh.othergt = (gametype == GT_PTSPICER)
+	if hh.othergt
+		hh.happyhour = PTSR.pizzatime
+		hh.timelimit = CV_PTSR.timelimit.value*TICRATE*60 or 0
+		hh.timeleft = PTSR.timeleft
+		hh.time = PTSR.pizzatime_tics
+		hh.overtime = hh.timeleft <= 0 and hh.happyhour
+		/*
+		if hh.happyhour
+			for p in players.iterate
+				if not (p and p.valid) then continue end
+				if not (p.mo and p.mo.valid) then continue end
+				if (not p.mo.health) or (p.playerstate ~= PST_LIVE) then continue end
+				if (p.exiting or p.pflags & PF_FINISHED) then continue end
+				
+				if not (hh.time % TR)
+				and (hh.time)
+					if (p.score > 5)
+						p.score = $-5
+					else
+						p.score = 0
 					end
-					
 				end
-			end
-			return
-		else
-			if (hh.overtime)
-				hh.overtime = false
-			end
-			if (hh.othergt)
-				hh.othergt = false 
+				
 			end
 		end
-		
+		*/
+	else
+	
 		if hh.happyhour
 			
+			if ((hh.timeleft ~= 0)
+			and (hh.timelimit))
+				hh.time = $+1
+			end
+			if (hh.timelimit)
+				hh.timeleft = hh.timelimit-hh.time
+			end
+			
+			/*
 			if (G_EnoughPlayersFinished())
 				HH_Reset()
 				return
@@ -149,7 +143,7 @@ addHook("ThinkFrame",do
 							P_KillMobj(p.mo)
 							p.deadtimer = 200*TR
 							--still wanna get through the level
-							P_DoPlayerExit(p)
+							p.pflags = $|PF_FINISHED
 						end
 					end
 					return
@@ -157,21 +151,12 @@ addHook("ThinkFrame",do
 			end
 			
 			hh.time = $+1
-		else
-			hh.timelimit = 0
-			hh.timeleft = 0
-			hh.time = 0
-		end
-	else
-		if hh.happyhour
-			hh.timelimit = 0
-			hh.timeleft = 0
-			hh.time = 0
-			hh.happyhour = false
+			*/
 		end
 	end
 end)
 
+----	trigger stuff
 freeslot("SPR_HHT_")
 freeslot("S_HHTRIGGER_IDLE")
 freeslot("S_HHTRIGGER_PRESSED")
@@ -296,5 +281,26 @@ addHook("MobjCollide",function(trig,mo)
 	end
 	
 end,MT_HHTRIGGER)
+----
+
+----	exit stuff
+freeslot("S_HHEXIT")
+freeslot("MT_HHEXIT")
+states[S_HHEXIT] = {
+	sprite = SPR_PLAY,
+	frame = A,
+	tics = -1
+}
+
+mobjinfo[MT_HHEXIT] = {
+	doomednum = 3001,
+	spawnstate = S_HHEXIT,
+	spawnhealth = 1,
+	height = 90*FU,
+	radius = 45*FU,
+	flags = MF_SPECIAL,
+}
+
+----
 
 filesdone = $+1

@@ -1701,7 +1701,7 @@ local function drawpizzaranks(v,p)
 			V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP
 		)
 		if h.percent
-		and not ((p.ptsr_rank == "S" and p.timeshit) or (p.ptsr_rank == "P"))
+		and (p.ptsr_rank ~= "P")
 			--thanks jisk for the help lol
 			
 			local max = h.percent
@@ -1719,12 +1719,6 @@ local function drawpizzaranks(v,p)
 				rankwidths[p.ptsr_rank],rankheights[p.ptsr_rank]
 			)
 			
-		end
-		if p.timeshit
-			v.drawScaled(x-(h.grow*25),y-(h.grow*20),FU/3+h.grow,
-				v.cachePatch("HUDRANKBKN"),
-				V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP|V_50TRANS
-			)
 		end
 	end
 

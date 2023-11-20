@@ -97,6 +97,8 @@
 	-happy hour is weird when it is synched
 	-replace hud items only when switching, like engi
 	-cosmenu scrolling if text goes past hints
+	-sometimes the PTSR bar doesnt show with nohappyhour?
+	-synch happy hour for joining players
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -2396,13 +2398,6 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		TakisGiveCombo(p,takis,false,false,true)
 	end
 	
-	if (p.timeshit == 1)
-	and p.ptsr_rank
-	and (HAPPY_HOUR.othergt)
-		takis.HUD.rank.grow = FRACUNIT/3
-		S_StartSound(nil,sfx_didbad,p)
-	end
-	
 	if takis.heartcards > 0
 	and (p.powers[pw_shield] == SH_NONE)
 		TakisResetHammerTime(p)
@@ -2443,15 +2438,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		end
 		TakisHealPlayer(p,mo,takis,3)
 		p.timeshit = $+1
-		
-		if (p.timeshit == 1)
-		and p.ptsr_rank
-		and (HAPPY_HOUR.othergt)
-			takis.HUD.rank.grow = FRACUNIT/3
-			S_StartSound(nil,sfx_didbad,p)
-		end
-		
-		
+				
 		if inf
 		and inf.valid
 			local ang = R_PointToAngle2(mo.x,mo.y, inf.x, inf.y)
@@ -2759,12 +2746,6 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 				p.timeshit = $+1
 				S_StartSound(mo,sfx_smack)
 				S_StartAntonOw(mo)
-			end
-			if (p.timeshit == 1)
-			and p.ptsr_rank
-			and (HAPPY_HOUR.othergt)
-				takis.HUD.rank.grow = FRACUNIT/3
-				S_StartSound(nil,sfx_didbad,p)
 			end
 			
 			takis.timesdeathpitted = $+1

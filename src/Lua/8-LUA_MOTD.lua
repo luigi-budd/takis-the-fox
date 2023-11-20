@@ -1,5 +1,5 @@
 rawset(_G, "TAKIS_INVITELINK", 'discord.gg/JY6ukFuQJV')
-rawset(_G, "TAKIS_INVITELINK2", 'https:--github.com/luigi-budd/takis-the-fox')
+rawset(_G, "TAKIS_INVITELINK2", 'https://github.com/luigi-budd/takis-the-fox')
 
 addHook("PlayerSpawn", function(p)
 	if p.discord == nil then

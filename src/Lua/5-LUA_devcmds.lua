@@ -353,4 +353,31 @@ COM_AddCommand("killme",function(p,type)
 	
 end,COM_ADMIN)
 
+COM_AddCommand("invuln", function(p,tics,flags)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if tics == nil
+		return
+	end
+	
+	if flags == nil
+		flags = 0
+	end
+	
+	flags = abs(tonumber($)) or 0
+	
+	tics = abs(tonumber($)) or 0
+	
+	if (flags & 1 == 1)
+		tics = $*TR
+	elseif (flags & 2 == 2)
+		tics = $*60*TR
+	end
+	
+	p.powers[pw_invulnerability] = tics
+end,COM_ADMIN)
+
 filesdone = $+1

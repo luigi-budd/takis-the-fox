@@ -81,6 +81,16 @@ addHook("ThinkFrame",do
 		setname = true
 	end
 end)
+--hud
+addHook("PostThinkFrame",do
+	if OLDC
+	and (skins[consoleplayer].name == TAKIS_SKIN)
+		hud.disable("score")
+		hud.disable("rings")
+		hud.disable("time")
+		hud.disable("lives")
+	end
+end)
 
 rawset(_G, "TAKIS_MAX_HEARTCARDS", 6)
 rawset(_G, "TAKIS_HEARTCARDS_SHAKETIME", 17)
@@ -1233,14 +1243,25 @@ mobjinfo[MT_TAKIS_SHOTGUN_HITBOX] = {
 }
 */
 
+
 addHook("NetVars",function(n)
 	TAKIS_NET = n($)
 	TAKIS_MAX_HEARTCARDS = n($)
 	TAKIS_DEBUGFLAG = n($)
 	SPIKE_LIST = n($)
-	--weird stuff happening in ptd... maybe ded serv issue?
-	--???
-	--HAPPY_HOUR = n($)
+	local hhsync = {
+		"happyhour",
+		"timelimit",
+		"timeleft",
+		"time",
+		"othergt",
+		"trigger",
+		"exit",
+		"overtime",
+	}
+	for _,v in ipairs(hhsync)
+		HAPPY_HOUR[v] = n($)
+	end
 end)
 
 filesdone = $+1

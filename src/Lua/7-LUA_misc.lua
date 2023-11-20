@@ -47,8 +47,10 @@ addHook("MapChange", function(mapid)
 	TAKIS_NET.ideyadrones = {}
 	HH_Reset()
 end)
-
+--should these 2 HH_Resets be here?
 addHook("MapLoad", function(mapid)
+	HH_Reset()
+	
 	local t = TAKIS_NET
 		
 	t.inbossmap = false
@@ -157,13 +159,6 @@ addHook("ThinkFrame", do
 			end
 		end
 	end
-	
-	if (HAPPY_HOUR ~= TAKIS_NET.happyhour)
-	and (TAKIS_NET.happyhour)
-		HAPPY_HOUR = TAKIS_NET.happyhour
-	end
-	
-	TAKIS_NET.happyhour = HAPPY_HOUR
 	
 	local nump = 0
 	local numt = 0
