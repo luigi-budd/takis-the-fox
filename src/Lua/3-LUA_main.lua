@@ -90,11 +90,11 @@
 	-[done]cap clutch boosts at 5
 	-[done]linedef trigger to open dialog
 	-[done]pt spice runners support
-	-replace menu patches with drawfill
+	-[done]replace menu patches with drawfill
 	-takisfest ach being buggy as hell, keeps doign every tiem
 	-[done]redo the cos menu. antonblast styled?
-	-remove disciplinary action
-	-happy hour is weird when it is synched
+	-[done]remove disciplinary action
+	-[done]happy hour is weird when it is synched
 	-replace hud items only when switching, like engi
 	-cosmenu scrolling if text goes past hints
 	-sometimes the PTSR bar doesnt show with nohappyhour?
@@ -104,6 +104,7 @@
 	-redo smug sprites
 	-reuse spng for jump
 	-the tail on roll frames doesnt point the right way
+	-redo walk 4th angle
 	
 	--PLANNED MAPHEADERS
 	-Takis_HH_Music - regular happyhour mus, ignore styles
@@ -1725,11 +1726,13 @@ addHook("PlayerThink", function(p)
 					takis.altdisfx = 4
 				end
 				
-			elseif p.playerstate == PST_REBORN
+			elseif (p.playerstate == PST_REBORN
+			or p.playerstate == PST_LIVE)
 				takis.deathanim = 0
 				takis.altdisfx = 0
 				takis.saveddmgt = 0
 				takis.stoprolling = false
+				takis.deathfloored = false
 			end
 			
 			--handle combo stuff here
@@ -1740,6 +1743,7 @@ addHook("PlayerThink", function(p)
 				or ((p.exiting) and not (p.pflags & PF_FINISHED))
 				or (p.powers[pw_nocontrol])
 				or (takis.nocontrol)
+				or (me.pizza_in or me.pizza_out)
 					takis.combo.frozen = true
 					if ((p.exiting) and not (p.pflags & PF_FINISHED))
 						takis.combo.cashable = true

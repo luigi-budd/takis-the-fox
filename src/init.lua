@@ -53,7 +53,7 @@ local filelist = {
 	"io",
 	"main",
 	"cmds",
-	"net",
+	"DNU-net",
 	"devcmds",
 	"hud",
 	"misc",

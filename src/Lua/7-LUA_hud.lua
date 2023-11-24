@@ -1421,7 +1421,7 @@ local function drawpizzatips(v,p)
 	and (not PTSR.quitting)
 	and (p.playerstate ~= PST_DEAD)
 		if not p.hold_newlap then
-			v.drawString(160, 130, "\x85Press FIRE to try a new lap!", V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-center")
+			v.drawString(160, 130, "\x85Hold FIRE to try a new lap!", V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-center")
 		else
 			local per = (FixedDiv(p.hold_newlap*FRACUNIT, PTSR.laphold*FRACUNIT)*100)/FRACUNIT
 			v.drawString(160, 130, "\x85Lapping... "..per.."%", V_SNAPTOBOTTOM|V_ALLOWLOWERCASE, "thin-center")

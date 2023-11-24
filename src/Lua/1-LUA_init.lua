@@ -309,6 +309,7 @@ rawset(_G, "TakisInitTable", function(p)
 		bashtime = 0,
 		bashtics = 0,
 		pizzastate = 0,
+		deathfloored = false,
 		
 		taunttime = 0,
 		tauntid = 0,

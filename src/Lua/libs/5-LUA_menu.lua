@@ -105,7 +105,7 @@ tm.entries = {
 		text = {
 			"Nerf Armas",
 			"Tauntkills",
-			"No Achs.",
+			"Achievements",
 			"Ragdoll collaterals",
 			"Heartcards",
 		},

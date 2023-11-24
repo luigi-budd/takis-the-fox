@@ -140,13 +140,23 @@ addHook("ThinkFrame",do
 							--already dead
 							if (not p.mo.health) or (p.playerstate ~= PST_LIVE) then continue end
 							if (p.exiting or p.pflags & PF_FINISHED) then continue end
-							P_KillMobj(p.mo)
-							p.deadtimer = 200*TR
-							--still wanna get through the level
-							p.pflags = $|PF_FINISHED
+							
+							if not (p.happydeath)
+								P_KillMobj(p.mo)
+								--still wanna get through the level
+								p.pflags = $|PF_FINISHED
+								p.happydeath = true
+							--DONT let them respawn....
+							else
+								if (multiplayer)
+									p.deadtimer = min(3,$)
+								end
+								if (p.playerstate ~= PST_DEAD)
+									p.happydeath = false
+								end
+							end
 						end
 					end
-					return
 				end
 			end
 			

@@ -1197,25 +1197,14 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		me.frame = (leveltime/3%2)
 	end
 	
-	/*
 	if (PTSR)
 	and (HAPPY_HOUR.othergt)
-		local exit,player = PTSR_COUNT()
-		if (PTSR.quitting)
-		--jiskcountr
-		or (exit == player)
-			p.pflags = $|PF_FINISHED
-		else
-			if (p.pflags & PF_FINISHED)
-				p.pflags = $ &~PF_FINISHED
-				takis.fakeexiting = 0
-			end
+		if (p.lap_hold == PTSR.laphold-1)
+			TakisGiveCombo(p,takis,false,true)
 		end
 	end
-	*/
 	
 	if (me.pizza_in)
-	and (me.state ~= S_PLAY_DEAD)
 	and not (takis.pizzastate)
 		takis.pizzastate = me.state
 		me.state = S_PLAY_DEAD
@@ -1224,10 +1213,12 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if (me.pizza_out)
-	and (me.sprite2 == S_PLAY_DEAD)
+	and (me.state ~= takis.pizzastate)
 	and (takis.pizzastate)
+	and (me.pizza_out == 1)
 		me.state = takis.pizzastate
 		takis.pizzastate = 0
+		TakisGiveCombo(p,takis,false,true)
 	end
 	
 	p.alreadyhascombometer = 2
@@ -2137,6 +2128,7 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 			end
 			
 			if (me.sprite2 ~= SPR2_FASS)
+			and not takis.deathfloored
 				me.sprite2 = SPR2_FASS
 			end
 			
@@ -2162,21 +2154,20 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 	*/
 	
 	if takis.justHitFloor
-	and (me.sprite2 ~= SPR2_TDD2)
 	and takis.onGround
 	and p.deadtimer > 3
-		me.state = S_PLAY_DEAD
+	and (not takis.deathfloored)
 		me.tics = -1
 		if (me.rollangle == 0)
 			me.frame = A
 			me.sprite2 = SPR2_TDD2
 			p.jp = 2
 			p.jt = -5
+			takis.deathfloored = true
 		else
 			P_SetObjectMomZ(me,10*FU)
 			me.rollangle = 0
 			takis.stoprolling = true
-			me.eflags = $ &~MFE_JUSTHITFLOOR
 		end
 		
 		DoFlash(p,PAL_NUKE,5)
