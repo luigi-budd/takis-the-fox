@@ -1,25 +1,6 @@
 if not (rawget(_G, "customhud")) return end
 local modname = "takisthefox"
 
----
---- Converts 320x200-based coordinates into their
---- pixel-based (resolution-dependent) equivalent
----
-local function greenToReal(v, x, y)
-    local dupx, dupy = v.dupx(), v.dupy()
-
-    local centerWidth  = 320 * dupx
-    local centerHeight = 200 * dupy
-
-    local borderWidth  = (v.width () - centerWidth ) / 2
-    local borderHeight = (v.height() - centerHeight) / 2
-
-    return
-        borderWidth  + x * dupx / FU,
-        borderHeight + y * dupy / FU
-end
-
-
 --HEALTH----------
 
 local function drawheartcards(v,p)
@@ -189,6 +170,7 @@ local function calcstatusface(p,takis)
 		or (me.sprite2 == SPR2_PAIN)
 		or (me.state == S_PLAY_PAIN)
 		or (takis.HUD.statusface.painfacetic))
+		or (me.pizza_out or me.pizza_in)
 		and (not takis.resettingtoslide)
 		and (me.sprite2 ~= SPR2_SLID)
 			takis.HUD.statusface.state = "PAIN"
@@ -1255,8 +1237,6 @@ local function drawjumpscarelol(v,p)
 	local h = takis.HUD.funny
 	
 	if h.tics
-		takis.HUD.funny.y = $*4/5
-		takis.HUD.funny.tics = $-1
 		v.fadeScreen(35,10)
 		
 		local scale = FU*7/5
@@ -1391,49 +1371,112 @@ end
 
 local function getlaptext(p)
 	local text = ''
-	local exitingCount, playerCount = JISK_COUNT()
-	local dynamiclapstext = "\x8D".."Dyna Laps"
-	local lapsandmaxlapstext = "\x82Laps:"
-	local lapstext = "\x82Laps:"
+	local exitingCount, playerCount = PTSR_COUNT()
 	local lapsperplayertext = "\x82Your Laps:"
+	local inflaps = "\x83Laps:"
 	local num = ''
 	
 	--lots of these for backwards compatability
-	local laps = ((PTSR) and (PTSR.laps)) or JISK_LAPS
-	local laptype = ((CV_PTSR) and (CV_PTSR.lappingtype.value)) or ((JISK_LAPPINGTYPE) and (JISK_LAPPINGTYPE.value))
-	local dynalap = ((CV_PTSR) and (CV_PTSR.dynamiclaps.value)) or ((JISK_DYNAMICLAPS) and (JISK_DYNAMICLAPS.value))
-	local mlpp = ((CV_PTSR) and (CV_PTSR.maxlaps_perplayer.value)) or ((JISK_MAXLAPS_PERPLAYER) and (JISK_MAXLAPS_PERPLAYER.value))
-	local maxlaps = ((CV_PTSR) and (CV_PTSR.maxlaps.value)) or ((JISK_MAXLAPS) and (JISK_MAXLAPS.value))
-	local dynalapsv = ((PTSR) and (PTSR.dynamic_maxlaps)) or JISK_DYNAMICMAXLAPS
+	local laps = (PTSR.laps)
+	local maxlaps = PTSR.maxlaps
 	
-	if p.pizzaface and laptype == 2 then 
-		num = 'dontdraw'
-		return text,num
-	end
-	if laptype == 2 then
+	if CV_PTSR.default_maxlaps.value
 		text = lapsperplayertext
-		num = p.lapsdid.." / "..mlpp
-		return text,num
-	end
-	
-	if dynalap then
-		text = dynamiclapstext
-		num = laps.." / "..dynalapsv
-		return text,num
-	end
-	
-	if maxlaps then
-		text = lapsandmaxlapstext
-		num = laps.." / "..maxlaps
+		num = p.lapsdid.." / "..PTSR.maxlaps
 		return text,num
 	else
-		text = lapstext
-		num = laps
+		text = inflaps
+		num = p.lapsdid
 		return text,num
 	end
 
 end
 
+local function drawpizzatips(v,p)
+
+	if (customhud.CheckType("PTSR_tooltips") != modname) return end
+	
+	if (skins[p.skin].name ~= TAKIS_SKIN)
+	and (p.takistable.io.morehappyhour == 0)
+		return
+	end
+	
+	local takis = p.takistable
+	local h = takis.HUD.ptsr
+	
+	h.xoffset = 0
+	
+	if not (HAPPY_HOUR.othergt and HAPPY_HOUR.happyhour)
+		return
+	end
+	
+	local tics = HAPPY_HOUR.time
+
+	
+	local text,num = getlaptext(p)
+	local exitingCount, playerCount = PTSR_COUNT()
+
+	if (not p.pizzaface)
+	and (p.exiting)
+	and (not PTSR.quitting)
+	and (p.playerstate ~= PST_DEAD)
+		if not p.hold_newlap then
+			v.drawString(160, 130, "\x85Press FIRE to try a new lap!", V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-center")
+		else
+			local per = (FixedDiv(p.hold_newlap*FRACUNIT, PTSR.laphold*FRACUNIT)*100)/FRACUNIT
+			v.drawString(160, 130, "\x85Lapping... "..per.."%", V_SNAPTOBOTTOM|V_ALLOWLOWERCASE, "thin-center")
+		end
+	end
+	
+	if tics > 3
+		if num ~= 'dontdraw'
+			h.xoffset = 31
+			
+			v.drawScaled(65*FU+(h.xoffset*FU),170*FU+(h.yoffset),3*FU/5,v.cachePatch("TA_LAPFLAG"),V_HUDTRANS|V_SNAPTOBOTTOM)
+			v.drawString((85+h.xoffset)*FU,(160)*FU+(h.yoffset),text,V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,"thin-fixed-center")
+
+			v.drawString((85+h.xoffset)*FU,(177)*FU+(h.yoffset),num,V_PURPLEMAP|V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,"fixed-center")
+		end
+		
+		if playerCount == 1
+			v.drawString((85+h.xoffset)*FU,(160-16)*FU+(h.yoffset),"\x88".."Exercise",V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,"thin-fixed-center")
+			v.drawString((85+h.xoffset)*FU,(160-8)*FU+(h.yoffset),"\x88".."Mode",V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,"thin-fixed-center")
+		end
+		
+	end
+	
+	if p.stuntime
+	and tics > 3
+		local ft = ((CV_PTSR) and (CV_PTSR.pizzatimestun.value))
+		ft = $*TR
+		
+		local max = ft*FU
+		local erm = FixedDiv(p.stuntime*FU,max)
+		
+		local scale2 = (30*FU)-FixedMul(erm,30*FU)
+		
+		if scale2 < 0 then scale2 = FU end
+		
+		v.drawString(165*FU,(120*FU)+(h.yoffset),"Frozen for "..p.stuntime/TR.." seconds",V_10TRANS|V_HUDTRANS|V_ALLOWLOWERCASE,"thin-fixed-center")
+		v.drawScaled(145*FU,135*FU+(h.yoffset),FU,v.cachePatch("TA_ICE2"), V_HUDTRANS)
+		v.drawCropped(
+		145*FU, 135*FU+(scale2)+(h.yoffset),
+		FU,FU,v.cachePatch("TA_ICE"), V_HUDTRANS,nil,
+		0,scale2,30*FU,30*FU)	
+		
+	end
+	
+	if p.pizzaface
+		if (p.pizzachargecooldown)
+			v.drawString(153+(h.xoffset),162+(h.yoffset/FU),"Cooling down...",V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small")
+		elseif (p.pizzacharge)
+			v.drawString(153+(h.xoffset),162+(h.yoffset/FU),"Charging!",V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small")
+		else
+			v.drawString(153+(h.xoffset),162+(h.yoffset/FU),"Hold FIRE to teleport!", V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small")
+		end
+		drawtelebar(v,p)
+	end
+end
 
 local function hhtimerbase(v,p)
 	if not HAPPY_HOUR.happyhour
@@ -1582,84 +1625,6 @@ local function drawtelebar(v,p)
 			end
 			
 
-end
-
-local function drawpizzatips(v,p)
-
-	if (customhud.CheckType("PTSR_tooltips") != modname) return end
-	
-	if (skins[p.skin].name ~= TAKIS_SKIN)
-	and (p.takistable.io.morehappyhour == 0)
-		return
-	end
-	
-	local takis = p.takistable
-	local h = takis.HUD.ptsr
-	
-	h.xoffset = 0
-	
-	if not ( ((PTSR) and (PTSR.pizzatime)) or (JISK_PIZZATIME))
-		return
-	end
-	
-	local tics = JISK_PIZZATIMETICS or PTSR.pizzatime_tics
-
-	
-	local text,num = getlaptext(p)
-	local exitingCount, playerCount = JISK_COUNT()
-
-	if (not p.pizzaface) and (p.exiting) and (not PTSR.quitting) and (p.playerstate ~= PST_DEAD) and (exitingCount ~= playerCount)
-		v.drawString(160, 130, "\x85Press FIRE to try a new lap!", V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-center")
-	end
-	
-	if tics > 3
-		if num ~= 'dontdraw'
-			h.xoffset = 31
-			
-			v.drawScaled(65*FU+(h.xoffset*FU),170*FU+(h.yoffset),3*FU/5,v.cachePatch("TA_LAPFLAG"),V_HUDTRANS|V_SNAPTOBOTTOM)
-			v.drawString((85+h.xoffset)*FU,(160)*FU+(h.yoffset),text,V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,"thin-fixed-center")
-
-			v.drawString((85+h.xoffset)*FU,(177)*FU+(h.yoffset),num,V_PURPLEMAP|V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,"fixed-center")
-		end
-		
-		if playerCount == 1
-			v.drawString((85+h.xoffset)*FU,(160-16)*FU+(h.yoffset),"\x88".."Exercise",V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,"thin-fixed-center")
-			v.drawString((85+h.xoffset)*FU,(160-8)*FU+(h.yoffset),"\x88".."Mode",V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,"thin-fixed-center")
-		end
-		
-	end
-	
-	if p.stuntime
-	and tics > 3
-		local ft = ((JISK_PIZZATIMESTUN) and (JISK_PIZZATIMESTUN.value)) or ((CV_PTSR) and (CV_PTSR.pizzatimestun.value))
-		ft = $*TR
-		
-		local max = ft*FU
-		local erm = FixedDiv(p.stuntime*FU,max)
-		
-		local scale2 = (30*FU)-FixedMul(erm,30*FU)
-		
-		if scale2 < 0 then scale2 = FU end
-		
-		v.drawString(165*FU,(120*FU)+(h.yoffset),"Frozen for "..p.stuntime/TR.." seconds",V_10TRANS|V_HUDTRANS|V_ALLOWLOWERCASE,"thin-fixed-center")
-		v.drawScaled(145*FU,135*FU+(h.yoffset),FU,v.cachePatch("TA_ICE2"), V_HUDTRANS)
-		v.drawCropped(
-		145*FU, 135*FU+(scale2)+(h.yoffset),
-		FU,FU,v.cachePatch("TA_ICE"), V_HUDTRANS,nil,
-		0,scale2,30*FU,30*FU)	
-		
-	end
-	
-	if p.pizzaface
-		if (p.pizzachargecooldown)
-			v.drawString(153+(h.xoffset),162+(h.yoffset/FU),"Cooling down...",V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small")
-		elseif (p.pizzacharge)
-			v.drawString(153+(h.xoffset),162+(h.yoffset/FU),"Charging!",V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small")
-		else
-			v.drawString(153+(h.xoffset),162+(h.yoffset/FU),"Hold FIRE to teleport!", V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small")
-		end
-		drawtelebar(v,p)
-	end
 end
 
 --before i learned about patch_t...
@@ -2362,6 +2327,27 @@ local function DrawMiniButton(v, player, x, y, flags, color, butt, symb, strngty
 	)
 end
 
+		local getpstate = {
+			[0] = "PST_LIVE",
+			[1] = "PST_DEAD",
+			[2] = "PST_REBORN",
+		}
+		local getdmg = {
+			[0] = "None",
+			[1] = "DMG_WATER",
+			[2] = "DMG_FIRE",
+			[3] = "DMG_ELECTRIC",
+			[4] = "DMG_SPIKE",
+			[5] = "DMG_NUKE",
+			[128] = "DMG_INSTAKILL",
+			[129] = "DMG_DROWNED",
+			[130] = "DMG_SPACEDROWN",
+			[131] = "DMG_DEATHPIT",
+			[132] = "DMG_CRUSHED",
+			[133] = "DMG_SPECTATOR",
+		}
+		
+
 local function drawflag(v,x,y,string,flags,onmap,offmap,align,flag)
 	local map = offmap
 	if flag
@@ -2592,10 +2578,14 @@ local function drawdebug(v,p)
 		
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_DEATH)
+		local pstate = getpstate[p.playerstate]
+		local dmg = getdmg[takis.saveddmgt]
+		
 		v.drawString(100,100,"State: "..me.state,V_ALLOWLOWERCASE,"thin")
 		v.drawString(100,108,"Sprite2: "..me.sprite2,V_ALLOWLOWERCASE,"thin")
-		v.drawString(100,116,"PState: "..p.playerstate,V_ALLOWLOWERCASE,"thin")
+		v.drawString(100,116,"PState: "..pstate,V_ALLOWLOWERCASE,"thin")
 		v.drawString(100,124,"Deadtimer: "..p.deadtimer,V_ALLOWLOWERCASE,"thin")
+		v.drawString(100,132,"DMG: "..dmg ,V_ALLOWLOWERCASE,"thin")
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
 		
@@ -2704,7 +2694,7 @@ local function drawdebug(v,p)
 end
 
 --draw the stuff
-customhud.SetupItem("takis_wareffect", 		modname/*,	,	"game",	1*/)
+--customhud.SetupItem("takis_wareffect", 		modname/*,	,	"game",	1*/)
 customhud.SetupItem("takis_freezing", 		modname/*,	,	"game",	1*/)
 customhud.SetupItem("takis_clutchstuff",	modname/*,	,	"game",	23*/) --
 customhud.SetupItem("rings", 				modname/*,	,	"game",	24*/) 

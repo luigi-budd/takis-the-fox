@@ -116,10 +116,6 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 rawset(_G,"TakisReadAchievements",function(p)
 	local number = 0
 	
-	if p ~= consoleplayer
-		return p.takistable.achfile
-	end
-	
 	if io
 		DEBUG_print(p,IO_ACH)
 		

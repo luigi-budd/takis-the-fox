@@ -553,6 +553,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			sound = takisvox,
 			soundchance = takischance,
 			delay = 2*TICRATE,
+			script = function() end,
 			next = 2
 		},
 		[2] = { 
@@ -564,6 +565,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
 			soundchance = takischance,
 			delay = 2*TICRATE,
+			script = function() end,
 			next = 3
 		},
 		[3] = { 

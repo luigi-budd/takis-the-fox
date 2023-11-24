@@ -103,7 +103,6 @@ tm.entries = {
 		title = "Net Stuff",
 		color = SKINCOLOR_GOLD,
 		text = {
-			"Don't Speed Boost",
 			"Nerf Armas",
 			"Tauntkills",
 			"No Achs.",
@@ -111,23 +110,21 @@ tm.entries = {
 			"Heartcards",
 		},
 		values = {
-			"dontspeedboost",
 			"nerfarma",
 			"tauntkillsenabled",
 			"noachs",
 			"collaterals",
 			"cards",
 		},
-		commands = {
-			"speedboosts",
-			"nerfarma",
-			"tauntkills",
-			"noachs",
-			"collaterals",
-			"heartcards",
+		--must be consvar_t, must be on/off, yes/no, true/false
+		cvars = {
+			CV_TAKIS.nerfarma,
+			CV_TAKIS.tauntkills,
+			CV_TAKIS.achs,
+			CV_TAKIS.collaterals,
+			CV_TAKIS.heartcards,
 		},
 		hints = {
-			"Toggles Takis giving players speed boosts in Co-op.",
 			"Toggles Powerful Arma & normal Arma for Takis.",
 			"Toggles tauntkills for Takis.",
 			"Toggles Takis being able to get achievements.",
@@ -143,7 +140,6 @@ if (TAKIS_ISDEBUG)
 		color = SKINCOLOR_SEAFOAM,
 		noprefix = true,
 		text = {
-			"Debug Flags",
 			"Instant exit",
 			"Panic!",
 			"Shotgunify",
@@ -151,25 +147,22 @@ if (TAKIS_ISDEBUG)
 		},
 		table = "_G",
 		values = {
-			"TAKIS_DEBUGFLAG",
 			nil,
 			nil,
 			nil,
 			nil
 		},
 		commands = {
-			nil,
 			"leave",
 			"panic 3 2",
 			"shotgun",
 			nil,
 		},
 		hints = {
-			"The current value of the debug flags.",
 			"Leave the level instantly.",
 			"Triggers Happy Hour with 3 minutes.",
 			"Instant shotgunify.",
-			"",
+			"Clientside debug flags.",
 		}
 	}
 	local dbgflags = {
@@ -185,15 +178,15 @@ if (TAKIS_ISDEBUG)
 		"SPEEDOMETER",
 	}
 	for k,v in ipairs(dbgflags)
-		tm.entries[5].text[5+k] = v
+		tm.entries[5].text[4+k] = v
 	end
 	for k,v in ipairs(dbgflags)
-		tm.entries[5].commands[5+k] = "setdebug "..v
+		tm.entries[5].commands[4+k] = "setdebug "..v
 	end
 	addHook("ThinkFrame",do
 		for i = 1,#dbgflags
 			local bit = 1<<(i-1)
-			tm.entries[5].values[5+i] = (TAKIS_DEBUGFLAG&bit)==bit
+			tm.entries[5].values[4+i] = (TAKIS_DEBUGFLAG&bit)==bit
 		end
 	end)
 	

@@ -173,7 +173,7 @@ end,COM_ADMIN)
 COM_AddCommand("setdebug", function(p,...)
 	local args = {...}
 	
-	if args == nil
+	if args == {}
 		CONS_Printf(p,"Current flag is "..TAKIS_DEBUGFLAG)
 		CONS_Printf(p,"Use: speedometer, happyhour, buttons")
 		return
@@ -189,7 +189,7 @@ COM_AddCommand("setdebug", function(p,...)
 		end
 	end
 	
-end,COM_ADMIN)
+end)
 
 COM_AddCommand("panic", function(p,tics,flags)
 	if gamestate ~= GS_LEVEL

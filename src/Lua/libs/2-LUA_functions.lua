@@ -250,10 +250,45 @@ rawset(_G, "TakisAnimateHappyHour", function(p)
 
 end)
 
+local blerp0 = {
+	["ULTIMATE"] = 0,
+	["SHOTGUN"] = 0,
+	["HAPPYHOUR"] = 0,
+	["HEART"] = 0,
+}
+local blerp1 = {
+	["ULTIMATE"] = 0,
+	["SHOTGUN"] = 0,
+	["HAPPYHOUR"] = 0,
+	["HEART"] = 0,
+}
+
 rawset(_G, "TakisHUDStuff", function(p)
 	local takis = p.takistable
 	local hud = takis.HUD
 	local me = p.mo
+	
+	local bonus = takis.bonuses
+	if bonus["shotgun"].tics
+		bonus["shotgun"].tics = $-1
+	end
+	
+	if bonus["ultimatecombo"].tics
+		bonus["ultimatecombo"].tics = $-1
+	end
+	
+	if bonus["happyhour"].tics
+		bonus["happyhour"].tics = $-1
+	end
+	
+	for k,val in ipairs(bonus.cards)
+		if val.tics
+			val.tics = $-1
+		else
+			table.remove(bonus.cards,k)
+		end
+	end
+	
 	
 	if hud.heartcards.add > 0
 		hud.heartcards.add = $*20/22
@@ -474,20 +509,20 @@ rawset(_G, "TakisHUDStuff", function(p)
 		end
 	end
 
-	takis.HUD.showingachs = 0
-	for k,va in ipairs(takis.HUD.steam)
+	hud.showingachs = 0
+	for k,va in ipairs(hud.steam)
 		if va == nil
 			continue
 		end
 		
 		local enum = va.enum
 		
-		if takis.HUD.showingachs & enum
-			table.remove(takis.HUD.steam,k)
+		if hud.showingachs & enum
+			table.remove(hud.steam,k)
 			return
 		end
 		
-		takis.HUD.showingachs = $|enum
+		hud.showingachs = $|enum
 		
 		local t = TAKIS_ACHIEVEMENTINFO
 		local x = va.xadd
@@ -496,11 +531,19 @@ rawset(_G, "TakisHUDStuff", function(p)
 		end
 		va.tics = $-1
 				
-		if takis.HUD.steam[k].tics == 0
-			table.remove(takis.HUD.steam,k)
+		if hud.steam[k].tics == 0
+			table.remove(hud.steam,k)
 		end
 		
 	end
+	
+	if hud.funny.tics
+		hud.funny.y = $*4/5
+		hud.funny.tics = $-1
+	end
+
+--hud stuff end
+--hudstuff end
 
 end)
 
@@ -1150,6 +1193,43 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 	end
 	
+	if (me.sprite2 == SPR2_FASS)
+		me.frame = (leveltime/3%2)
+	end
+	
+	/*
+	if (PTSR)
+	and (HAPPY_HOUR.othergt)
+		local exit,player = PTSR_COUNT()
+		if (PTSR.quitting)
+		--jiskcountr
+		or (exit == player)
+			p.pflags = $|PF_FINISHED
+		else
+			if (p.pflags & PF_FINISHED)
+				p.pflags = $ &~PF_FINISHED
+				takis.fakeexiting = 0
+			end
+		end
+	end
+	*/
+	
+	if (me.pizza_in)
+	and (me.state ~= S_PLAY_DEAD)
+	and not (takis.pizzastate)
+		takis.pizzastate = me.state
+		me.state = S_PLAY_DEAD
+		me.frame = A
+		me.sprite2 = SPR2_FASS
+	end
+	
+	if (me.pizza_out)
+	and (me.sprite2 == S_PLAY_DEAD)
+	and (takis.pizzastate)
+		me.state = takis.pizzastate
+		takis.pizzastate = 0
+	end
+	
 	p.alreadyhascombometer = 2
 	
 --shorts end
@@ -1245,6 +1325,7 @@ rawset(_G, "DoTakisSquashAndStretch", function(p, me, takis)
 	or (p.powers[pw_carry] == CR_PTERABYTE)
 	or (p.powers[pw_carry] == CR_MINECART)
 	or (p.powers[pw_carry] == CR_ROPEHANG)
+	or (me.pizza_out or me.pizza_in)
 		dontdo = true
 	end
 	
@@ -1266,22 +1347,40 @@ rawset(_G, "DoTakisSquashAndStretch", function(p, me, takis)
 		if me.momz*takis.gravflip < 1 then
 			p.jp = 0
 		end
-		if me.state != S_PLAY_CLIMB and me.eflags != me.eflags | MFE_GOOWATER then
-			if me.momz*takis.gravflip > 0 and p.jp == 0 and me.state != S_PLAY_FLY and me.state != S_PLAY_SWIM and me.state != S_PLAY_FLY_TIRED and me.state != S_PLAY_WALK and me.state != S_PLAY_RUN and me.state != S_PLAY_WALK and me.state != S_PLAY_BOUNCE_LANDING then
+		if me.state != S_PLAY_CLIMB
+		and not (me.eflags & MFE_GOOWATER) then
+			if me.momz*takis.gravflip > 0
+			and p.jp == 0
+			and me.state != S_PLAY_FLY
+			and me.state != S_PLAY_SWIM
+			and me.state != S_PLAY_FLY_TIRED
+			and me.state != S_PLAY_WALK
+			and me.state != S_PLAY_RUN
+			and me.state != S_PLAY_WALK
+			and me.state != S_PLAY_BOUNCE_LANDING then
 				p.jp = 1
 				p.jt = 5
 			end
-			if me.momz*takis.gravflip > 0 and p.jt < 0 and me.state != S_PLAY_FLY and me.state != S_PLAY_SWIM and me.state != S_PLAY_FLY_TIRED and me.state != S_PLAY_WALK and me.state != S_PLAY_RUN and me.state != S_PLAY_WALK and me.state != S_PLAY_BOUNCE_LANDING then
+			if me.momz*takis.gravflip > 0
+			and p.jt < 0
+			and me.state != S_PLAY_FLY
+			and me.state != S_PLAY_SWIM
+			and me.state != S_PLAY_FLY_TIRED
+			and me.state != S_PLAY_WALK
+			and me.state != S_PLAY_RUN
+			and me.state != S_PLAY_WALK
+			and me.state != S_PLAY_BOUNCE_LANDING then
 				p.jp = 1
 				p.jt = 5
 			end
-		elseif me.eflags == me.eflags | MFE_GOOWATER
+		elseif (me.eflags & MFE_GOOWATER)
 			p.jp = 1
 		end
-		if p.pflags != p.pflags | PF_THOKKED then
+		if not ((p.pflags & PF_THOKKED)
+		or takis.thokked) then
 			p.tk = 0
 		end
-		if p.pflags == p.pflags | PF_THOKKED and p.tk == 0 then
+		if (p.pflags & PF_THOKKED or takis.thokked) and p.tk == 0 then
 			p.tk = 1
 			p.jt = 5
 		end
@@ -1909,7 +2008,8 @@ rawset(_G, "TakisDoWindLines", function(me)
 end)
 
 rawset(_G, "TakisSpawnDeadBody", function(p, me, soap)
-	if ((p.deadtimer >= 3*TR) or (me.flags2 & MF2_DONTDRAW)) and not (soap.body and soap.body.valid)
+	if ((p.deadtimer >= 3*TR) and (me.flags2 & MF2_DONTDRAW))
+	and not (soap.body and soap.body.valid)
 		soap.body = P_SpawnMobjFromMobj(me, 0, 0, 0, MT_TAKIS_DEADBODY)
 		soap.body.tics = -1
 		soap.body.skin = me.skin
@@ -1937,6 +2037,8 @@ rawset(_G, "TakisSpawnDeadBody", function(p, me, soap)
 end)
 
 rawset(_G, "TakisDeathThinker",function(p,me,takis)
+	local capdead = false
+	
 	--explosion anim
 	if me.sprite2 == SPR2_TDED
 		if p.deadtimer < 21
@@ -1956,6 +2058,7 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 	end
 	
 	if takis.saveddmgt
+		takis.altdisfx = 0
 		if takis.saveddmgt == DMG_CRUSHED
 			if p.deadtimer == 1
 			and takis.onGround
@@ -2020,6 +2123,10 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 			return
 			
 		elseif takis.saveddmgt == DMG_FIRE
+			if (p.deadtimer == 1)
+				S_StartSound(me,sfx_takoww)
+			end
+			
 			if me.color ~= SKINCOLOR_JET
 				me.color = SKINCOLOR_JET
 				me.colorized = true
@@ -2027,6 +2134,10 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 
 			if p.deadtimer < 10
 				S_StartSound(me,sfx_fire)
+			end
+			
+			if (me.sprite2 ~= SPR2_FASS)
+				me.sprite2 = SPR2_FASS
 			end
 			
 			if (leveltime & 3) == 0
@@ -2041,16 +2152,20 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 	
 	me.flags = $ &~MF_NOCLIPHEIGHT
 	TakisSpawnDeadBody(p,me,takis)
-
+	
+	/*
 	if (me.rollangle ~= 0)
 	or not (takis.onGround)
+	and (capdead)
 		p.deadtimer = min(5,$)
 	end
+	*/
 	
 	if takis.justHitFloor
 	and (me.sprite2 ~= SPR2_TDD2)
 	and takis.onGround
 	and p.deadtimer > 3
+		me.state = S_PLAY_DEAD
 		me.tics = -1
 		if (me.rollangle == 0)
 			me.frame = A
@@ -2075,21 +2190,6 @@ local function FixedLerp(val1,val2,amt)
 	local p = FixedMul(FRACUNIT-amt,val1) + FixedMul(amt,val2)
 	return p
 end
-
-local blerp0 = {
-	["ULTIMATE"] = 0,
-	["SHOTGUN"] = 0,
-	["HAPPYHOUR"] = 0,
-	["HEART"] = 0,
-	["HEARTPIECE"] = 0,
-}
-local blerp1 = {
-	["ULTIMATE"] = 0,
-	["SHOTGUN"] = 0,
-	["HAPPYHOUR"] = 0,
-	["HEART"] = 0,
-	["HEARTPIECE"] = 0,
-}
 
 rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 
@@ -2138,7 +2238,6 @@ rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 			flags|trans, salign
 		)
 		
-		bonus["shotgun"].tics = $-1
 		DoShift(lerp["SHOTGUN"], angle)
 		DoLerp("SHOTGUN", false, dist)
 	else
@@ -2159,7 +2258,6 @@ rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 			flags|trans, salign
 		)
 		
-		bonus["ultimatecombo"].tics = $-1
 		DoShift(lerp["ULTIMATE"], angle)
 		DoLerp("ULTIMATE", false, dist)
 	else
@@ -2180,7 +2278,6 @@ rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 			flags|trans, salign
 		)
 		
-		bonus["happyhour"].tics = $-1
 		DoShift(lerp["HAPPYHOUR"], angle)
 		DoLerp("HAPPYHOUR", false, dist)
 	else
@@ -2202,7 +2299,6 @@ rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 				flags|trans, salign
 			)
 			
-			val.tics = $-1
 			DoShift(lerp["HEART"], angle)
 			DoLerp("HEART", false, dist)
 		else
@@ -2687,12 +2783,21 @@ rawset(_G,"TakisMenuThinker",function(p)
 		end
 	end
 	if menu.jump == 1
-		if TAKIS_MENU.entries[menu.page].commands[menu.y+1] ~= nil
+		if TAKIS_MENU.entries[menu.page].commands
+		and TAKIS_MENU.entries[menu.page].commands[menu.y+1] ~= nil
 			local pre = "takis_"
 			if (TAKIS_MENU.entries[menu.page].noprefix) then pre = '' end
 			
 			COM_BufInsertText(p,pre..TAKIS_MENU.entries[menu.page].commands[menu.y+1])
 			S_StartSound(nil,sfx_menu1,p)
+		elseif TAKIS_MENU.entries[menu.page].cvars
+		and TAKIS_MENU.entries[menu.page].cvars[menu.y+1] ~= nil
+			local cv = TAKIS_MENU.entries[menu.page].cvars[menu.y+1]
+			local setting = 0
+			setting = 1-cv.value
+			COM_BufInsertText(p,cv.name.." "..setting)
+			S_StartSound(nil,sfx_menu1,p)
+			
 		end
 	end
 		

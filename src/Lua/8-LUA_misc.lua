@@ -33,208 +33,6 @@ local numtotrans = {
 	[0] = 0,
 }
 
-addHook("MapChange", function(mapid)
-	TAKIS_MAX_HEARTCARDS = 6
-	if (mapheaderinfo[mapid].takis_maxheartcards)
-		if (tonumber(mapheaderinfo[mapid].takis_maxheartcards) > 0)
-			TAKIS_MAX_HEARTCARDS = tonumber(mapheaderinfo[mapid].takis_maxheartcards)
-		end
-	end
-	if ultimatemode
-		TAKIS_MAX_HEARTCARDS = 1
-	end
-	
-	TAKIS_NET.ideyadrones = {}
-	HH_Reset()
-end)
---should these 2 HH_Resets be here?
-addHook("MapLoad", function(mapid)
-	HH_Reset()
-	
-	local t = TAKIS_NET
-		
-	t.inbossmap = false
-	
-	t.numdestroyables = 0
-	
-	t.inspecialstage = G_IsSpecialStage(mapid)
-	t.isretro = (maptol & TOL_MARIO)
-	
-	t.livescount = 0
-	
-	for mt in mapthings.iterate
-		if mt.mobj and mt.mobj.valid
-			local mobj = mt.mobj
-			
-			if mobj.type == MT_CYBRAKDEMON
-				t.inbrakmap = true
-			end
-			
-			if mobj.type == MT_EGGMAN_BOX
-				continue
-			end
-			
-			if (mobj.flags & (MF_ENEMY|MF_MONITOR))
-			or (SPIKE_LIST[mobj.type] == true)
-			or (mobj.takis_flingme)
-				mobj.partofdestoys = true
-				t.numdestroyables = $+1
-			end
-		else
-			continue
-		end
-		
-	end
-	
-	local numplayers = 0
-	for p in players.iterate
-		if p.quittime
-			continue
-		end
-		if p.bot
-			continue
-		end
-		
-		numplayers = $+1		
-	end
-		
-	t.partdestroy = t.numdestroyables/(numplayers+2) or 1
-	
-end)
-
---thinkframe for netvars
-addHook("ThinkFrame", do
-		
-	if gamestate == GS_TITLESCREEN
-		TAKIS_TITLETIME = $+1
-		
-		--you probably wont get this without stalling
-		if TAKIS_TITLETIME == (120*FU)
-			S_ChangeMusic("D",false)
-			S_StartSound(nil,sfx_jumpsc)
-			TAKIS_TITLEFUNNY = (TR)+1
-			TAKIS_TITLEFUNNYY = 500*FU
-		end
-		if TAKIS_TITLEFUNNY > 0
-			if TAKIS_TITLEFUNNY == 1
-				COM_BufInsertText(consoleplayer,"quit")
-			end
-			TAKIS_TITLEFUNNY = $-1
-		end
-	else
-		TAKIS_TITLETIME = 0
-	end
-	
-	if gamestate ~= GS_LEVEL
-		return
-	end
-	
-	if (gametyperules & GTR_TAG)
-		return
-	elseif (G_GametypeHasTeams())
-		return
-	else
-		
-		if (G_GametypeUsesLives())
-			
-			if ((netgame or multiplayer) and G_GametypeUsesCoopLives() and (CV_FindVar("cooplives").value == 3))
-				
-				local lives = 0
-				
-				for p in players.iterate
-					if p.lives < 1
-						continue
-					end
-					
-					if (p.lives == INFLIVES)
-						lives = INFLIVES
-						break
-					elseif lives < 99
-						lives = $+p.lives
-					end
-					
-				end
-				
-				TAKIS_NET.livescount = lives
-			end
-		end
-	end
-	
-	local nump = 0
-	local numt = 0
-	local exitors = 0
-	local pizzatime = HAPPY_HOUR.happyhour
-	for p in players.iterate
-		if not p
-		or not p.valid
-			continue
-		end
-		
-		/*
-		if p.quittime
-			continue
-		end
-		if p.bot
-			continue
-		end
-		*/
-		
-		nump = $+1
-		if skins[p.skin].name == TAKIS_SKIN
-			numt = $+1
-		end
-		if p.exiting or p.spectator or (p.pizzaface or (p.playerstate == PST_DEAD and pizzatime))
-			exitors = $+1
-		end
-		
-		if not p.takistable
-			continue
-		end
-		
-		if ((p.mo) and (p.mo.valid))
-			if p.mo.skin ~= TAKIS_SKIN
-				continue
-			end
-			
-			if p.pflags & PF_SLIDING
-				p.takistable.inwaterslide = true
-			else
-				p.takistable.inwaterslide = false
-			end
-		end
-		
-	end
-
-	TAKIS_NET.playercount = numplayers
-	TAKIS_NET.exitingcount = exitors
-	
-	--PLEASE... I WANT MY EARS
-	if not (leveltime % 3*TR)
-	and ((multiplayer) and not splitscreen)
-	and not (TAKIS_NET.noachs)
-		if numt >= 6
-			for p in players.iterate
-				if (p ~= consoleplayer) then continue end
-				if skins[p.skin].name == TAKIS_SKIN
-					TakisAwardAchievement(p,ACHIEVEMENT_TAKISFEST)
-				end
-			end
-			
-		end
-	end
-	
-	if (ultimatemode)
-		if TAKIS_MAX_HEARTCARDS ~= 1
-			TAKIS_MAX_HEARTCARDS = 1
-		end
-	else
-		if TAKIS_MAX_HEARTCARDS < 1
-			TAKIS_MAX_HEARTCARDS = 6
-		end
-	end
-	
-end)
-
 --after image
 addHook("MobjThinker", function(ai)
 	if not ai
@@ -382,9 +180,13 @@ addHook("MobjThinker", function(rag)
 			and (L_ZCollide(rag,found))
 				if (found.takis_flingme ~= false)
 					if (found.flags & (MF_ENEMY|MF_BOSS))
-					or (found.flags & MF_MONITOR)
 					or (found.takis_flingme)
+						SpawnBam(found)
 						SpawnRagThing(found,rag,rag.parent2)
+						local sfx = P_SpawnGhostMobj(found)
+						sfx.flags2 = $|MF2_DONTDRAW
+						sfx.tics = TR
+						S_StartSound(sfx,sfx_smack)
 					elseif (SPIKE_LIST[found.type] == true)
 						P_KillMobj(found,rag,rag.parent2)
 					end
@@ -447,7 +249,6 @@ addHook("MobjThinker", function(rag)
 				and (found.health)
 					if (found.takis_flingme ~= false)
 						if (found.flags & (MF_ENEMY|MF_BOSS))
-						or (found.flags & MF_MONITOR)
 						or (found.takis_flingme)
 							SpawnRagThing(found,helper,helper.parent2)
 						elseif (SPIKE_LIST[found.type] == true)
@@ -1017,6 +818,7 @@ end,MT_THROWNSCATTER)
 addHook("MobjDeath",function(shot,i,s)
 	if ((i == shot.tracer) or (s == shot.tracer))
 	or ((shot.timealive < 10) and (i.valid or s.valid))
+	and (shot.shotbytakis)
 		return true
 	end
 end,MT_THROWNSCATTER)

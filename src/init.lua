@@ -36,6 +36,7 @@ end
 //file tree
 local guh = {
 	"init",
+	"net",
 }
 //libs
 local filelistt1 = {
@@ -52,6 +53,7 @@ local filelist = {
 	"io",
 	"main",
 	"cmds",
+	"net",
 	"devcmds",
 	"hud",
 	"misc",
@@ -60,7 +62,7 @@ local filelist = {
 //
 
 rawset(_G, "filesdone", 0)
-rawset(_G, "NUMFILES", (#guh)+(#filelistt1)+(#filelist))
+rawset(_G, "NUMFILES", (#guh)+(#filelistt1)+(#filelist-1))
 
 rawset(_G, "takis_printdebuginfo",function(p)
 	if not p
@@ -106,7 +108,11 @@ local pre = "LUA_"
 local suf = ".lua"
 
 for k,v in ipairs(guh)
-	dofile("1-"..pre..v)
+	if k == 1
+		dofile("1-"..pre..v)
+	else
+		dofile("5-"..pre..v)
+	end
 	print("Done "..filesdone.." file(s)")
 end
 
@@ -116,6 +122,7 @@ for k,v in ipairs(filelistt1)
 end
 
 for k,v in ipairs(filelist)
+	if k == 4 then continue end
 	dofile((k+1).."-"..pre..v..suf)
 	print("Done "..filesdone.." file(s)")
 end

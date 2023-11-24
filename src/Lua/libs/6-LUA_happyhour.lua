@@ -42,6 +42,7 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 		
 		for mobj in mobjs.iterate()
 			if (mobj.type == MT_NIGHTSDRONE)
+			or (mobj.type == MT_HHEXIT)
 				hh.exit = mobj
 			else
 				continue
@@ -102,7 +103,6 @@ addHook("ThinkFrame",do
 				hh.timeleft = hh.timelimit-hh.time
 			end
 			
-			/*
 			if (G_EnoughPlayersFinished())
 				HH_Reset()
 				return
@@ -150,8 +150,6 @@ addHook("ThinkFrame",do
 				end
 			end
 			
-			hh.time = $+1
-			*/
 		end
 	end
 end)

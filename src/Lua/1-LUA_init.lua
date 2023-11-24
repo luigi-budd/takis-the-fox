@@ -81,16 +81,6 @@ addHook("ThinkFrame",do
 		setname = true
 	end
 end)
---hud
-addHook("PostThinkFrame",do
-	if OLDC
-	and (skins[consoleplayer].name == TAKIS_SKIN)
-		hud.disable("score")
-		hud.disable("rings")
-		hud.disable("time")
-		hud.disable("lives")
-	end
-end)
 
 rawset(_G, "TAKIS_MAX_HEARTCARDS", 6)
 rawset(_G, "TAKIS_HEARTCARDS_SHAKETIME", 17)
@@ -182,7 +172,6 @@ rawset(_G, "TAKIS_NET", {
 	
 	livescount = 0,
 	
-	dontspeedboost = false,
 	nerfarma = false,
 	tauntkillsenabled = true,
 	noachs = false, --dont let players get achs in netgames
@@ -194,6 +183,7 @@ rawset(_G, "TAKIS_NET", {
 	
 	exitingcount = 0,
 	playercount = 0,
+	takiscount = 0,
 	
 	ideyadrones = {},
 	
@@ -270,6 +260,7 @@ rawset(_G, "TakisInitTable", function(p)
 		steppedthisframe = false,
 		prevmomz = 0,
 		dontlanddust = false,
+		dontfootdust = false,
 		ticsforpain = 0,
 		ticsinpain = 0,
 		timesdeathpitted = 0,
@@ -317,6 +308,7 @@ rawset(_G, "TakisInitTable", function(p)
 		nightsexplode = false,
 		bashtime = 0,
 		bashtics = 0,
+		pizzastate = 0,
 		
 		taunttime = 0,
 		tauntid = 0,
@@ -497,7 +489,6 @@ rawset(_G, "TakisInitTable", function(p)
 		stasistic = 0,
 		thokked = false,
 		fakesprung = false,
-		fakesneakers = 0,
 		fakeexiting = 0,
 		nocontrol = 0,
 		noability = 0,
@@ -763,12 +754,6 @@ SafeFreeslot("sfx_tactic")
 sfxinfo[sfx_tactic].caption = "\x86...Tick\x80"
 SafeFreeslot("sfx_tactoc")
 sfxinfo[sfx_tactoc].caption = "\x86Tock...\x80"
-SafeFreeslot("sfx_tspdup")
-sfxinfo[sfx_tspdup].caption = "\x82Speed Up!\x80"
-SafeFreeslot("sfx_tspddn")
-sfxinfo[sfx_tspddn].caption = "\x8DSpeed Down...\x80"
-SafeFreeslot("sfx_tspdsn")
-sfxinfo[sfx_tspdsn].caption = "Impact"
 SafeFreeslot("sfx_homrun")
 sfxinfo[sfx_homrun] = {
 	caption = "\x82HOMERUN!!!\x80",
@@ -882,6 +867,8 @@ SafeFreeslot("SPR2_SGST")
 SafeFreeslot("SPR2_CLKB")
 --PLACEHOLH
 SafeFreeslot("SPR2_PLHD")
+--fireass
+SafeFreeslot("SPR2_FASS")
 
 --
 
@@ -1247,7 +1234,7 @@ mobjinfo[MT_TAKIS_SHOTGUN_HITBOX] = {
 addHook("NetVars",function(n)
 	TAKIS_NET = n($)
 	TAKIS_MAX_HEARTCARDS = n($)
-	TAKIS_DEBUGFLAG = n($)
+	--TAKIS_DEBUGFLAG = n($)
 	SPIKE_LIST = n($)
 	local hhsync = {
 		"happyhour",
