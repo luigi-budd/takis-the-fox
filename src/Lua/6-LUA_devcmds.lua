@@ -182,10 +182,14 @@ COM_AddCommand("setdebug", function(p,...)
 	for _, enum in ipairs(args)
 		local todo = string.upper(enum)
 		local realnum = _G["DEBUG_"..todo] or 0
-		if TAKIS_DEBUGFLAG & realnum
-			TAKIS_DEBUGFLAG = $ &~realnum
+		if realnum ~= 0
+			if TAKIS_DEBUGFLAG & realnum
+				TAKIS_DEBUGFLAG = $ &~realnum
+			else
+				TAKIS_DEBUGFLAG = $|realnum
+			end
 		else
-			TAKIS_DEBUGFLAG = $|realnum
+			prn(p,"Flag invalid ("..todo..")")
 		end
 	end
 	

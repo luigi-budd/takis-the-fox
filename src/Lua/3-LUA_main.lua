@@ -1266,7 +1266,7 @@ addHook("PlayerThink", function(p)
 							spark2.momx = FixedMul(sin(fa),radius/20)
 							spark2.momy = FixedMul(cos(fa),radius/20)
 						end
-						DoQuake(p,FU*5,20)
+						DoQuake(p,FU*37,20)
 						
 						if not (G_RingSlingerGametype())
 							--KILL!
@@ -1965,30 +1965,26 @@ addHook("PlayerThink", function(p)
 			and (HAPPY_HOUR.othergt)
 				local per = (PTSR.maxrankpoints)/6
 				takis.HUD.rank.percent = per
+				local rank = p.ptsr_rank
 				
-				if p.score < per
+				if (rank == "D")
 					takis.HUD.rank.score = p.score
-				elseif p.score <= per*2
+				elseif (rank == "C")
 					takis.HUD.rank.score = p.score-(per)
-				elseif p.score <= per*3
+				elseif (rank == "B")
 					takis.HUD.rank.score = p.score-(per*2)
-				elseif p.score <= per*4
-					takis.HUD.rank.score = p.score-(per*3)
-				elseif p.score <= per*5
+				elseif (rank == "A")
 					takis.HUD.rank.score = p.score-(per*4)
-				elseif p.score <= per*6
-					takis.HUD.rank.score = p.score-(per*5)
-				--we dont need anything past this point
-				--since S and P ranks dont use fills
 				end
+				
 				takis.HUD.rank.score = $+takis.combo.score
 				if takis.HUD.flyingscore.tics
 					takis.HUD.rank.score = $-takis.HUD.flyingscore.lastscore
 				end
 				
-				if ranktonum[p.ptsr_rank] ~= takis.lastrank
+				if ranktonum[rank] ~= takis.lastrank
 				and not (p.pizzaface)
-					local r = ranktonum[p.ptsr_rank]
+					local r = ranktonum[rank]
 					--we went up!
 					if r > takis.lastrank
 						if r == 6
@@ -3141,28 +3137,11 @@ addHook("AbilitySpecial", function(p)
 			ring.color = SKINCOLOR_WHITE
 		end
 	end
-	/*
-	for i = 0, 7
-		local mt = MT_SPINDUST
-		if me.eflags & MFE_UNDERWATER
-			mt = MT_MEDIUMBUBBLE
-		end
-
-		local radius = me.scale*16
-		local fa = (i*ANGLE_45)
-		local dust = P_SpawnMobjFromMobj(me,0,0,0,mt)
-		dust.momx = FixedMul(sin(fa),radius)
-		dust.momy = FixedMul(cos(fa),radius)
-		dust.momz = -(abs(me.momz)*takis.gravflip)/2
-		dust.scale = FixedDiv(me.scale,3*FRACUNIT/4)
-		dust.destscale = dust.scale/3
-	end
-	*/
 	
 	p.mo.state = S_PLAY_ROLL
 	p.jp = 1
 	p.jt = 5
-	p.pflags = $|PF_JUMPED & ~PF_SPINNING & ~PF_JUMPDOWN & ~PF_THOKKED & ~PF_STARTDASH
+	p.pflags = $|(PF_JUMPED|PF_JUMPDOWN|PF_THOKKED|PF_STARTJUMP) & ~(PF_SPINNING|PF_STARTDASH)
 	return true
 end)
 --takis moved into a thing

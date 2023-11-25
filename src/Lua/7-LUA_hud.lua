@@ -1094,7 +1094,7 @@ local function drawcombostuff(v,p)
 			color = SKINCOLOR_YELLOW
 		end
 		if (takis.combo.frozen)
-			color = SKINCOLOR_BLACK
+			color = SKINCOLOR_ICY
 		end
 		if width < 0 then
 			width = 0
@@ -2715,6 +2715,7 @@ customhud.SetupItem("takis_cfgnotifs", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_bonuses", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_crosshair", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_happyhourtime", 	modname/*,	,	"game",	10*/)
+local altmodname = "vanilla"
 
 addHook("HUD", function(v,p,cam)
 	if not p
@@ -2852,15 +2853,15 @@ addHook("HUD", function(v,p,cam)
 				)
 			end
 		else
-			customhud.SetupItem("rings","vanilla")
+			customhud.SetupItem("rings",altmodname)
 			if not (HAPPY_HOUR.othergt)
-				customhud.SetupItem("time","vanilla")
-				customhud.SetupItem("score","vanilla")
+				customhud.SetupItem("time",altmodname)
+				customhud.SetupItem("score",altmodname)
 			else
 				customhud.SetupItem("time","spicerunners")
 				customhud.SetupItem("score","spicerunners")			
 			end
-			customhud.SetupItem("lives","vanilla")
+			customhud.SetupItem("lives",altmodname)
 			if takis.io.morehappyhour == 0
 				customhud.SetupItem("PTSR_itspizzatime","spicerunners")
 			else

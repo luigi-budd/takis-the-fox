@@ -1191,6 +1191,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		if (takis.heartcards > 1)
 			takis.heartcards = 1
 		end
+		p.powers[pw_sneakers] = 3
 	end
 	
 	if (me.sprite2 == SPR2_FASS)
@@ -1205,8 +1206,10 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if (me.pizza_in)
-	and not (takis.pizzastate)
-		takis.pizzastate = me.state
+	and me.state ~= S_PLAY_DEAD
+		if not (takis.pizzastate)
+			takis.pizzastate = me.state
+		end
 		me.state = S_PLAY_DEAD
 		me.frame = A
 		me.sprite2 = SPR2_FASS
