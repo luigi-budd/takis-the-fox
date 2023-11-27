@@ -99,6 +99,9 @@
 	-cosmenu scrolling if text goes past hints
 	-sometimes the PTSR bar doesnt show with nohappyhour?
 	-synch happy hour for joining players
+	-transformations
+	-bat taunt keeps colorization if interuppted
+	-textspectator hud stuff
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -208,7 +211,15 @@ addHook("PlayerThink", function(p)
 		end
 		
 		if p.takis
-			if p.takis.shotgunnotif == 0
+		and (takis.isTakis)
+			--shotgun monitor
+			if p.takis.shotgunnotif
+				if (takis.c3)
+					CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.shotgunnotif)
+					p.takis.shotgunnotif = 1
+				end
+				p.takis.shotgunnotif = $-1
+			else
 				p.takis = nil
 			end
 		end
@@ -1426,9 +1437,6 @@ addHook("PlayerThink", function(p)
 			end
 			
 			if takis.hammerblastjumped
-				if not (takis.hammerblastjumped % 6)
-					S_StartSoundAtVolume(me,sfx_airham,3*255/5)
-				end
 				takis.hammerblastjumped = $+1
 				if takis.hammerblastjumped == (6*7)
 					takis.hammerblastjumped = 0
@@ -1973,8 +1981,13 @@ addHook("PlayerThink", function(p)
 					takis.HUD.rank.score = p.score-(per)
 				elseif (rank == "B")
 					takis.HUD.rank.score = p.score-(per*2)
+					takis.HUD.rank.percent = $*2
 				elseif (rank == "A")
-					takis.HUD.rank.score = p.score-(per*4)
+					takis.HUD.rank.score = p.score-(per*3)
+					takis.HUD.rank.percent = $*5
+				elseif (rank == "S")
+					takis.HUD.rank.score = p.score-(per*8)
+					takis.HUD.rank.percent = $*5
 				end
 				
 				takis.HUD.rank.score = $+takis.combo.score
@@ -2123,7 +2136,7 @@ addHook("PlayerThink", function(p)
 end)
 
 addHook("PlayerSpawn", function(p)
-	local x,y = ReturnTrigAngles(p.mo.angle)
+	local x,y = ReturnTrigAngles(p.realmo.angle)
 	/*
 	if (TAKIS_DEBUGFLAG & DEBUG_HAPPYHOUR)
 		P_SpawnMobjFromMobj(p.mo,100*x,100*y,0,MT_HHTRIGGER)
@@ -2209,11 +2222,6 @@ addHook("PlayerSpawn", function(p)
 		end
 		
 		takis.thingsdestroyed = 0
-		
-		if ultimatemode
-		and not (G_IsSpecialStage(gamemap) or maptol & TOL_NIGHTS)
-			TakisShotgunify(p)
-		end
 	else
 		if ultimatemode
 			p.takis = {
@@ -2221,6 +2229,13 @@ addHook("PlayerSpawn", function(p)
 			}
 		end
 	end
+	if ultimatemode
+	and not (G_IsSpecialStage(gamemap) or maptol & TOL_NIGHTS)
+	and (skins[p.skin].name == TAKIS_SKIN)
+		x,y = ReturnTrigAngles(p.realmo.angle+ANGLE_90)
+		P_SpawnMobjFromMobj(p.realmo,55*x,55*y,0,MT_SHOTGUN_BOX)
+	end
+
 end)
 
 addHook("PlayerCanDamage", function(player, mobj)
@@ -2920,8 +2935,9 @@ addHook("MobjDeath", givecardpieces)
 --thing died by takis
 local function hurtbytakis(mo,inf,sor)
 	
-	if not mo.health
-	and (mo.takis_flingme ~= false)
+	if (not mo.health
+	and (mo.takis_flingme ~= false))
+	and (sor and sor.skin == TAKIS_SKIN)
 		if (mo.flags & MF_ENEMY)
 		or (mo.takis_flingme == true)
 			if P_RandomChance(FU/2)
@@ -3115,7 +3131,13 @@ addHook("AbilitySpecial", function(p)
 	S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSJUMP])
 	takis.thokked = true
 	takis.hammerblastjumped = 0
-	P_SetObjectMomZ(p.mo,15*FU)
+	
+	local sfactor = FU
+	if (me.eflags & MFE_UNDERWATER)
+		sfactor = FixedDiv(117*FRACUNIT, 200*FRACUNIT)
+	end
+	
+	P_SetObjectMomZ(p.mo,FixedMul(15*FU, sfactor))
 	
 	S_StartSoundAtVolume(me,sfx_takdjm,4*255/5)
 

@@ -266,7 +266,12 @@ local blerp1 = {
 rawset(_G, "TakisHUDStuff", function(p)
 	local takis = p.takistable
 	local hud = takis.HUD
-	local me = p.mo
+	local me = p.realmo
+	
+	if hud.cfgnotifstuff
+		if takis.c3 then hud.cfgnotifstuff = 1 end
+		hud.cfgnotifstuff = $-1
+	end
 	
 	local bonus = takis.bonuses
 	if bonus["shotgun"].tics
@@ -591,7 +596,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if (p.powers[pw_shield]&SH_NOSTACK) == SH_ATTRACT
 	and t and t.valid
 	and not (me.state >= 59 and me.state <= 64)
-	--and not ((p.pflags & PF_THOKKED) or takis.thokked or takis.dived)
+	and not (takis.noability & NOABIL_SHIELD)
 		takis.attracttarg = t
 		P_SpawnLockOn(p, t, S_LOCKON2)
 	end
@@ -1219,7 +1224,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	and (me.state ~= takis.pizzastate)
 	and (takis.pizzastate)
 	and (me.pizza_out == 1)
-		me.state = takis.pizzastate
+		P_MovePlayer(p)
 		takis.pizzastate = 0
 		TakisGiveCombo(p,takis,false,true)
 	end

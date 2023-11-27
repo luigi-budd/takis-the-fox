@@ -22,29 +22,20 @@ local function drawheartcards(v,p)
 		return
 	end
 	
-	local xoff = 20*FU
+	local xoff = 15*FU
 	local takis = p.takistable
-	local halfwidth = (v.width()*FU)/4
 	local me = p.mo
 	
-	local maxx = (15*FU)*TAKIS_MAX_HEARTCARDS
-	if TAKIS_MAX_HEARTCARDS > 6
-		maxx = $-((TAKIS_MAX_HEARTCARDS-6)*FU)
-		xoff = $-((FU)*(TAKIS_MAX_HEARTCARDS-6))
-	elseif TAKIS_MAX_HEARTCARDS < 6
-		xoff = $+((FU*2)*(TAKIS_MAX_HEARTCARDS))
-	end
+	--space allocated for all the cards
+	local maxspace = 90*FU
+	
+	--position of the first card
+	local maxx = maxspace
 	
 	--heart cards
 	for i = 1, TAKIS_MAX_HEARTCARDS do
 		
-		local maxline = 14
-		local linebreak = i/maxline
-		
 		local j = i
-		if (TAKIS_MAX_HEARTCARDS == 1)
-			j = 0
-		end
 		
 		local eflag = V_HUDTRANS
 		
@@ -73,14 +64,16 @@ local function drawheartcards(v,p)
 		
 		if TAKIS_MAX_HEARTCARDS == 1
 			add = 0
+		--	j = 0
 		end
 		
 		--shake
 		local shakex,shakey = 0,0
-				
+		
 		if takis.HUD.heartcards.shake
 		and not (paused)
 		and not (menuactive and takis.isSinglePlayer)
+		and not p.spectator
 			
 			local s = takis.HUD.heartcards.shake
 			shakex,shakey = v.RandomFixed()/2,v.RandomFixed()/2
@@ -99,25 +92,19 @@ local function drawheartcards(v,p)
 		end
 		--
 		
+		local incre = (FixedMul(
+				FixedDiv(maxspace,TAKIS_MAX_HEARTCARDS*FU)*j,
+				FU*4/5
+			)
+		)
+		
 		--draw from last to first
 		local flags = V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER|eflag
-		v.drawScaled(maxx-((13*FU)*j)+xoff+shakex,
+		v.drawScaled(maxx-(incre)+xoff+shakex,
 			15*FU+add-takis.HUD.heartcards.add+shakey,
 			4*FU/5, patch, flags
 		)
 	end
-
-	--heal indc.
-	/*
-	if takis.heartcards ~= TAKIS_MAX_HEARTCARDS
-	and not (takis.fakeexiting)
-	and (me.health or p.playerstate == PST_LIVE)
-		v.drawString((maxx/FU)+10+(xoff/FU),15+4,takis.heartcardpieces,V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER,"thin")
-		v.drawString((maxx/FU)+10+4+(xoff/FU),15+4+4,"/",V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER,"thin")
-		v.drawString((maxx/FU)+10+7+(xoff/FU),15+8+3-2+4,"7",V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER,"thin")
-		v.drawScaled(maxx+(10*FU)+(25*FU)+xoff, 33*FU, FU/2,v.getSpritePatch("RING", A, 0, 0), V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER)
-	end
-	*/
 	
 end
 
@@ -331,7 +318,7 @@ local function drawrings(v,p)
 	and not (p.exiting)
 		flash = true
 	end
-			
+	
 	local ringFx,ringFy = unpack(takis.HUD.rings.FIXED)
 	local ringx,ringy = unpack(takis.HUD.rings.int)
 	flash = (flash and ((leveltime%(2*TR)) < 30*TR) and (leveltime/5 & 1))
@@ -340,9 +327,12 @@ local function drawrings(v,p)
 		ringpatch = "TRNG"
 	end
 	
+	local eflag = V_HUDTRANS
+	if p.spectator then eflag = V_HUDTRANSHALF end
+	
 	local val = p.rings
-	v.drawScaled(ringFx, ringFy, FU/2,v.getSpritePatch(ringpatch, A, 0, 0), V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER,v.getColormap(nil,SKINCOLOR_RED))
-	v.drawNum(ringx, ringy, val, V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER)
+	v.drawScaled(ringFx, ringFy, FU/2,v.getSpritePatch(ringpatch, A, 0, 0), V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER,v.getColormap(nil,SKINCOLOR_RED))
+	v.drawNum(ringx, ringy, val, V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER)
 	
 end
 
@@ -361,6 +351,7 @@ local function howtotimer(player)
 	local hlimit = purehlimit * TR
 	local extratext = ''
 	local extrafunc = ''
+	local timertype = "regular"
 	
 	-- Counting down the hidetime?
 	if (gametyperules & GTR_STARTCOUNTDOWN)
@@ -368,6 +359,7 @@ local function howtotimer(player)
 		tics = hlimit - pt
 		flash = true
 		extrafunc = "countinghide"
+		timertype = "counting"
 	else
 		-- Time limit?
 		if (gametyperules & GTR_TIMELIMIT) and (puretlimit) then -- Gotta thank CobaltBW for spotting this oversight.
@@ -377,12 +369,15 @@ local function howtotimer(player)
 				tics = 0
 			end
 			flash = true
+			timertype = "counting"
 		-- Post-hidetime normal.
         elseif (gametyperules & GTR_STARTCOUNTDOWN) and (gametyperules & GTR_TIMELIMIT) -- Thanking 'im again.
             tics = tlimit - pt
+			timertype = "countdown"
         elseif (gametyperules & GTR_STARTCOUNTDOWN)
             tics = pt - hlimit
 			extrafunc = "hiding"
+			timertype = "counting"
         else
             tics = pt
         end
@@ -390,7 +385,7 @@ local function howtotimer(player)
 	
 	flash = (flash and (tics < 30*TR) and (lt/5 & 1)) -- Overtime?
 	
-	return flash, tics, extratext, extrafunc
+	return flash, tics, extratext, extrafunc, timertype
 end
 
 local function drawtimer(v,p)
@@ -400,6 +395,7 @@ local function drawtimer(v,p)
 	if p.takistable.inNIGHTSMode
 	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
+	or HAPPY_HOUR.othergt
 		return
 	end
 	
@@ -408,8 +404,13 @@ local function drawtimer(v,p)
 	--time
 	--this is so minhud
 	local flashflag = 0
-	local flash,timetic,extratext,extrafunc = howtotimer(p)
-			
+	local flash,timetic,extratext,extrafunc,type = howtotimer(p)
+	
+	if type == "regular"
+	and (gametype == GT_COOP)
+		if not p.exiting then return end
+	end
+	
 	if flash
 		flashflag = V_REDMAP
 	end
@@ -944,7 +945,7 @@ local function drawclutches(v,p,cam)
 	elseif (takis.io.clutchstyle == 1)
 		--chrispy chars
 		local player = p
-		local mo = player.mo
+		local mo = player.realmo
 		local color = SKINCOLOR_CRIMSON
 		local pre = "CLTCHMET_"
 		
@@ -1420,6 +1421,7 @@ local function drawpizzatips(v,p)
 	and (p.exiting)
 	and (not PTSR.quitting)
 	and (p.playerstate ~= PST_DEAD)
+	and (not p.spectator)
 		if not p.hold_newlap then
 			v.drawString(160, 130, "\x85Hold FIRE to try a new lap!", V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-center")
 		else
@@ -2151,15 +2153,10 @@ local function drawcfgnotifs(v,p)
 	v.drawString(160,70,"Make sure to get the Music Wad!",trans|V_ALLOWLOWERCASE,"thin-center")
 	v.drawString(160,80,"\x86".."C3 - Dismiss",trans|V_ALLOWLOWERCASE,"thin-center")
 	
-	if takis.c3
-		HUD.cfgnotifstuff = 1
-	end
-	
-	HUD.cfgnotifstuff = $-1
 end
 
 local function drawbonuses(v,p)
-	if (customhud.CheckType("takis_cfgnotifs") != modname) return end
+	if (customhud.CheckType("takis_bonuses") != modname) return end
 	
 	if (skins[p.skin].name ~= TAKIS_SKIN)
 		return
@@ -2788,15 +2785,11 @@ addHook("HUD", function(v,p,cam)
 				end
 				
 				if draw
-					v.drawString(160,55,"\x85You will be spawning with a",V_ALLOWLOWERCASE,"thin-center")
-					v.drawString(160,65,"\x82Shotgun\x85 from now on!",V_ALLOWLOWERCASE,"thin-center")
-					v.drawString(160,75,"C3 - Don't Care",V_ALLOWLOWERCASE,"thin-center")
-				end
-				if (p.cmd.buttons & BT_CUSTOM3)
-					p.takis.shotgunnotif = 1
+					v.drawString(160,55,"\x85Something's new in",V_ALLOWLOWERCASE,"thin-center")
+					v.drawString(160,65,"\x89Ultimate Mode\x85!",V_ALLOWLOWERCASE,"thin-center")
+					v.drawString(160,75,"C3 - What's up?",V_ALLOWLOWERCASE,"thin-center")
 				end
 				
-				p.takis.shotgunnotif = $-1
 			end
 			
 			--drawwareffect(v,p)

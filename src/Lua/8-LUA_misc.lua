@@ -684,6 +684,50 @@ addHook("MobjThinker",function(mo)
 		return
 	end
 	
+	if (mo.dropped)
+		if not mo.set
+			mo.flags = MF_SPECIAL
+			mo.set = true
+		end
+		
+		local grounded = P_IsObjectOnGround(mo)
+		if mo.groundtime == nil
+			mo.groundtime = 0
+		end
+		if mo.timealive == nil
+			mo.timealive = 1
+		else
+			mo.timealive = $+1
+		end
+		
+		--end of life blinking
+		if (mo.timealive >= 50*TR)
+			if (mo.timealive%2)
+				mo.flags2 = $ &~MF2_DONTDRAW
+			else
+				mo.flags2 = $|MF2_DONTDRAW
+			end
+			if (mo.timealive >= 60*TR)
+				P_RemoveMobj(mo)
+				return
+			end
+		end
+		
+		if grounded			
+			mo.groundtime = $+1
+			local waveforce = FU
+			local ay = FixedMul(waveforce,sin(mo.groundtime*3*ANG2))
+			mo.spriteyoffset = 6*FU+ay
+		else
+			if mo.groundtime
+				mo.groundtime = $-1
+			end
+		end
+		
+		mo.angle = $+FixedAngle(5*FU)
+		return
+	end
+	
 	if not mo.ragdoll
 		if not mo.target
 		or not mo.target.valid
@@ -789,20 +833,36 @@ addHook("MobjMoveCollide",function(shot,mo)
 	
 end,MT_THROWNSCATTER)
 
-addHook("MobjDeath",function(gun,i)
-	if not gun.ragdoll
-		local rag = P_SpawnMobjFromMobj(gun,0,0,0,MT_TAKIS_SHOTGUN)
-		rag.ragdoll = true
-		rag.timealive = 0
-		rag.flags = $ &~MF_NOGRAVITY
-		rag.fuse = 4*TR
-		rag.frame = B
-		rag.rollangle = ANGLE_90-(ANG10*3)
-		
-		P_SetObjectMomZ(rag,10*FU)
-		P_Thrust(rag, R_PointToAngle2(rag.x,rag.y, i.x,i.y), -5*rag.scale)
-		
-		S_StartSound(i,sfx_shgnk)
+local function gunragdoll(gun,i)
+	local rag = P_SpawnMobjFromMobj(gun,0,0,0,MT_TAKIS_SHOTGUN)
+	rag.ragdoll = true
+	rag.timealive = 0
+	rag.flags = $ &~MF_NOGRAVITY
+	rag.fuse = 4*TR
+	rag.frame = B
+	rag.rollangle = ANGLE_90-(ANG10*3)
+	
+	P_SetObjectMomZ(rag,10*FU)
+	P_Thrust(rag, R_PointToAngle2(rag.x,rag.y, i.x,i.y), -5*rag.scale)
+	
+	S_StartSound(i,sfx_shgnk)
+end
+
+addHook("MobjDeath",function(gun,i,s)
+	if not gun.dropped
+		if not gun.ragdoll
+			gunragdoll(gun,i)
+		end
+	else
+		if (s and s.valid)
+		and s.health
+		and (s.player and s.player.valid)
+			if (s.skin == TAKIS_SKIN)
+				TakisShotgunify(s.player)
+			else
+				gunragdoll(gun,i)
+			end
+		end
 	end
 end,MT_TAKIS_SHOTGUN)
 
@@ -1114,11 +1174,11 @@ addHook("MobjThinker",function(me)
 	
 end,MT_STARPOST)
 
---disable yd if we're in a bossstage
 addHook("BossThinker", function(mo)
 	if (not TAKIS_NET.inbossmap)
-	and (mapheaderinfo[gamemap].muspostbossname ~= '')
+	and (mapheaderinfo[gamemap].muspostbossname)
 		TAKIS_NET.inbossmap = true
+		print("ASD")
 	end
 	
 end)

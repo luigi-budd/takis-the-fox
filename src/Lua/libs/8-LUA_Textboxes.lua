@@ -539,16 +539,19 @@ hud.add(function(v, player)
     end
 end)
 
+
+local takisport = {TAKIS_SKIN, SPR2_STND, A, 8}
 local takisname = "\x83Takis"
 local takisvox = {sfx_s_tak1,sfx_s_tak2,sfx_s_tak3}
 local takischance = FU/3
+local takiscolor = SKINCOLOR_FOREST
 
 rawset(_G,"TAKIS_TEXTBOXES",{
 	shotgun = {
 		[1] = { 
 			name = takisname,
-			portrait = {TAKIS_SKIN, SPR2_STND, A, 8},
-			color = SKINCOLOR_FOREST,
+			portrait = takisport,
+			color = takiscolor,
 			text = "This is the shotgun tutorial! Handling a shotgun is not very hard, and this tutorial won't be either!",
 			sound = takisvox,
 			soundchance = takischance,
@@ -558,8 +561,8 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		},
 		[2] = { 
 			name = takisname,
-			portrait = {TAKIS_SKIN, SPR2_STND, A, 8},
-			color = SKINCOLOR_FOREST,
+			portrait = takisport,
+			color = takiscolor,
 			text = "I will get a new moveset, completely different from what you're used to! "
 			.."Clutching and whatnot cannot be used with the shotgun!",
 			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
@@ -570,8 +573,8 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		},
 		[3] = { 
 			name = takisname,
-			portrait = {TAKIS_SKIN, SPR2_STND, A, 8},
-			color = SKINCOLOR_FOREST,
+			portrait = takisport,
+			color = takiscolor,
 			text = "Press |esc\x82[SPIN]|esc\x80 to shoot the shotgun. The bullets can launch badniks and break spikes! "
 			.."Press |esc\x82[CUSTOM2]|esc\x80 midair to shoot the ground, and start stomping!",
 			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
@@ -581,8 +584,8 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		},
 		[4] = { 
 			name = takisname,
-			portrait = {TAKIS_SKIN, SPR2_STND, A, 8},
-			color = SKINCOLOR_FOREST,
+			portrait = takisport,
+			color = takiscolor,
 			text = "I can still slide (|esc\x82[CUSTOM2]|esc\x80) with the shotgun. "
 			.."The slide is not great for gaining speed on flat ground, so I can |esc\x83"
 			.."Shoulder Bash|esc\x80 with |esc\x82[CUSTOM1]|esc\x80 to get speed!",
@@ -593,12 +596,47 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		},
 		[5] = { 
 			name = takisname,
-			portrait = {TAKIS_SKIN, SPR2_STND, A, 8},
-			color = SKINCOLOR_FOREST,
+			portrait = takisport,
+			color = takiscolor,
 			text = "That is about it! There is nothing else for me to teach you. Get blastin'!",
 			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
 			soundchance = takischance,
 			delay = 2*TICRATE,
+			next = 0
+		},
+	},
+	shotgunnotif = {
+		[1] = { 
+			name = takisname,
+			portrait = takisport,
+			color = takiscolor,
+			text = "In |esc\x89Ultimate Mode|esc\x80, a Shotgun Monitor will spawn besides me.",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = 2*TICRATE,
+			script = function() end,
+			next = 2
+		},
+		[2] = { 
+			name = takisname,
+			portrait = takisport,
+			color = takiscolor,
+			text = "Finishing a level with the Shotgun will award |esc\x82".."80000|esc\x80 bonus points.",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = 2*TICRATE,
+			script = function() end,
+			next = 3
+		},
+		[3] = { 
+			name = takisname,
+			portrait = takisport,
+			color = takiscolor,
+			text = "The shotgun doesn't provide an extra hit! Try not to be careless, or else I will face the consequences!",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = 2*TICRATE,
+			script = function() end,
 			next = 0
 		},
 	},

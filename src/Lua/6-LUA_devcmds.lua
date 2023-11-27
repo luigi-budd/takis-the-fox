@@ -45,9 +45,32 @@ COM_AddCommand("setrank", function(p,rank)
 	end
 	
 	
-	local per = (PTSR.maxrankpoints)/6
+	local pec = (PTSR.maxrankpoints)/6
+	if rank == "D"
+		p.score = 0
+	elseif rank == "C" then
+		p.score = pec*2
+		
+	elseif rank == "B" then
+		p.score = pec*4
+	elseif rank == "A" then
+		p.score = pec*8
+	elseif rank == "S" then
+		p.score = pec*13
+	else
+		/*
+		if player.timeshit then
+			player.ptsr_rank = "S"
+		else
+			player.ptsr_rank = "P"
+		end
+		*/
+		
+		player.ptsr_rank = "P"
+	end
 	
-	p.score = per*(ranktonum[rank]-1)
+
+	
 end,COM_ADMIN)
 
 COM_AddCommand("sethp", function(p,type,amt)

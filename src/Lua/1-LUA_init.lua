@@ -848,6 +848,7 @@ SafeFreeslot("SPR_CMBB")
 SafeFreeslot("SPR_TNDE")
 SafeFreeslot("SPR_RGDA") --ragdoll A
 SafeFreeslot("SPR_THND")
+SafeFreeslot("SPR_TVSG")
 
 --
 
@@ -1089,7 +1090,7 @@ states[S_TAKIS_HEARTCARD_SPIN] = {
 --server sustainability comes first!
 freeslot("MT_TAKIS_HEARTCARD")
 mobjinfo[MT_TAKIS_HEARTCARD] = {
-	doomednum = 3001,
+	doomednum = 3003,
 	spawnstate = S_TAKIS_HEARTCARD_SPIN,
 	spawnhealth = 1000,
 	height = 50*FU,
@@ -1187,8 +1188,8 @@ mobjinfo[MT_TAKIS_DEADBODY] = {
 	spawnstate = S_NULL,
 	--mt_playuer
 	flags = MF_NOCLIP|MF_SLIDEME|MF_NOCLIPTHING|MF_NOGRAVITY,
-	height = 5*FU,
-	radius = 5*FU,
+	height = 16*FU,
+	radius = 26*FU,
 }
 
 freeslot("MT_TAKIS_SHOTGUN")
@@ -1217,6 +1218,78 @@ mobjinfo[MT_TAKIS_BADNIK_RAGDOLL_A] = {
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING|MF_NOGRAVITY,
 	height = 5*FU,
 	radius = 5*FU,
+}
+
+function A_ShotgunBox(mo)
+	local gun = P_SpawnMobjFromMobj(mo,0,0,0,MT_TAKIS_SHOTGUN)
+	gun.dropped = true
+	local oldscale = gun.scale
+	gun.scale = $/20
+	P_SetObjectMomZ(gun,4*FU)
+	gun.destscale = oldscale
+	
+	if mo.info.seesound
+		local g = P_SpawnGhostMobj(mo)
+		g.tics = -1
+		g.flags2 = $|MF2_DONTDRAW
+		g.fuse = TR
+		S_StartSound(g,mo.info.seesound)
+	end
+	
+end
+
+freeslot("S_SHOTGUN_BOX")
+states[S_SHOTGUN_BOX] = {
+	sprite = SPR_TVSG,
+	frame = A,
+	tics = 2,
+	nextstate = S_BOX_FLICKER
+}
+freeslot("S_SHOTGUN_ICON1")
+freeslot("S_SHOTGUN_ICON2")
+states[S_SHOTGUN_ICON1] = {
+	sprite = SPR_TVSG,
+	frame = FF_ANIMATE|C,
+	tics = 18,
+	var1 = 3,
+	var2 = 4,
+	nextstate = S_SHOTGUN_ICON2
+}
+states[S_SHOTGUN_ICON2] = {
+	sprite = SPR_TVSG,
+	frame = C,
+	tics = 18,
+	action = A_ShotgunBox,
+	nextstate = S_NULL
+}
+
+freeslot("MT_SHOTGUN_BOX")
+freeslot("MT_SHOTGUN_ICON")
+mobjinfo[MT_SHOTGUN_BOX] = {
+	doomednum = 3002,
+	spawnstate = S_SHOTGUN_BOX,
+	painstate = S_SHOTGUN_BOX,
+	deathstate = S_BOX_POP1,
+	deathsound = sfx_pop,
+	reactiontime = 8,
+	speed = 1,
+	damage = MT_SHOTGUN_ICON,
+	mass = 100,
+	flags = MF_SOLID|MF_SHOOTABLE|MF_MONITOR,
+	height = 40*FU,
+	radius = 18*FU,
+}
+mobjinfo[MT_SHOTGUN_ICON] = {
+	doomednum = -1,
+	spawnstate = S_SHOTGUN_ICON1,
+	seesound = sfx_ncitem,
+	reactiontime = 10,
+	speed = 2*FU,
+	damage = 62*FU,
+	mass = 100,
+	flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY|MF_NOGRAVITY|MF_BOXICON,
+	height = 14*FU,
+	radius = 8*FU,
 }
 
 /*
