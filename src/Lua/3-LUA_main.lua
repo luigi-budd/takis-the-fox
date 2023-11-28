@@ -110,11 +110,11 @@
 	-redo walk 4th angle
 	
 	--PLANNED MAPHEADERS
-	-Takis_HH_Music - regular happyhour mus, ignore styles
-	-Takis_HH_EndMusic - ending happyhour mus, ignore styles
-	-Takis_HH_NoMusic - disable happyhour mus
-	-Takis_HH_NoEndMusic - disable happyhour end mus
-	-Takis_HH_Timelimit - timelimit (in tics)
+	-[done]Takis_HH_Music - regular happyhour mus, ignore styles
+	-[done]Takis_HH_EndMusic - ending happyhour mus, ignore styles
+	-[done]Takis_HH_NoMusic - disable happyhour mus
+	-[done]Takis_HH_NoEndMusic - disable happyhour end mus
+	-[done]Takis_HH_Timelimit - timelimit (in tics)
 	
 	
 */
@@ -1279,7 +1279,7 @@ addHook("PlayerThink", function(p)
 						end
 						DoQuake(p,FU*37,20)
 						
-						if not (G_RingSlingerGametype())
+						if not (G_RingSlingerGametype() or TAKIS_NET.hammerquakes == false)
 							--KILL!
 							local rad = takis.lastmomz
 							local px = me.x
@@ -3082,10 +3082,8 @@ addHook("MobjDeath", function(mo,_,_,dmgt)
 		mo.player.takistable.HUD.heartcards.shake = $+TAKIS_HEARTCARDS_SHAKETIME
 	end
 	
-	print(dmgt)
 	mo.player.takistable.combo.time = 0
 	mo.player.takistable.saveddmgt = dmgt
-	print(mo.player.takistable.saveddmgt)
 	
 	if (mo.eflags & MFE_UNDERWATER)
 		mo.player.takistable.saveddmgt = DMG_DROWNED

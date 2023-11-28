@@ -177,6 +177,7 @@ rawset(_G, "TAKIS_NET", {
 	noachs = false, --dont let players get achs in netgames
 	collaterals = true, --let ragdolls kill other ragdolls
 	cards = true, --only spawn heartcards if this is true
+	hammerquakes = true,
 	
 	numdestroyables = 0,
 	partdestroy = 0,
@@ -206,6 +207,11 @@ rawset(_G, "TAKIS_NET", {
 	},
 	
 })
+local netsynchlist = {}
+for k,v in ipairs(TAKIS_NET)
+	netsynchlist[k] = v
+end
+
 rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
 
 freeslot("MT_TAKIS_TAUNT_HITBOX")
@@ -1306,7 +1312,11 @@ mobjinfo[MT_TAKIS_SHOTGUN_HITBOX] = {
 
 
 addHook("NetVars",function(n)
-	TAKIS_NET = n($)
+	--TAKIS_NET = n($)
+	for k,v in ipairs(netsynchlist)
+		HAPPY_HOUR[k] = n($)
+	end
+	
 	TAKIS_MAX_HEARTCARDS = n($)
 	--TAKIS_DEBUGFLAG = n($)
 	SPIKE_LIST = n($)

@@ -550,9 +550,12 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 	
 	if (HAPPY_HOUR.happyhour)
 	and dohhmus
-	
 		
-		local song = "hapyhr"
+		local nomus = string.lower(mapheaderinfo[gamemap].takis_hh_nomusic) == "true"
+		local noendmus = string.lower(mapheaderinfo[gamemap].takis_hh_noendmusic) == "true"
+		
+		local song = tostring(mapheaderinfo[gamemap].takis_hh_music) or "hapyhr"
+		local songend = tostring(mapheaderinfo[sgamemap].takis_hh_endmusic) or "hpyhre"
 		
 		local pizzatime = HAPPY_HOUR.happyhour
 		newname = string.lower(newname)
@@ -580,17 +583,20 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 			end
 			
 			if changetohappy
+				
+				if nomus then return end
+				
 				if oldname ~= song
 					return ReturnTakisMusic(song,consoleplayer),mflags,looping,pos,prefade,fade
 				end
 			
 			else
-				if oldname ~= "hpyhre"
-					return ReturnTakisMusic("hpyhre",consoleplayer),mflags,looping,pos,prefade,fade
+				if noendmus then return end
+				
+				if oldname ~= songend
+					return ReturnTakisMusic(songend,consoleplayer),mflags,looping,pos,prefade,fade
 				end
 			end
-			
-			return true
 		end
 		
 	else
@@ -859,8 +865,9 @@ addHook("MobjDeath",function(gun,i,s)
 		and (s.player and s.player.valid)
 			if (s.skin == TAKIS_SKIN)
 				TakisShotgunify(s.player)
+				TakisGiveCombo(s.player,s.player.takistable,false,true)
 			else
-				gunragdoll(gun,i)
+				gunragdoll(gun,s)
 			end
 		end
 	end

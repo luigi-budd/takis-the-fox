@@ -1,6 +1,8 @@
 if not (rawget(_G, "customhud")) return end
 local modname = "takisthefox"
 
+--if TAKIS_ISDEBUG then return end
+
 --HEALTH----------
 
 local function drawheartcards(v,p)
@@ -444,6 +446,7 @@ local function drawtimer(v,p)
 		extra = " (SUCKS)"
 	end
 	
+	/*
 	if p.spectator
 		timex, timey = unpack(takis.HUD.timer.spectator)
 	elseif ( ((p.pflags & PF_FINISHED) and (netgame))
@@ -452,6 +455,8 @@ local function drawtimer(v,p)
 	and not p.exiting
 		timex, timey = unpack(takis.HUD.timer.finished)
 	end
+	*/
+	
 	v.drawString(timex, timey, hours..extrac..minutes..":"..spad..seconds.."."..tictrn..tpad,V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER|flashflag,"thin-right")		v.drawString(timetx, timey, "Time"..extra,V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER|flashflag,"thin")
 	if extrastring ~= ''
 		v.drawString(timetx, timey+8, extratext,V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER|flashflag,"thin")			
@@ -1078,10 +1083,12 @@ local function drawcombostuff(v,p)
 		local combonum = takis.combo.count
 		if (takis.combo.outrotics) then combonum = takis.combo.failcount end
 		
+		/*
 		if ((p.pflags & PF_FINISHED) and (netgame))
 		and not p.exiting
 			backy = $+(20*FU)
 		end
+		*/
 		
 		local max = TAKIS_MAX_COMBOTIME*FU or 1
 		local erm = FixedDiv((takis.HUD.combo.fillnum),max)
@@ -1296,6 +1303,8 @@ local function drawhappyhour(v,p)
 	
 	if (HAPPY_HOUR.time) and (HAPPY_HOUR.time <= 5*TR)
 	and not (dontdo)
+	
+		local date = os.date("*t", 906000490)
 		
 		local tics = HAPPY_HOUR.time
 
@@ -1327,9 +1336,14 @@ local function drawhappyhour(v,p)
 				V_SNAPTOTOP|V_HUDTRANS
 			)
 			
+			local happy = h.happy.patch
+			if date.hour == 6 or date.hour == 18
+				happy = "TAHY_SAD"
+			end
+			
 			shakex,shakey = happyshakelol(v)
 			v.drawScaled(h.happy.x+shakex, y+h.happy.yadd+shakey, h.happy.scale,
-				pa(h.happy.patch..h.happy.frame),
+				pa(happy..h.happy.frame),
 				V_SNAPTOTOP|V_HUDTRANS
 			)
 			
@@ -2712,6 +2726,7 @@ customhud.SetupItem("takis_cfgnotifs", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_bonuses", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_crosshair", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_happyhourtime", 	modname/*,	,	"game",	10*/)
+customhud.SetupItem("textspectator", 	modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
 
 addHook("HUD", function(v,p,cam)
@@ -2755,6 +2770,7 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("takis_bonuses", 		modname)
 			customhud.SetupItem("takis_crosshair", 		modname)
 			customhud.SetupItem("takis_happyhourtime", 	modname)
+			customhud.SetupItem("textspectator", 		modname)
 		
 			if takis.io.nohappyhour == 0
 				customhud.SetupItem("PTSR_itspizzatime",modname)
@@ -2864,6 +2880,7 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("PTSR_bar","spicerunners")
 			customhud.SetupItem("PTSR_tooltips","spicerunners")
 			customhud.SetupItem("PTSR_rank", "spicerunners")
+			customhud.SetupItem("textspectator",altmodname)
 			--customhud.SetupItem("rank", "pizzatime2.0")
 			
 			--elfilin stuff

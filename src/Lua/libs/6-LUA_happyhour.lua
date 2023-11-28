@@ -274,7 +274,8 @@ addHook("MobjCollide",function(trig,mo)
 			return true
 		end
 		
-		HH_Trigger(trig,3*60*TR)
+		local tl = tonumber(mapheaderinfo[gamemap].takis_hh_timelimit)*TR or 3*60*TR
+		HH_Trigger(trig,tl)
 		S_StartSound(trig,trig.info.deathsound)
 		trig.state = trig.info.deathstate
 		trig.spritexscaleadd = 2*FU

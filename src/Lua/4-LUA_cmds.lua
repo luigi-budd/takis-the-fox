@@ -278,33 +278,8 @@ COM_AddCommand("takis_openmenu", function(p)
 	if not takis
 		return
 	end
+	TakisMenuOpenClose(p)
 	
-	if takis.cosmenu.menuinaction
-		takis.cosmenu.menuinaction = false
-		--no need to hide it if we're drawing over it, right?
-		/*
-		customhud.enable("score")
-		customhud.enable("time")
-		customhud.enable("rings")
-		customhud.enable("lives")
-		*/
-		takis.HUD.showingletter = false
-		P_RestoreMusic(p)
-		p.pflags = $ &~PF_FORCESTRAFE		
-		return
-	end
-	
-	if takis.otherskin
-		--no need to hide it if we're drawing over it, right?
-		/*
-		customhud.disable("score")
-		customhud.disable("time")
-		customhud.disable("rings")
-		customhud.disable("lives")
-		*/
-	end
-	
-	takis.cosmenu.menuinaction = true
 end)
 COM_AddCommand("takis_additiveafterimages", function(p)
 	if gamestate ~= GS_LEVEL

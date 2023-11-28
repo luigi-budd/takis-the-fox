@@ -31,6 +31,12 @@ CV_TAKIS.heartcards = CV_RegisterVar({
 	flags = CV_NETVAR,
 	PossibleValue = CV_TrueFalse
 })
+CV_TAKIS.hammerquake = CV_RegisterVar({
+	name = "takis_hammerquakes",
+	defaultvalue = "true",
+	flags = CV_NETVAR,
+	PossibleValue = CV_TrueFalse
+})
 
 local boolean = {
 	["false"] = false,
@@ -42,6 +48,7 @@ local function CVtoNET()
 	t.noachs = not boolean[string.lower(CV_TAKIS.achs.string)]
 	t.collaterals = boolean[string.lower(CV_TAKIS.collaterals.string)]
 	t.cards = boolean[string.lower(CV_TAKIS.heartcards.string)]
+	t.hammerquakes = boolean[string.lower(CV_TAKIS.hammerquake.string)]
 end
 
 local function livesCount()
@@ -75,14 +82,14 @@ local function livesCount()
 end
 
 addHook("MapChange", function(mapid)
-	TAKIS_MAX_HEARTCARDS = 6
+	TakisChangeHeartCards(6)
 	if (mapheaderinfo[mapid].takis_maxheartcards)
 		if (tonumber(mapheaderinfo[mapid].takis_maxheartcards) > 0)
-			TAKIS_MAX_HEARTCARDS = tonumber(mapheaderinfo[mapid].takis_maxheartcards)
+			TakisChangeHeartCards(tonumber(mapheaderinfo[mapid].takis_maxheartcards))
 		end
 	end
 	if ultimatemode
-		TAKIS_MAX_HEARTCARDS = 1
+		TakisChangeHeartCards(1)
 	end
 	
 	t.ideyadrones = {}
@@ -198,11 +205,11 @@ addHook("ThinkFrame", do
 	
 	if (ultimatemode)
 		if TAKIS_MAX_HEARTCARDS ~= 1
-			TAKIS_MAX_HEARTCARDS = 1
+			TakisChangeHeartCards(1)
 		end
 	else
 		if TAKIS_MAX_HEARTCARDS < 1
-			TAKIS_MAX_HEARTCARDS = 6
+			TakisChangeHeartCards(6)
 		end
 	end
 	

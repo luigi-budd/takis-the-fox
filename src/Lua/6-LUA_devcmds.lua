@@ -216,7 +216,7 @@ COM_AddCommand("setdebug", function(p,...)
 		end
 	end
 	
-end)
+end,COM_LOCAL)
 
 COM_AddCommand("panic", function(p,tics,flags)
 	if gamestate ~= GS_LEVEL
@@ -351,7 +351,7 @@ COM_AddCommand("setmaxhp",function(p,amt)
 			CONS_Printf(p,"You do this you die")
 			return
 		end
-		TAKIS_MAX_HEARTCARDS = amt
+		TakisChangeHeartCards(amt)
 	end
 end,COM_ADMIN)
 

@@ -33,3 +33,5 @@ dsjump = dsantjum
 dsskid = dstakskd
 dsaltdi3 = dstkapow
 dsaltdi4 = dstakoww
+
+shieldscale = 1.4

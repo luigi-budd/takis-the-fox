@@ -2680,12 +2680,7 @@ rawset(_G,"TakisMenuThinker",function(p)
 	
 	if p.spectator
 	or not (me and me.valid)
-		menu.menuinaction = false
-		takis.HUD.showingletter = false
-		if not (takis.shotgunned)
-			P_RestoreMusic(p)
-		end
-		p.pflags = $ &~PF_FORCESTRAFE		
+		TakisMenuOpenClose(p)
 		return
 	end
 	
@@ -2693,10 +2688,7 @@ rawset(_G,"TakisMenuThinker",function(p)
 	p.pflags = $ |PF_FULLSTASIS|PF_FORCESTRAFE
 	
 	if (p.cmd.buttons & BT_CUSTOM1)
-		menu.menuinaction = false
-		takis.HUD.showingletter = false
-		P_RestoreMusic(p)
-		p.pflags = $ &~PF_FORCESTRAFE
+		TakisMenuOpenClose(p)
 		return
 	end
 	
@@ -3029,6 +3021,38 @@ rawset(_G,"SpawnBam",function(mo)
 	local bam = P_SpawnMobjFromMobj(mo,0,0,0,MT_TNTDUST)
 	bam.state = mobjinfo[MT_MINECART].deathstate 
 	return bam
+end)
+
+rawset(_G,"TakisChangeHeartCards",function(amt)
+	if amt == nil then return end
+	if not tonumber(amt) then return end
+	amt = abs($)
+	
+	local oldcards = TAKIS_MAX_HEARTCARDS
+	TAKIS_MAX_HEARTCARDS = amt
+	for p in players.iterate
+		if skins[p.skin].name ~= TAKIS_SKIN then continue end
+		if not p.takistable then return end
+		local takis = p.takistable
+		
+		if takis.heartcards ~= oldcards then continue end
+		
+		takis.heartcards = TAKIS_MAX_HEARTCARDS
+	end
+end)
+
+rawset(_G,"TakisMenuOpenClose",function(p)
+	local takis = p.takistable
+	if not takis then return end
+	if takis.cosmenu.menuinaction
+		takis.cosmenu.menuinaction = false
+		takis.HUD.showingletter = false
+		P_RestoreMusic(p)
+		p.pflags = $ &~PF_FORCESTRAFE		
+		return
+	end
+	
+	takis.cosmenu.menuinaction = true
 end)
 
 filesdone = $+1

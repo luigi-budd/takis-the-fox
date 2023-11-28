@@ -105,9 +105,10 @@ tm.entries = {
 		text = {
 			"Nerf Armas",
 			"Tauntkills",
-			"Achievements",
+			"No achievements",
 			"Ragdoll collaterals",
 			"Heartcards",
+			"Hammer quakes",
 		},
 		values = {
 			"nerfarma",
@@ -115,6 +116,7 @@ tm.entries = {
 			"noachs",
 			"collaterals",
 			"cards",
+			"hammerquakes",
 		},
 		--must be consvar_t, must be on/off, yes/no, true/false
 		cvars = {
@@ -123,13 +125,15 @@ tm.entries = {
 			CV_TAKIS.achs,
 			CV_TAKIS.collaterals,
 			CV_TAKIS.heartcards,
+			CV_TAKIS.hammerquake,
 		},
 		hints = {
 			"Toggles Powerful Arma & normal Arma for Takis.",
 			"Toggles tauntkills for Takis.",
 			"Toggles Takis being able to get achievements.",
 			"Toggles ragdolls being able to kill other things.",
-			"Toggles things dropping Heart Cards on death."
+			"Toggles things dropping Heart Cards on death.",
+			"Toggles Takis' Hammer Blast causing quakes when landing."
 		}
 	},
 }
