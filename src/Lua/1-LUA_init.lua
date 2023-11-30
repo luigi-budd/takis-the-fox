@@ -40,6 +40,7 @@ local dbgflags = {
 	"BLOCKMAP",
 	"DEATH",
 	"SPEEDOMETER",
+	"TRANSFO",
 }
 for k,v in ipairs(dbgflags)
 	rawset(_G,"DEBUG_"..v,1<<(k-1))
@@ -154,6 +155,16 @@ end
 --anything that uses spin
 rawset(_G,"NOABIL_SPIN",NOABIL_CLUTCH|NOABIL_HAMMER|NOABIL_SHOTGUN|NOABIL_WAVEDASH)
 
+local transfoenum = {
+	"SHOTGUN",
+	"FIREASS",
+	"PANCAKE",
+	"BALL",
+}
+for k,v in ipairs(transfoenum)
+	rawset(_G,"TRANSFO_"..v,1<<(k-1))
+	print("Enummed TRANSFO_"..v.." ("..1<<(k-1)..")")
+end
 
 --spike stuff according tro source
 -- https://github.com/STJr/SRB2/blob/a4a3b5b0944720a536a94c9d471b64c822cdac61/src/p_map.c#L838
@@ -246,6 +257,8 @@ rawset(_G, "TakisInitTable", function(p)
 		weaponmasktime = 0,
 		weaponnext = 0,
 		weaponprev = 0,
+		
+		transfo = 0,
 		
 		--vars
 		accspeed = 0,
@@ -900,7 +913,7 @@ states[S_PLAY_TAKIS_SHOULDERBASH_JUMP] = {
 freeslot("S_PLAY_TAKIS_SHOTGUNSTOMP")
 states[S_PLAY_TAKIS_SHOTGUNSTOMP] = {
     sprite = SPR_PLAY,
-    frame = SPR2_PLHD, --SPR2_SGST,
+    frame = A|FF_ANIMATE|SPR2_SGST,
     tics = -1,
     nextstate = S_PLAY_STND
 }

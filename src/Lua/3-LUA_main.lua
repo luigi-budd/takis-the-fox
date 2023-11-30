@@ -640,6 +640,8 @@ addHook("PlayerThink", function(p)
 					and not (takis.tossflag)
 					and not takis.bashtime
 					and not (takis.inPain or takis.inFakePain)
+					and not (takis.hammerblastdown)
+					and (me.state ~= S_PLAY_TAKIS_SLIDE)
 					and not (takis.noability & NOABIL_SHOTGUN)
 						local ang = (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
 						p.drawangle = ang
@@ -1544,8 +1546,6 @@ addHook("PlayerThink", function(p)
 						P_SpawnSkidDust(p,3*me.scale+( FixedMul(takis.accspeed-(10*FU),me.scale)*3/5 ))
 					end
 					P_ButteredSlope(me)
-					--AGAIN !!
-					P_ButteredSlope(me)
 					takis.clutchingtime = $-2
 					takis.noability = $|NOABIL_SHOTGUN
 				end
@@ -2127,6 +2127,14 @@ addHook("PlayerThink", function(p)
 			end
 		end
 		
+		--holding FN, C3, C1 open menu
+		if (takis.firenormal >= TR)
+		and (takis.c3 >= TR)
+		and (takis.c2 >= TR)
+		and not (takis.cosmenu.menuinaction)
+			TakisMenuOpenClose(p)
+		end
+		
 		takis.combo.lastcount = takis.combo.count
 		takis.lastmap = gamemap
 		takis.lastgt = gametype
@@ -2407,7 +2415,6 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		TakisGiveCombo(p,takis,false,false,true)
 	end
 	
-	--DIE.
 	if takis.heartcards > 0
 	and (p.powers[pw_shield] == SH_NONE)
 		TakisResetHammerTime(p)

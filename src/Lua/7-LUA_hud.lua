@@ -782,9 +782,9 @@ local function drawlivesarea(v,p)
 		disp = $-20
 	end
 	
-	if (takis.shotgunned)
+	if (takis.transfo)
 		v.drawScaled(hudinfo[HUD_LIVES].x*FU, (hudinfo[HUD_LIVES].y+disp)*FU, (FU/2)+(FU/12), v.cachePatch("TB_C3"), V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS)
-		v.drawString(hudinfo[HUD_LIVES].x+20, hudinfo[HUD_LIVES].y+(disp+5), "Un-Shotgun",V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS, "thin")	
+		v.drawString(hudinfo[HUD_LIVES].x+20, hudinfo[HUD_LIVES].y+(disp+5), "De-Transfo",V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS, "thin")	
 		disp = $-20
 	end
 	
@@ -2338,26 +2338,33 @@ local function DrawMiniButton(v, player, x, y, flags, color, butt, symb, strngty
 	)
 end
 
-		local getpstate = {
-			[0] = "PST_LIVE",
-			[1] = "PST_DEAD",
-			[2] = "PST_REBORN",
-		}
-		local getdmg = {
-			[0] = "None",
-			[1] = "DMG_WATER",
-			[2] = "DMG_FIRE",
-			[3] = "DMG_ELECTRIC",
-			[4] = "DMG_SPIKE",
-			[5] = "DMG_NUKE",
-			[128] = "DMG_INSTAKILL",
-			[129] = "DMG_DROWNED",
-			[130] = "DMG_SPACEDROWN",
-			[131] = "DMG_DEATHPIT",
-			[132] = "DMG_CRUSHED",
-			[133] = "DMG_SPECTATOR",
-		}
-		
+local getpstate = {
+	[0] = "PST_LIVE",
+	[1] = "PST_DEAD",
+	[2] = "PST_REBORN",
+}
+local getdmg = {
+	[0] = "None",
+	[1] = "DMG_WATER",
+	[2] = "DMG_FIRE",
+	[3] = "DMG_ELECTRIC",
+	[4] = "DMG_SPIKE",
+	[5] = "DMG_NUKE",
+	[128] = "DMG_INSTAKILL",
+	[129] = "DMG_DROWNED",
+	[130] = "DMG_SPACEDROWN",
+	[131] = "DMG_DEATHPIT",
+	[132] = "DMG_CRUSHED",
+	[133] = "DMG_SPECTATOR",
+}
+local gettransfo = {
+	[0] = "None",
+	[TRANSFO_SHOTGUN] = "TRANSFO_SHOTGUN",
+	[TRANSFO_FIREASS] = "TRANSFO_FIREASS",
+	[TRANSFO_PANCAKE] = "TRANSFO_PANCAKE",
+	[TRANSFO_BALL] = "TRANSFO_BALL",
+	
+}
 
 local function drawflag(v,x,y,string,flags,onmap,offmap,align,flag)
 	local map = offmap
@@ -2702,6 +2709,11 @@ local function drawdebug(v,p)
 			"thin-fixed"
 		)
 	end
+	if (TAKIS_DEBUGFLAG & DEBUG_TRANSFO)
+		local transfo = gettransfo[takis.transfo]
+		
+		v.drawString(100,92,"Transfo: "..transfo,V_ALLOWLOWERCASE,"thin")
+	end
 end
 
 --draw the stuff
@@ -2992,8 +3004,8 @@ addHook("HUD", function(v,p,cam)
 				trans = (10-takis.HUD.menutext.tics)<<V_ALPHASHIFT
 			end
 			
+			v.drawString(160,200-16,"\x86".."FN+C3+C2 (hold)\x80 - Open Menu",trans|V_ALLOWLOWERCASE|V_SNAPTOBOTTOM,"thin-center")
 			v.drawString(160,200-8,"\x86takis_openmenu\x80 - Open Menu",trans|V_ALLOWLOWERCASE|V_SNAPTOBOTTOM,"thin-center")
-			takis.HUD.menutext.tics = $-1
 		end
 	
 		drawdebug(v,p)

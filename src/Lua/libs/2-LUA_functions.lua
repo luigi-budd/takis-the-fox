@@ -268,6 +268,10 @@ rawset(_G, "TakisHUDStuff", function(p)
 	local hud = takis.HUD
 	local me = p.realmo
 	
+	if hud.menutext.tics
+		hud.menutext.tics = $-1
+	end
+	
 	if hud.cfgnotifstuff
 		if takis.c3 then hud.cfgnotifstuff = 1 end
 		hud.cfgnotifstuff = $-1
@@ -552,6 +556,68 @@ rawset(_G, "TakisHUDStuff", function(p)
 
 end)
 
+-- thinkers for each transfo
+rawset(_G, "TakisTransfoHandle", function(p,me,takis)
+	if (takis.transfo == TRANSFO_BALL)
+		if me.state ~= S_PLAY_ROLL
+			S_StartSound(me,sfx_shgnk)
+			takis.transfo = 0
+		else
+			takis.afterimaging = false
+			takis.clutchingtime = 0
+			takis.noability = $|NOABIL_SLIDE
+			P_ButteredSlope(me)
+			P_ButteredSlope(me)
+			if (takis.onGround)
+				p.thrustfactor = skins[TAKIS_SKIN].thrustfactor*4
+				takis.dustspawnwait = $+FixedDiv(takis.accspeed,64*FU)
+				while takis.dustspawnwait > FU
+					takis.dustspawnwait = $-FU
+					--xmom code
+					if (takis.onGround)
+					and not (takis.clutchingtime % 10)
+					and (takis.accspeed >= 45*FU)
+						local d1 = P_SpawnMobjFromMobj(me, -20*cos(p.drawangle + ANGLE_45), -20*sin(p.drawangle + ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
+						local d2 = P_SpawnMobjFromMobj(me, -20*cos(p.drawangle - ANGLE_45), -20*sin(p.drawangle - ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
+						--d1.scale = $*2/3
+						d1.destscale = FU/10
+						d1.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d1.x, d1.y) --- ANG5
+
+						--d2.scale = $*2/3
+						d2.destscale = FU/10
+						d2.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d2.x, d2.y) --+ ANG5
+					end
+				end
+			else
+				p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
+			end
+			
+			if (takis.c3)
+				P_DoJump(p,true)
+				S_StartSound(me,sfx_shgnk)
+				takis.transfo = 0
+			end
+		end
+	end
+	
+end)
+
+rawset(_G, "TakisTransfo", function(p,me,takis)
+	if (me.standingslope)
+		if ((me.prevz - me.z)*takis.gravflip >= 7*me.scale)
+		and (me.state == S_PLAY_TAKIS_SLIDE)
+		and (p.pflags & PF_SPINNING)
+		and (takis.transfo ~= TRANSFO_BALL)
+		and (takis.c2)
+		and (takis.accspeed >= 35*FU)
+			me.state = S_PLAY_ROLL
+			takis.transfo = TRANSFO_BALL
+		end
+	end
+	
+	TakisTransfoHandle(p,me,takis)
+end)
+
 rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	TakisHUDStuff(p)
@@ -590,6 +656,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.thokked = false
 		takis.inFakePain = false
 	end
+	
+	TakisTransfo(p,me,takis)
 	
 	takis.attracttarg = nil
 	local t = P_LookForEnemies(p,true,false)
@@ -2981,6 +3049,13 @@ rawset(_G, "TakisShotgunify", function(p)
 		return
 	end
 	
+	if (takis.transfo ~= 0)
+		S_StartSound(me,sfx_shgnk)
+		takis.transfo = 0
+		P_MovePlayer(p)
+	end
+	
+	takis.transfo = TRANSFO_SHOTGUN
 	takis.shotgunned = true
 	ChangeTakisMusic("war",true,p)
 	S_StartSound(nil,sfx_shgnl,p)
@@ -3011,6 +3086,7 @@ rawset(_G, "TakisDeShotgunify", function(p)
 	end
 	takis.shotgun = 0
 	takis.shotgunned = false
+	takis.transfo = 0
 	if string.lower(S_MusicName()) == ReturnTakisMusic("war",p)
 		P_RestoreMusic(p)
 	end
