@@ -438,6 +438,7 @@ addHook("MobjThinker", function(sweat)
 		P_MoveOrigin(sweat, sweat.tracer.x, sweat.tracer.y, (sweat.tracer.z+sweat.tracer.height)-(45*sweat.scale))
 	end	
 	sweat.scale = sweat.tracer.scale
+	sweat.spritexscale,sweat.spriteyscale = sweat.tracer.spritexscale,sweat.tracer.spriteyscale
 end,MT_TAKIS_SWEAT)
 
 addHook("MobjThinker", function(bolt)

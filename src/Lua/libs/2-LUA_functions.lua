@@ -569,13 +569,12 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			P_ButteredSlope(me)
 			P_ButteredSlope(me)
 			if (takis.onGround)
-				p.thrustfactor = skins[TAKIS_SKIN].thrustfactor*4
+				p.thrustfactor = skins[TAKIS_SKIN].thrustfactor*6
 				takis.dustspawnwait = $+FixedDiv(takis.accspeed,64*FU)
 				while takis.dustspawnwait > FU
 					takis.dustspawnwait = $-FU
 					--xmom code
-					if (takis.onGround)
-					and not (takis.clutchingtime % 10)
+					if not (leveltime % 10)
 					and (takis.accspeed >= 45*FU)
 						local d1 = P_SpawnMobjFromMobj(me, -20*cos(p.drawangle + ANGLE_45), -20*sin(p.drawangle + ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
 						local d2 = P_SpawnMobjFromMobj(me, -20*cos(p.drawangle - ANGLE_45), -20*sin(p.drawangle - ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
@@ -598,6 +597,11 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 				takis.transfo = 0
 			end
 		end
+	elseif (takis.transfo == TRANSFO_PANCAKE)
+		if (takis.c3)
+			S_StartSound(me,sfx_shgnk)
+			takis.transfo = 0
+		end
 	end
 	
 end)
@@ -610,6 +614,7 @@ rawset(_G, "TakisTransfo", function(p,me,takis)
 		and (takis.transfo ~= TRANSFO_BALL)
 		and (takis.c2)
 		and (takis.accspeed >= 35*FU)
+			S_StartSound(me,sfx_trnsfo)
 			me.state = S_PLAY_ROLL
 			takis.transfo = TRANSFO_BALL
 		end
@@ -897,7 +902,9 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if takis.crushtime ~= 0
-		takis.crushtime = $-1
+		if (takis.transfo ~= TRANSFO_PANCAKE)
+			takis.crushtime = $-1
+		end
 	else
 		takis.timescrushed = 0
 	end

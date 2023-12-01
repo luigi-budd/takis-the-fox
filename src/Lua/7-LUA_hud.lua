@@ -783,6 +783,7 @@ local function drawlivesarea(v,p)
 	end
 	
 	if (takis.transfo)
+	and not (takis.noability & NOABIL_TRANSFO)
 		v.drawScaled(hudinfo[HUD_LIVES].x*FU, (hudinfo[HUD_LIVES].y+disp)*FU, (FU/2)+(FU/12), v.cachePatch("TB_C3"), V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS)
 		v.drawString(hudinfo[HUD_LIVES].x+20, hudinfo[HUD_LIVES].y+(disp+5), "De-Transfo",V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS, "thin")	
 		disp = $-20
@@ -2405,6 +2406,7 @@ local function drawdebug(v,p)
 		drawflag(v,x+60,y-50,"WD",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_WAVEDASH))
 		drawflag(v,x+75,y-50,"SG",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHOTGUN))
 		drawflag(v,x+90,y-50,"SH",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHIELD))
+		drawflag(v,x+105,y-50,"TR",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_TRANSFO))
 		
 		v.drawString(x,y-38,"FSTASIS",flags|V_GREENMAP,"thin")
 		v.drawString(x,y-30,takis.stasistic,flags,"thin")

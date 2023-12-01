@@ -147,6 +147,7 @@ local noabflags = {
 	"WAVEDASH",
 	"SHOTGUN",		--generally for anything shotgunned
 	"SHIELD",
+	"TRANSFO",
 }
 for k,v in ipairs(noabflags)
 	rawset(_G,"NOABIL_"..v,1<<(k-1))
@@ -847,6 +848,9 @@ SafeFreeslot("sfx_s_tak2")
 sfxinfo[sfx_s_tak2].caption = "/"
 SafeFreeslot("sfx_s_tak3")
 sfxinfo[sfx_s_tak3].caption = "/"
+
+SafeFreeslot("sfx_trnsfo")
+sfxinfo[sfx_trnsfo].caption = "/"
 
 --spr_ freeslot
 

@@ -1671,7 +1671,10 @@ addHook("PlayerThink", function(p)
 				takis.timescrushed = $+1
 				
 				if not takis.crushtime
+				and (takis.transfo ~= TRANSFO_PANCAKE)
 					S_StartSound(me,sfx_tsplat)
+					S_StartSound(me,sfx_trnsfo)
+					takis.transfo = TRANSFO_PANCAKE
 				end
 				--used to reset crushed
 				takis.crushtime = TR
@@ -1697,6 +1700,11 @@ addHook("PlayerThink", function(p)
 				TakisDeathThinker(p,me,takis)
 				if (takis.shotgunned)
 					TakisDeShotgunify(p)
+				end
+				
+				if (takis.transfo)
+					S_StartSound(me,sfx_shgnk)
+					takis.transfo = 0
 				end
 				
 				if ((takis.body) and (takis.body.valid))
@@ -2753,6 +2761,57 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 	end
 	
 end,MT_PLAYER)
+
+addHook("PlayerHeight",function(p)
+	if not p
+	or not p.valid
+		return
+	end
+	
+	if not p.takistable
+		return
+	end
+	
+	if ((p.realmo) and (p.realmo.valid))
+		local me = p.realmo
+		local takis = p.takistable
+		
+		if me.skin == TAKIS_SKIN
+			if takis.crushtime
+				local div = (takis.crushtime/8)
+				div = max(1,$)
+				return P_GetPlayerHeight(p)/div
+			end
+		end
+	end
+end)
+
+addHook("PlayerCanEnterSpinGaps",function(p)
+	if not p
+	or not p.valid
+		return
+	end
+	
+	if not p.takistable
+		return
+	end
+	
+	if ((p.realmo) and (p.realmo.valid))
+		local me = p.realmo
+		local takis = p.takistable
+		
+		if me.skin == TAKIS_SKIN
+			if takis.crushtime
+				local div = (takis.crushtime/8)
+				div = max(1,$)
+				local phigh = P_GetPlayerHeight(p)/div
+				if phigh <= P_GetPlayerSpinHeight(p)
+					return true
+				end
+			end
+		end
+	end
+end)
 
 /*
 local function KillSpike(spike, plmo)
