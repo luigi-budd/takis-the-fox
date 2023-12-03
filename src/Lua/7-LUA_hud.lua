@@ -21,6 +21,7 @@ local function drawheartcards(v,p)
 	if p.takistable.inNIGHTSMode
 	or (TAKIS_NET.inspecialstage)
 	or amiinsrbz
+	or p.takistable.hhexiting
 		return
 	end
 	
@@ -242,7 +243,7 @@ local function drawface(v,p)
 	if p.takistable.inNIGHTSMode
 	or (TAKIS_NET.inspecialstage)
 	or amiinsrbz
-
+	or p.takistable.hhexiting
 		return
 	end
 
@@ -306,6 +307,7 @@ local function drawrings(v,p)
 	if p.takistable.inNIGHTSMode
 	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
+	or p.takistable.hhexiting
 		return
 	end
 
@@ -477,6 +479,12 @@ local function drawscore(v,p)
 		return
 	end
 	
+	if (PTSR)
+		if PTSR.intermission_tics and (PTSR.intermission_tics < 324)
+			return
+		end
+	end
+	
 	local takis = p.takistable
 	
 	local xshake = takis.HUD.flyingscore.xshake
@@ -558,6 +566,7 @@ local function drawlivesarea(v,p)
 	or p.takistable.inSRBZ
 	or (p.textBoxInAction)
 	or (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
+	or p.takistable.hhexiting
 		return
 	end
 	
@@ -1419,6 +1428,8 @@ local function drawpizzatips(v,p)
 	local takis = p.takistable
 	local h = takis.HUD.ptsr
 	
+	if (takis.hhexiting) then return end
+	
 	h.xoffset = 0
 	
 	if not (HAPPY_HOUR.othergt and HAPPY_HOUR.happyhour)
@@ -1669,6 +1680,12 @@ local function drawpizzaranks(v,p)
 	
 	if gametype ~= GT_PTSPICER then return end
 	if p.pizzaface then return end
+	
+	if (PTSR)
+		if PTSR.intermission_tics and (PTSR.intermission_tics < 324)
+			return
+		end
+	end
 	
 	local takis = p.takistable
 	local h = takis.HUD.rank
@@ -2360,7 +2377,6 @@ local getdmg = {
 local gettransfo = {
 	[0] = "None",
 	[TRANSFO_SHOTGUN] = "TRANSFO_SHOTGUN",
-	[TRANSFO_FIREASS] = "TRANSFO_FIREASS",
 	[TRANSFO_PANCAKE] = "TRANSFO_PANCAKE",
 	[TRANSFO_BALL] = "TRANSFO_BALL",
 	
@@ -2405,7 +2421,6 @@ local function drawdebug(v,p)
 		drawflag(v,x+60,y-50,"WD",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_WAVEDASH))
 		drawflag(v,x+75,y-50,"SG",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHOTGUN))
 		drawflag(v,x+90,y-50,"SH",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHIELD))
-		drawflag(v,x+105,y-50,"TR",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_TRANSFO))
 		
 		v.drawString(x,y-38,"FSTASIS",flags|V_GREENMAP,"thin")
 		v.drawString(x,y-30,takis.stasistic,flags,"thin")
@@ -2710,6 +2725,7 @@ local function drawdebug(v,p)
 			"thin-fixed"
 		)
 	end
+	--todo: multi transfo
 	if (TAKIS_DEBUGFLAG & DEBUG_TRANSFO)
 		local transfo = gettransfo[takis.transfo]
 		

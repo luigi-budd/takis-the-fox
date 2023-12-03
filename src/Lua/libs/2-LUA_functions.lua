@@ -368,6 +368,24 @@ rawset(_G, "TakisHUDStuff", function(p)
 		
 	end
 	
+	if (PTSR)
+	and (HAPPY_HOUR.othergt)
+		if (PTSR.gameover)
+			
+			local tics = PTSR.intermission_tics
+			
+			if tics <= 2*TR
+				local et = 2*TR
+				hud.ptsr.yoffset = ease.inquad(( FU / et )*tics,0,200*FU)
+			else
+				if hud.ptsr.yoffset ~= 200*FU
+					hud.ptsr.yoffset = 200*FU
+				end
+			end
+			
+		end
+	end
+	
 	if HAPPY_HOUR.timelimit
 	
 		if HAPPY_HOUR.timeleft
@@ -560,8 +578,10 @@ end)
 rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 	if (takis.transfo & TRANSFO_BALL)
 		if me.state ~= S_PLAY_ROLL
+			S_StopSoundByID(me,sfx_trnsfo)
 			S_StartSound(me,sfx_shgnk)
 			takis.transfo = $ &~TRANSFO_BALL
+			p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
 		else
 			takis.afterimaging = false
 			takis.clutchingtime = 0
@@ -596,12 +616,14 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 	end
 	if (takis.transfo & TRANSFO_PANCAKE)
 		if takis.pancaketime
-			if (me.momz*takis.gravflip <= -5*me.scale)
+			if (me.momz*takis.gravflip <= 0)
+			and (takis.jump)
 			and not takis.hammerblastdown
 				me.momz = $*21/23
 			end
 			takis.pancaketime = $-1
 		else
+			S_StopSoundByID(me,sfx_trnsfo)
 			S_StartSound(me,sfx_shgnk)
 			takis.transfo = $ &~TRANSFO_PANCAKE
 		end
@@ -622,6 +644,8 @@ rawset(_G, "TakisTransfo", function(p,me,takis)
 			takis.transfo = $|TRANSFO_BALL
 		end
 	end
+	
+	--pancake is handled in pthink
 	
 	TakisTransfoHandle(p,me,takis)
 end)
@@ -927,6 +951,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if takis.accspeed >= 60*FU
 		if (me.state == S_PLAY_WALK or me.state == S_PLAY_RUN)
+		and (p.playerstate == PST_LIVE)
 			takis.goingfast = true
 			takis.wentfast = 10*TR
 		end
@@ -1286,10 +1311,21 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		me.frame = (leveltime/3%2)
 	end
 	
+	takis.hhexiting = false
 	if (PTSR)
 	and (HAPPY_HOUR.othergt)
 		if (p.lap_hold == PTSR.laphold-1)
 			TakisGiveCombo(p,takis,false,true)
+		end
+		if (PTSR.gameover)
+			takis.hhexiting = true
+			takis.noability = NOABIL_SPIN|NOABIL_SLIDE
+			
+			if not (p.pflags & PF_FINISHED)
+				p.pflags = $|PF_FINISHED
+			end
+			p.exiting = 100
+			
 		end
 	end
 	
@@ -1686,9 +1722,9 @@ rawset(_G, "TakisNoShield", function(player)
 	local f = s&SH_NOSTACK
 	local takis = player.takistable
 	local p = player
-	local me = p.mo
+	local me = p.realmo
 	
-	if not (player.mo.health)
+	if not (me.health)
 		takis.noability = $|NOABIL_SHIELD
 	end
 	
@@ -1850,7 +1886,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 	
 	if not (tm.flags & MF_BOSS)
 		if (tm.flags & MF_ENEMY)
-		or (tm.takis_flingme)
+		or (tm.takis_flingme ~= false)
 			--spawn ragdoll thing here
 			local ragdoll = P_SpawnMobjFromMobj(tm,0,0,0,MT_TAKIS_BADNIK_RAGDOLL)
 			tm.tics = -1
@@ -2135,7 +2171,7 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 		DoFlash(p,PAL_NUKE,7)
 	end
 	
-	if me.state == S_PLAY_FALL
+	if me.state == S_PLAY_PAIN
 		me.state = S_PLAY_DEAD
 	end
 	
@@ -3144,6 +3180,32 @@ rawset(_G,"TakisMenuOpenClose",function(p)
 	end
 	
 	takis.cosmenu.menuinaction = true
+end)
+
+--because im LAZY.
+rawset(_G,"GetActorZ",function(actor,targ,type)
+	if type == nil then type = 1 end
+	if not (actor and actor.valid) then return 0 end
+	if not (targ and targ.valid) then return 0 end
+	
+	local flip = P_MobjFlip(actor)
+	
+	--get z
+	if type == 1
+		if flip == 1
+			return actor.z
+		else
+			return actor.z+actor.height-targ.height
+		end
+	--get top z
+	elseif type == 2
+		if flip == 1
+			return actor.z+actor.height
+		else
+			return actor.z-targ.height
+		end
+	end
+	return 0
 end)
 
 filesdone = $+1

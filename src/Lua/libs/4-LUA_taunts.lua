@@ -108,15 +108,9 @@ local function think_bat(p)
 	local takis = p.takistable
 	
 	takis.stasistic = 2
-	if (takis.taunttime == 3*TR)
-		takis.wascolorized = me.colorized
-	else
+	if (takis.taunttime ~= 3*TR)
 		if takis.taunttime > TR
-			if (takis.taunttime % 2)
-				me.colorized = true
-			else
-				me.colorized = false
-			end
+			--
 		elseif takis.taunttime == TR
 			me.colorized = takis.wascolorized
 			S_StartSound(me,sfx_mswing)

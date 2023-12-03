@@ -69,10 +69,10 @@
 	-[scrapped]optional paperdoll over statusface
 	-[done]pw_strong?
 	-[done]still break other types of "spikes" alongside STR_SPIKE
-	-milne kick
+	-[scrapped]milne kick
 	-taunt icons
 	-ach icons
-	-move all takis.HUD editting code from LUA_hud to TakisHUDStuff
+	-[done]move all takis.HUD editting code from LUA_hud to TakisHUDStuff
 	-set takis.issuperman to random when nightserized, if true,
 	 spawn a superman cape
 	-if the Verys draw past the bottom of the screen, only draw 1 and
@@ -84,7 +84,7 @@
 	-happy hour trigger and exit objects
 	-[done??]dedicated servers may be breaking heart cards?
 	-[done]rings give too much score
-	-we may be loading other people's cfgs??
+	-[done?]we may be loading other people's cfgs??
 	-[done]offset afterimages to start at salmon
 	-sometimes shotgun shots dont give combo?
 	-[done]cap clutch boosts at 5
@@ -98,11 +98,12 @@
 	-replace hud items only when switching, like engi
 	-cosmenu scrolling if text goes past hints
 	-sometimes the PTSR bar doesnt show with nohappyhour?
-	-synch happy hour for joining players
+	-[done]synch happy hour for joining players
 	-transformations
-	-bat taunt keeps colorization if interuppted
+	-[scrapped]bat taunt keeps colorization if interuppted
 	-textspectator hud stuff
 	-shields are squished with pancake
+	-wtf is resynching & crashing servers!?? DEBUG!!!!
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -427,7 +428,7 @@ addHook("PlayerThink", function(p)
 						
 						--not too fast, now
 						if thrust >= 13*FU
-						and not (p.powers[pw_sneakers])
+						--and not (p.powers[pw_sneakers])
 							thrust = 13*FU
 						end
 						
@@ -1040,7 +1041,6 @@ addHook("PlayerThink", function(p)
 				and not (takis.tauntcanparry)
 					P_RestoreMusic(p)
 					takis.taunttime = 0
-					me.colorized = takis.wascolorized
 				end
 				
 				-- recov / recovery jump
@@ -1084,12 +1084,17 @@ addHook("PlayerThink", function(p)
 			end
 			
 			--hammer blast thinker
+			--hammerblast stuff
 			if takis.hammerblastdown
 				p.charflags = $ &~SF_RUNONWATER
 				p.powers[pw_strong] = $|(STR_SPRING|STR_HEAVY)
 				takis.noability = $|NOABIL_SHOTGUN|NOABIL_HAMMER
 				--control better
 				p.thrustfactor = $*3/2
+				
+				if (p.pflags & PF_SHIELDABILITY)
+					p.pflags = $ &~PF_SHIELDABILITY
+				end
 				
 				if (takis.shotgunned)
 					if me.state ~= S_PLAY_TAKIS_SHOTGUNSTOMP
@@ -1117,6 +1122,10 @@ addHook("PlayerThink", function(p)
 						end
 					end
 					
+				else
+					if me.state ~= S_PLAY_MELEE
+						me.state = S_PLAY_MELEE
+					end
 				end
 				
 				takis.hammerblastjumped = 0
@@ -1323,7 +1332,7 @@ addHook("PlayerThink", function(p)
 									or (found.takis_flingme ~= false)
 										if (found.flags & (MF_ENEMY|MF_BOSS))
 										or (found.flags & MF_MONITOR)
-										or (found.takis_flingme)
+										or (found.takis_flingme ~= false)
 											spawnragthing(found,me)
 										elseif (found.type == MT_PLAYER)
 											if CanPlayerHurtPlayer(p,found.player)
@@ -1715,6 +1724,7 @@ addHook("PlayerThink", function(p)
 					takis.body.rollangle = me.rollangle
 				end
 				
+				takis.goingfast = false
 				takis.wentfast = 0
 				
 				--death thinker and anims are called in 
@@ -1939,8 +1949,14 @@ addHook("PlayerThink", function(p)
 					end
 				end
 				
+				local candomusic = true
+				if (PTSR)
+					if PTSR.gameover then candomusic = false end
+				end
+				
 				if not takis.setmusic
 				and (p.pflags & PF_FINISHED)
+				and candomusic
 					ChangeTakisMusic("_ABCLR", false, p)
 					takis.setmusic = true
 					takis.yeahwait = (2*TR)+(TR/2)+5
@@ -2051,7 +2067,6 @@ addHook("PlayerThink", function(p)
 			--just switched
 			if not takis.otherskin
 				takis.otherskin = true
-				me.colorized = takis.wascolorized
 				TakisResetTauntStuff(takis,true)
 			else
 				takis.otherskintime = $+1
@@ -2280,10 +2295,10 @@ addHook("PlayerCanDamage", function(player, mobj)
 			not (takis.noability & (NOABIL_CLUTCH|NOABIL_HAMMER))
 		)
 			if L_ZCollide(me,mobj)
-			and ((mobj.flags & MF_ENEMY)
+			and (((mobj.flags & MF_ENEMY)
 			--and (mobj.type ~= MT_ROSY)
 			and (mobj.type ~= MT_SHELL))
-			or (mobj.takis_flingme ~= false)
+			or (mobj.takis_flingme ~= false))
 				
 				--prevent killing blow sound from mobjs way above/below us
 				
@@ -2433,6 +2448,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	if takis.heartcards > 0
 	and (p.powers[pw_shield] == SH_NONE)
 		TakisResetHammerTime(p)
+		--DIE
 		if takis.heartcards == 1
 			P_KillMobj(mo,inf,sor,dmgt)
 			
@@ -2468,9 +2484,10 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		if (dmgt & DMG_SPIKE)
 			S_StartSound(mo,sfx_spkdth)
 		end
+		
 		TakisHealPlayer(p,mo,takis,3)
 		p.timeshit = $+1
-				
+		
 		if inf
 		and inf.valid
 			local ang = R_PointToAngle2(mo.x,mo.y, inf.x, inf.y)
@@ -2482,6 +2499,12 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		p.pflags = $ &~(PF_THOKKED|PF_JUMPED)
 		takis.thokked = false
 		takis.dived = false
+		if (dmgt & DMG_ELECTRIC)
+			S_StartSound(mo,sfx_buzz2)
+			mo.state = S_PLAY_DEAD
+			takis.transfo = $|TRANSFO_ELEC
+			takis.electime = TR*3/2
+		end
 		return true
 	
 	end
@@ -3318,7 +3341,11 @@ addHook("MobjMoveCollide",function(tm,t)
 		and (p.pflags & PF_SPINNING)
 		and L_ZCollide(t,tm)
 			if CanPlayerHurtPlayer(p,t.player)
-				TakisAddHurtMsg(t.player,HURTMSG_SLIDE)
+				if not (takis.transfo & TRANSFO_BALL)
+					TakisAddHurtMsg(t.player,HURTMSG_SLIDE)
+				else
+					TakisAddHurtMsg(t.player,HURTMSG_BALL)
+				end
 				P_DamageMobj(t,tm,tm,10)
 				LaunchTargetFromInflictor(1,t,tm,63*tm.scale,takis.accspeed/5)
 				P_Thrust(tm,p.drawangle,5*tm.scale)
@@ -3333,10 +3360,14 @@ addHook("MobjMoveCollide",function(tm,t)
 		elseif (SPIKE_LIST[t.type] == true)
 			--we mightve ran into a spike thing
 			if t.health
-			and (p.powers[pw_strong] & STR_SPIKE)
+			and (p.powers[pw_strong] & STR_SPIKE or takis.afterimaging)
 				P_KillMobj(t,tm,tm)
 				return false
 			end
+		elseif (t.type == MT_ROSY)
+		--and (takis.afterimaging or p.pflags & PF_SPINNING)
+			print("ASDSD")
+			spawnragthing(t,tm,tm)
 		--TODO: fling solids
 		elseif (t.flags & MF_SOLID|MF_SCENERY == MF_SOLID|MF_SCENERY)
 		and not (t.flags & (MF_SPECIAL|MF_ENEMY|MF_MONITOR|MF_PUSHABLE))

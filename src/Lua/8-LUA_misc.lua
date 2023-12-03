@@ -432,11 +432,10 @@ addHook("MobjThinker", function(sweat)
 	
 	if sweat.tracer.eflags & MFE_VERTICALFLIP
 		sweat.eflags = $|MFE_VERTICALFLIP
-		P_MoveOrigin(sweat, sweat.tracer.x, sweat.tracer.y, (sweat.tracer.z + sweat.tracer.height - sweat.height)-sweat.tracer.height+(45*sweat.scale))
 	else
 		sweat.eflags = $ &~MFE_VERTICALFLIP
-		P_MoveOrigin(sweat, sweat.tracer.x, sweat.tracer.y, (sweat.tracer.z+sweat.tracer.height)-(45*sweat.scale))
 	end	
+	P_MoveOrigin(sweat, sweat.tracer.x, sweat.tracer.y, GetActorZ(sweat.tracer,sweat,1))
 	sweat.scale = sweat.tracer.scale
 	sweat.spritexscale,sweat.spriteyscale = sweat.tracer.spritexscale,sweat.tracer.spriteyscale
 end,MT_TAKIS_SWEAT)
@@ -551,7 +550,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 	
 	if (HAPPY_HOUR.happyhour)
 	and dohhmus
-		
+	
 		local nomus = string.lower(mapheaderinfo[gamemap].takis_hh_nomusic or '') == "true"
 		local noendmus = string.lower(mapheaderinfo[gamemap].takis_hh_noendmusic or '') == "true"
 		
@@ -560,17 +559,18 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		
 		song,songend = string.lower($1),string.lower($2)
 		
-		local pizzatime = HAPPY_HOUR.happyhour
 		newname = string.lower(newname)
+		
 		local isspecsong
 		isspecsong = string.sub(newname,1,1) == "_"
 		if not isspecsong
 			isspecsong = TAKIS_NET.specsongs[newname]
 		end
 		
+		oldname = string.lower($)
+		
 		--stop any lap music
-		if pizzatime 
-		and (not isspecsong)
+		if (not isspecsong)
 		
 			local changetohappy = true
 			
@@ -586,7 +586,6 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 			end
 			
 			if changetohappy
-				
 				if nomus then return end
 				
 				if oldname ~= song
@@ -600,6 +599,8 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 					return ReturnTakisMusic(songend,consoleplayer),mflags,looping,pos,prefade,fade
 				end
 			end
+			
+			return true
 		end
 		
 	else
@@ -979,8 +980,7 @@ addHook("MobjThinker",function(s)
 		local p = s.target.player
 		local takis = p.takistable
 		
-		if takis.io.flashes
-		and not (TAKIS_NET.nerfarma)
+		if not (TAKIS_NET.nerfarma)
 			/*
 			choose(AST_ADD,AST_TRANSLUCENT,AST_MODULATE
 				AST_ADD,AST_ADD,AST_TRANSLUCENT,AST_TRANSLUCENT,AST_MODULATE)
@@ -1188,7 +1188,6 @@ addHook("BossThinker", function(mo)
 	if (not TAKIS_NET.inbossmap)
 	and (mapheaderinfo[gamemap].muspostbossname)
 		TAKIS_NET.inbossmap = true
-		print("ASD")
 	end
 	
 end)
@@ -1398,11 +1397,12 @@ local function makefling(mo)
 	end
 	
 	mo.takis_flingme = true
-
+	
 end
 
 local flinglist = {
 	MT_EGGROBO1,
+	MT_ROSY,	--DIE
 }
 
 for k,type in pairs(flinglist)
@@ -1547,5 +1547,43 @@ local dontflinglist = {
 for k,type in ipairs(dontflinglist)
 	addHook("MobjSpawn",dontfling,type)
 end
+
+--shields will squish with us
+addHook("MobjThinker", function(shield)
+	if shield and shield.valid
+		if not shield.target return end
+	
+		if not (shield.flags2 & MF2_SHIELD)
+			return
+		end
+		
+		if shield.target.player
+			local p = shield.target.player
+			local takis = p.takistable
+			local me = shield.target
+			
+			if takis
+				if me.skin == TAKIS_SKIN
+					shield.stretched = true
+					shield.spritexscale,spriteyscale = me.spritexscale,me.spriteyscale
+					/*
+					if (takis.transfo & TRANSFO_PANCAKE)
+					else
+						if (shield.stretched)
+							shield.spritexscale,spriteyscale = FU,FU
+							shield.stretched = false
+						end
+					end
+					*/
+				else
+					if (shield.stretched)
+						shield.spritexscale,spriteyscale = FU,FU
+						shield.stretched = false
+					end
+				end
+			end
+		end
+	end
+end, MT_OVERLAY)
 
 filesdone = $+1

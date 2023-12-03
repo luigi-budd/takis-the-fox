@@ -133,6 +133,7 @@ local hurtmsgenum = {
 	"HAMMERBOX",
 	"HAMMERQUAKE",
 	"ARMA",
+	"BALL",
 }
 for k,v in ipairs(hurtmsgenum)
 	rawset(_G,"HURTMSG_"..v,k-1)
@@ -157,9 +158,9 @@ rawset(_G,"NOABIL_SPIN",NOABIL_CLUTCH|NOABIL_HAMMER|NOABIL_SHOTGUN|NOABIL_WAVEDA
 
 local transfoenum = {
 	"SHOTGUN",
-	"FIREASS",
 	"PANCAKE",
 	"BALL",
+	"ELEC",
 }
 for k,v in ipairs(transfoenum)
 	rawset(_G,"TRANSFO_"..v,1<<(k-1))
@@ -215,6 +216,11 @@ rawset(_G, "TAKIS_NET", {
 		["creds"] = true,
 		["_conga"] = true,
 		["ovrtme"] = true,
+		["rnk_a"] = true,
+		["rnk_cb"] = true,
+		["rnk_d"] = true,
+		["rnk_p"] = true,
+		["rnk_s"] = true,
 	},
 	
 })
@@ -306,7 +312,6 @@ rawset(_G, "TakisInitTable", function(p)
 		lastrank = 0,
 		lastmomz = 0,
 		recovwait = 0,
-		wascolorized = false,
 		dropdashstale = 0,
 		dropdashstaletime = 0,
 		lastmap = 1,
@@ -330,6 +335,8 @@ rawset(_G, "TakisInitTable", function(p)
 		pizzastate = 0,
 		deathfloored = false,
 		pancaketime = 0,
+		electime = 0,
+		hhexiting = false,
 		
 		taunttime = 0,
 		tauntid = 0,
@@ -454,6 +461,7 @@ rawset(_G, "TakisInitTable", function(p)
 			[HURTMSG_HAMMERBOX] = {text = "Hammer",tics = 0},
 			[HURTMSG_HAMMERQUAKE] = {text = "Earthquake",tics = 0},
 			[HURTMSG_ARMA] = {text = "Armageddon Shield",tics = 0},
+			[HURTMSG_BALL] = {text = "tumble",tics = 0},
 		},
 		bonuses = {
 			["shotgun"] = {
