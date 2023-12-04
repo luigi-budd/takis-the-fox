@@ -4,37 +4,37 @@ rawset(_G,"CV_TAKIS",{})
 CV_TAKIS.nerfarma = CV_RegisterVar({
 	name = "takis_nerfarma",
 	defaultvalue = "false",
-	flags = CV_NETVAR,
+	flags = CV_NETVAR|CV_SHOWMODIF,
 	PossibleValue = CV_TrueFalse
 })
 CV_TAKIS.tauntkills = CV_RegisterVar({
 	name = "takis_tauntkills",
 	defaultvalue = "true",
-	flags = CV_NETVAR,
+	flags = CV_NETVAR|CV_SHOWMODIF,
 	PossibleValue = CV_TrueFalse
 })
 CV_TAKIS.achs = CV_RegisterVar({
 	name = "takis_achs",
 	defaultvalue = "true",
-	flags = CV_NETVAR,
+	flags = CV_NETVAR|CV_SHOWMODIF,
 	PossibleValue = CV_TrueFalse
 })
 CV_TAKIS.collaterals = CV_RegisterVar({
 	name = "takis_collaterals",
 	defaultvalue = "true",
-	flags = CV_NETVAR,
+	flags = CV_NETVAR|CV_SHOWMODIF,
 	PossibleValue = CV_TrueFalse
 })
 CV_TAKIS.heartcards = CV_RegisterVar({
 	name = "takis_heartcards",
 	defaultvalue = "true",
-	flags = CV_NETVAR,
+	flags = CV_NETVAR|CV_SHOWMODIF,
 	PossibleValue = CV_TrueFalse
 })
 CV_TAKIS.hammerquake = CV_RegisterVar({
 	name = "takis_hammerquakes",
 	defaultvalue = "true",
-	flags = CV_NETVAR,
+	flags = CV_NETVAR|CV_SHOWMODIF,
 	PossibleValue = CV_TrueFalse
 })
 

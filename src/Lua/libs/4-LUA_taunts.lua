@@ -112,7 +112,6 @@ local function think_bat(p)
 		if takis.taunttime > TR
 			--
 		elseif takis.taunttime == TR
-			me.colorized = takis.wascolorized
 			S_StartSound(me,sfx_mswing)
 		elseif takis.taunttime == 32
 			local x = cos(p.drawangle)

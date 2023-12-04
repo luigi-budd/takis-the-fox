@@ -131,6 +131,22 @@ local function calcstatusface(p,takis)
 		takis.HUD.statusface.frame = (2*leveltime/3)%2
 		takis.HUD.statusface.priority = 0
 	end
+	if (takis.transfo & TRANSFO_SHOTGUN)
+		takis.HUD.statusface.state = "SGUN"
+		takis.HUD.statusface.frame = (leveltime/3)%2
+		takis.HUD.statusface.priority = 0		
+	end
+	if (takis.transfo & TRANSFO_BALL)
+		--im lazy and dont want to draw more ball frames
+		takis.HUD.statusface.state = "SPR2"
+		takis.HUD.statusface.frame = p.realmo.frame
+		takis.HUD.statusface.priority = 0		
+	end
+	if (takis.transfo & TRANSFO_PANCAKE)
+		takis.HUD.statusface.state = "PCKE"
+		takis.HUD.statusface.frame = (leveltime/4)%2
+		takis.HUD.statusface.priority = 0		
+	end
 	
 	if (takis.heartcards <= (TAKIS_MAX_HEARTCARDS/6 or 1))
 	and not (takis.fakeexiting)
@@ -276,7 +292,16 @@ local function drawface(v,p)
 	end
 	
 	local healthstate,healthframe = calcstatusface(p,takis)	
-	local headpatch = v.cachePatch(pre..healthstate..tostring(healthframe))
+	local headpatch
+	local flip = false
+	if (healthstate ~= "SPR2")
+		headpatch = v.cachePatch(pre..healthstate..tostring(healthframe))
+	else
+		flip = true
+		headpatch = v.getSprite2Patch(TAKIS_SKIN,me.sprite2,p.powers[pw_super] > 0,healthframe,2,0)
+		scale = (2*FU/5)*8/5
+		y2 = 7*FU
+	end
 	
 	local y = 0
 	local expectedtime = TR
@@ -292,6 +317,7 @@ local function drawface(v,p)
 		end
 	end
 	
+	if flip == true then eflags = $|V_FLIP end
 	v.drawScaled(20*FU+x,27*FU+y+y2,scale, headpatch, V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER|eflags,v.getColormap(nil,headcolor))
 
 end
@@ -1067,6 +1093,60 @@ local function drawclutches(v,p,cam)
 end
 
 --      ----------
+
+local function drawnadocount(v,p,cam)
+
+	if (customhud.CheckType("takis_nadocount") != modname) return end
+	
+	local takis = p.takistable
+	local me = p.mo
+	
+	if not takis then return end 
+	
+	if not (takis.transfo & TRANSFO_TORNADO)
+	or not takis.nadocount
+		return
+	end
+	
+	--chrispy chars
+	local player = p
+	local mo = player.realmo
+	
+	local flip = 1
+	local bubble = v.cachePatch("CMBCF"..takis.nadocount)
+	local angdiff = ANGLE_90
+	local x, y, scale
+	local cutoff = function(y) return false end
+	
+	if cam.chase and not (player.awayviewtics and not (me.flags2 & MF2_TWOD))
+		x, y, scale = R_GetScreenCoords(v, player, cam, mo)
+		scale = $*2
+		if mo.eflags & MFE_VERTICALFLIP
+		and player.pflags & PF_FLIPCAM
+			y = 200*FRACUNIT - $
+		else
+			flip = P_MobjFlip(mo)
+		end
+	else
+		x, y, scale = 160*FRACUNIT, (100 + bubble.height >> 1)*FRACUNIT, FRACUNIT
+	end
+	
+	if splitscreen
+		if player == secondarydisplayplayer
+			cutoff = function(y) return y < (bubble.height*scale >> 1) end
+		else
+			cutoff = function(y) return y > 200*FRACUNIT + (bubble.height*scale >> 1) end
+		end
+	end
+	
+	local angle = angdiff + ANGLE_90
+	local x = x - P_ReturnThrustX(nil, angle, -(bubble.width*scale)/2)
+	y = $+flip*(-50*scale)
+	if not cutoff(y)
+		v.drawScaled(x, y, scale, bubble, V_PERPLAYER|V_HUDTRANS)
+	end
+
+end
 
 --COMBO ----------
 
@@ -2374,13 +2454,6 @@ local getdmg = {
 	[132] = "DMG_CRUSHED",
 	[133] = "DMG_SPECTATOR",
 }
-local gettransfo = {
-	[0] = "None",
-	[TRANSFO_SHOTGUN] = "TRANSFO_SHOTGUN",
-	[TRANSFO_PANCAKE] = "TRANSFO_PANCAKE",
-	[TRANSFO_BALL] = "TRANSFO_BALL",
-	
-}
 
 local function drawflag(v,x,y,string,flags,onmap,offmap,align,flag)
 	local map = offmap
@@ -2725,11 +2798,15 @@ local function drawdebug(v,p)
 			"thin-fixed"
 		)
 	end
-	--todo: multi transfo
 	if (TAKIS_DEBUGFLAG & DEBUG_TRANSFO)
-		local transfo = gettransfo[takis.transfo]
-		
-		v.drawString(100,92,"Transfo: "..transfo,V_ALLOWLOWERCASE,"thin")
+		local x, y = 16, 156
+		local flags = V_HUDTRANS|V_PERPLAYER|V_SNAPTOBOTTOM|V_SNAPTOLEFT
+		v.drawString(x,y-78,"transfo",flags|V_GREENMAP,"thin")
+		drawflag(v,x+00,y-70,"SG",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_SHOTGUN))
+		drawflag(v,x+15,y-70,"BL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_BALL))
+		drawflag(v,x+30,y-70,"PC",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_PANCAKE))
+		drawflag(v,x+45,y-70,"EL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_ELEC))
+		drawflag(v,x+60,y-70,"TR",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_TORNADO))
 	end
 end
 
@@ -2755,7 +2832,8 @@ customhud.SetupItem("takis_cfgnotifs", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_bonuses", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_crosshair", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_happyhourtime", 	modname/*,	,	"game",	10*/)
-customhud.SetupItem("textspectator", 	modname/*,	,	"game",	10*/)
+customhud.SetupItem("textspectator", 		modname/*,	,	"game",	10*/)
+customhud.SetupItem("takis_nadocount",	 	modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
 
 addHook("HUD", function(v,p,cam)
@@ -2800,6 +2878,7 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("takis_crosshair", 		modname)
 			customhud.SetupItem("takis_happyhourtime", 	modname)
 			customhud.SetupItem("textspectator", 		modname)
+			customhud.SetupItem("takis_nadocount", 		modname)
 		
 			if takis.io.nohappyhour == 0
 				customhud.SetupItem("PTSR_itspizzatime",modname)
@@ -2839,6 +2918,7 @@ addHook("HUD", function(v,p,cam)
 			
 			--drawwareffect(v,p)
 			drawclutches(v,p,cam)
+			drawnadocount(v,p,cam)
 			--drawbubbles(v,p,cam)
 			drawrings(v,p)
 			drawtimer(v,p)

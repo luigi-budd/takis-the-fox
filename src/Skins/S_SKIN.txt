@@ -27,7 +27,7 @@ contangle = 0
 
 height = 52
 
-jumpfactor = 1.32
+jumpfactor = 1.2
 
 dsjump = dsantjum
 dsskid = dstakskd

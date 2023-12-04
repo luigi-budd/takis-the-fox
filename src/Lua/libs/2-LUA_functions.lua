@@ -578,10 +578,20 @@ end)
 rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 	if (takis.transfo & TRANSFO_BALL)
 		if me.state ~= S_PLAY_ROLL
-			S_StopSoundByID(me,sfx_trnsfo)
-			S_StartSound(me,sfx_shgnk)
-			takis.transfo = $ &~TRANSFO_BALL
-			p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
+			--BUT, if we're trying to continue slide, keep the ball
+			if (takis.justHitFloor and takis.c2)
+				me.state = S_PLAY_ROLL
+				p.pflags = $|PF_SPINNING
+				takis.ballretain = 2
+				takis.noability = $|NOABIL_SLIDE
+			else
+				if takis.ballretain == 0
+					S_StopSoundByID(me,sfx_trnsfo)
+					S_StartSound(me,sfx_shgnk)
+					takis.transfo = $ &~TRANSFO_BALL
+					p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
+				end
+			end
 		else
 			takis.afterimaging = false
 			takis.clutchingtime = 0
@@ -613,6 +623,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			end
 			
 		end
+		if takis.ballretain then takis.ballretain = $-1 end
 	end
 	if (takis.transfo & TRANSFO_PANCAKE)
 		if takis.pancaketime
@@ -628,10 +639,128 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			takis.transfo = $ &~TRANSFO_PANCAKE
 		end
 	end
+	if (takis.transfo & TRANSFO_ELEC)
+		if takis.electime
+			if (leveltime % 3) == 0
+				me.color = SKINCOLOR_SUPERGOLD1
+			else
+				me.color = SKINCOLOR_JET
+			end
+			
+			local rad = me.radius/FRACUNIT
+			local hei = me.height/FRACUNIT
+			local x = P_RandomRange(-rad,rad)*FRACUNIT
+			local y = P_RandomRange(-rad,rad)*FRACUNIT
+			local z = P_RandomRange(0,hei)*FRACUNIT
+			local spark = P_SpawnMobjFromMobj(me,x,y,z,MT_SOAP_SUPERTAUNT_FLYINGBOLT)
+			spark.tracer = me
+			spark.state = P_RandomRange(S_SOAP_SUPERTAUNT_FLYINGBOLT1,S_SOAP_SUPERTAUNT_FLYINGBOLT5)			
+			spark.blendmode = AST_ADD
+			spark.color = P_RandomRange(SKINCOLOR_SUPERGOLD1,SKINCOLOR_SUPERGOLD5)
+			spark.angle = p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT ))
+
+			me.colorized = true
+			
+			if (me.state ~= S_PLAY_DEAD)
+				me.state = S_PLAY_DEAD
+				me.frame = A
+				me.sprite2 = SPR2_FASS
+			end
+			
+			--so the instathrust doesnt move us by an inch
+			p.cmd.forwardmove = max($,10)
+			
+			if (takis.justHitFloor)
+				P_SetObjectMomZ(me,4*FU)
+				p.drawangle = $+(FixedAngle(
+					P_RandomRange(-150,150)*FU+P_RandomFixed()
+					)
+				)
+				P_InstaThrust(me,p.drawangle,7*me.scale)
+			end
+			
+			
+			p.powers[pw_nocontrol] = 2
+			p.pflags = $|PF_FULLSTASIS
+			takis.electime = $-1
+		else
+			me.color = p.skincolor
+			me.colorized = false
+			P_MovePlayer(p)
+			takis.transfo = $ &~TRANSFO_ELEC
+		end
+	end
+	if (takis.transfo & TRANSFO_TORNADO)
+		local sfx_nado = sfx_tknado
+		local sfx_nado2 = sfx_tkfndo
+		
+		if (takis.nadocount > 0)
+			takis.noability = $|NOABIL_SPIN|NOABIL_DIVE|NOABIL_SLIDE
+			takis.thokked = true
+			
+			local lastspin = takis.spin
+			if p.cmd.buttons & BT_USE
+				takis.spin = $+1
+			else
+				takis.spin = 0
+			end
+			
+			local speed = 30*me.scale
+			if (takis.spin)
+			or (not takis.onGround and takis.accspeed >= 45*FU)
+				speed = 50*me.scale
+				if (takis.spin == 1)
+					S_StopSoundByID(me,sfx_nado)
+				end
+			end
+			
+			if lastspin
+			and takis.spin == 0
+				S_StopSoundByID(me,sfx_nado2)
+			end
+			
+			if not (takis.onGround)
+				p.thrustfactor = skins[TAKIS_SKIN].thrustfactor/4
+			else
+				p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
+			end
+			
+			p.normalspeed = FixedDiv(speed,me.scale)
+			P_MovePlayer(p)
+			
+			if not (takis.spin)
+				if not S_SoundPlaying(me,sfx_nado)
+					S_StartSound(me,sfx_nado)
+				end
+			else
+				if not S_SoundPlaying(me,sfx_nado2)
+					S_StartSound(me,sfx_nado2)
+				end
+			end
+			
+			local state = S_PLAY_ROLL
+			if (p.playerstate == PST_LIVE)
+				if (me.state ~= state)
+					me.state = state
+				else
+					p.powers[pw_strong] = $|STR_SPIKE|STR_WALL
+				end
+			end
+			
+			if takis.nadotic > 0 then takis.nadotic = $-1 end
+		else
+			S_StopSoundByID(me,sfx_nado)
+			S_StopSoundByID(me,sfx_nado2)
+			S_StartSound(me,sfx_shgnk)
+			takis.transfo = $ &~TRANSFO_TORNADO		
+		end
+		
+	end
 	
 end)
 
 rawset(_G, "TakisTransfo", function(p,me,takis)
+	
 	if (me.standingslope)
 		if ((me.prevz - me.z)*takis.gravflip >= 7*me.scale)
 		and (me.state == S_PLAY_TAKIS_SLIDE)
@@ -644,8 +773,6 @@ rawset(_G, "TakisTransfo", function(p,me,takis)
 			takis.transfo = $|TRANSFO_BALL
 		end
 	end
-	
-	--pancake is handled in pthink
 	
 	TakisTransfoHandle(p,me,takis)
 end)
@@ -699,6 +826,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	and not (takis.noability & NOABIL_SHIELD)
 		takis.attracttarg = t
 		P_SpawnLockOn(p, t, S_LOCKON2)
+	else
+		takis.attracttarg = nil
 	end
 	
 	if ((takis.hammerblasthitbox) and (takis.hammerblasthitbox.valid))
@@ -929,7 +1058,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if takis.crushtime ~= 0
-		if (takis.transfo ~= TRANSFO_PANCAKE)
+		if not (takis.transfo & TRANSFO_PANCAKE)
 			takis.crushtime = $-1
 		end
 	else
@@ -957,6 +1086,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 	elseif (takis.heartcards <= (TAKIS_MAX_HEARTCARDS/6 or 1))
 	and not (takis.fakeexiting)
+	and (p.playerstate == PST_LIVE)
 		takis.goingfast = true
 		takis.wentfast = 3
 	else
@@ -1321,10 +1451,12 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 			takis.hhexiting = true
 			takis.noability = NOABIL_SPIN|NOABIL_SLIDE
 			
-			if not (p.pflags & PF_FINISHED)
-				p.pflags = $|PF_FINISHED
+			if (p.playerstate == PST_LIVE and not p.spectator)
+				if not (p.pflags & PF_FINISHED)
+					p.pflags = $|PF_FINISHED
+				end
+				p.exiting = 100
 			end
-			p.exiting = 100
 			
 		end
 	end
@@ -1346,6 +1478,10 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		P_MovePlayer(p)
 		takis.pizzastate = 0
 		TakisGiveCombo(p,takis,false,true)
+	end
+	
+	if (p.spectator)
+		takis.noability = $|NOABIL_SPIN|NOABIL_DIVE|NOABIL_SLIDE
 	end
 	
 	p.alreadyhascombometer = 2
@@ -1640,7 +1776,7 @@ rawset(_G, "TakisTeamNewShields", function(player)
 	--if player.pflags & PF_JUMPED
 	if (f or player.powers[pw_super])
 	and not (player.mo.state >= 59 and player.mo.state <= 64)
-		local t = P_LookForEnemies(player,true,false)
+		local t = takis.attracttarg
 			
 			takis.hammerblastdown = 0
 			
@@ -1665,15 +1801,12 @@ rawset(_G, "TakisTeamNewShields", function(player)
 				player.pflags = $|PF_THOKKED|PF_SHIELDABILITY
 				player.homing = 2
 				if t and t.valid
-					player.mo.target = t
-					player.mo.tracer = t
-					P_HomingAttack(player.mo,player.mo.target)
+					P_HomingAttack(player.mo,t)
 					player.mo.angle = R_PointToAngle2(player.mo.x,player.mo.y,t.x,t.y)
-					player.pflags = $&~PF_NOJUMPDAMAGE
 					player.mo.state = S_PLAY_ROLL
 					S_StartSound(player.mo, sfx_s3k40)
 					player.homing = 3*TR
-					player.pflags = $ &~PF_THOKKED
+					player.pflags = $|PF_JUMPED &~(PF_THOKKED|PF_NOJUMPDAMAGE)
 					takis.thokked = false
 				else
 					S_StartSound(player.mo, sfx_s3ka6)
@@ -1886,7 +2019,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 	
 	if not (tm.flags & MF_BOSS)
 		if (tm.flags & MF_ENEMY)
-		or (tm.takis_flingme ~= false)
+		or (tm.takis_flingme)
 			--spawn ragdoll thing here
 			local ragdoll = P_SpawnMobjFromMobj(tm,0,0,0,MT_TAKIS_BADNIK_RAGDOLL)
 			tm.tics = -1
@@ -2280,12 +2413,13 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 	end
 	*/
 	
-	if takis.justHitFloor
-	and takis.onGround
+	if (takis.justHitFloor
+	or takis.onGround)
 	and p.deadtimer > 3
 	and (not takis.deathfloored)
 		me.tics = -1
 		if (me.rollangle == 0)
+			me.state = S_PLAY_DEAD
 			me.frame = A
 			me.sprite2 = SPR2_TDD2
 			p.jp = 2
@@ -2295,6 +2429,7 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 			P_SetObjectMomZ(me,10*FU)
 			me.rollangle = 0
 			takis.stoprolling = true
+			takis.deathfloored = false
 		end
 		
 		DoFlash(p,PAL_NUKE,5)
@@ -2695,7 +2830,11 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 	
 	local lastaimingbeforedown = p.aiming
 	if down
-		p.aiming = FixedAngle(FU*270)
+		if (takis.gravflip == 1)
+			p.aiming = FixedAngle(FU*270)
+		else
+			p.aiming = FixedAngle(FU*89)
+		end
 	end
 	
 	local ssmul = 10
@@ -3206,6 +3345,10 @@ rawset(_G,"GetActorZ",function(actor,targ,type)
 		end
 	end
 	return 0
+end)
+
+rawset(_G,"GetControlAngle",function(p)
+	return (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
 end)
 
 filesdone = $+1

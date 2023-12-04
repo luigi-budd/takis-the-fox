@@ -102,8 +102,9 @@
 	-transformations
 	-[scrapped]bat taunt keeps colorization if interuppted
 	-textspectator hud stuff
-	-shields are squished with pancake
+	-[pretty much done]shields are squished with pancake
 	-wtf is resynching & crashing servers!?? DEBUG!!!!
+	-[done?]death slam not activating sometimes
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -411,7 +412,7 @@ addHook("PlayerThink", function(p)
 						local ccombo = min(takis.clutchcombo,3)
 						
 						if takis.io.nostrafe == 1
-							local ang = (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
+							local ang = GetControlAngle(p)
 							p.drawangle = ang
 						end
 						
@@ -481,7 +482,7 @@ addHook("PlayerThink", function(p)
 							thrust = $/4
 						end
 						
-						local  ang = (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
+						local  ang = GetControlAngle(p)
 						
 						if (takis.accspeed > 55*FU)
 						and not (p.powers[pw_sneakers])
@@ -555,7 +556,7 @@ addHook("PlayerThink", function(p)
 					and not (takis.noability & NOABIL_WAVEDASH)
 						p.pflags = $ &~(PF_JUMPED)
 						P_SetObjectMomZ(me,-8*FRACUNIT)
-						local ang = (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
+						local ang = GetControlAngle(p)
 						S_StartSoundAtVolume(me,sfx_takdiv,255/4)
 						P_Thrust(me,ang,14*me.scale)
 					end
@@ -609,7 +610,7 @@ addHook("PlayerThink", function(p)
 					and not (takis.noability & NOABIL_DIVE)
 						takis.hammerblastjumped = 0
 					
-						local ang = (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
+						local ang = GetControlAngle(p)
 						S_StartSound(me,sfx_takdiv)
 						
 						--im not sure if this actually does anything
@@ -645,7 +646,7 @@ addHook("PlayerThink", function(p)
 					and not (takis.hammerblastdown)
 					and (me.state ~= S_PLAY_TAKIS_SLIDE)
 					and not (takis.noability & NOABIL_SHOTGUN)
-						local ang = (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
+						local ang = GetControlAngle(p)
 						p.drawangle = ang
 						if (takis.accspeed >= skins[TAKIS_SKIN].runspeed)
 							P_InstaThrust(me,p.drawangle,
@@ -1329,10 +1330,10 @@ addHook("PlayerThink", function(p)
 								if found and found.valid
 								and (found.health)
 									if (found.type ~= MT_EGGMAN_BOX)
-									or (found.takis_flingme ~= false)
+									or (found.takis_flingme)
 										if (found.flags & (MF_ENEMY|MF_BOSS))
 										or (found.flags & MF_MONITOR)
-										or (found.takis_flingme ~= false)
+										or (found.takis_flingme)
 											spawnragthing(found,me)
 										elseif (found.type == MT_PLAYER)
 											if CanPlayerHurtPlayer(p,found.player)
@@ -1395,7 +1396,7 @@ addHook("PlayerThink", function(p)
 							takis.clutchingtime = 0
 							takis.glowyeffects = takis.hammerblastdown/3
 							
-							local ang = (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
+							local ang = GetControlAngle(p)
 							
 							if ((me.flags2 & MF2_TWOD)
 							or (twodlevel))
@@ -1679,6 +1680,7 @@ addHook("PlayerThink", function(p)
 				--keep increasing this until it reaches
 				--2*TR, kill if then
 				takis.timescrushed = $+1
+				takis.crushscale = FU/3
 				
 				if not takis.crushtime
 				and not (takis.transfo & TRANSFO_PANCAKE)
@@ -1686,6 +1688,12 @@ addHook("PlayerThink", function(p)
 					S_StartSound(me,sfx_trnsfo)
 					takis.transfo = $|TRANSFO_PANCAKE
 					takis.pancaketime = 10*TR
+				end
+				
+				p.pflags = $ &~PF_SPINNING
+				P_MovePlayer(p)
+				if (me.state == S_PLAY_ROLL)
+					me.state = S_PLAY_STND
 				end
 				
 				--used to reset crushed
@@ -1696,10 +1704,11 @@ addHook("PlayerThink", function(p)
 						DoTakisSquashAndStretch(p,me,takis)
 					end
 				else
-					local div = (takis.crushtime/8)
-					div = max(1,$)
-					me.spriteyscale = FU/div
-					me.spritexscale = FU*div					
+					local s = FixedDiv(takis.crushtime*FU,TR*FU)
+					takis.crushscale = ease.inexpo(FU-s,takis.crushscale,FU)
+					
+					me.spriteyscale = FixedMul(FU,takis.crushscale)
+					me.spritexscale = FixedDiv(FU,takis.crushscale)				
 				end
 			end
 			
@@ -2073,7 +2082,8 @@ addHook("PlayerThink", function(p)
 			end
 			
 			takis.combo.time = 0
-			TakisAnimateHappyHour(p)
+			TakisHUDStuff(p)
+			
 			if HAPPY_HOUR.time
 			and (takis.io.nohappyhour == 0
 			and takis.io.morehappyhour == 1)
@@ -2198,6 +2208,7 @@ addHook("PlayerSpawn", function(p)
 		
 		TakisResetHammerTime(p)
 		TakisDeShotgunify(p)
+		takis.transfo = 0
 		
 		takis.heartcards = TAKIS_MAX_HEARTCARDS
 		
@@ -2294,11 +2305,12 @@ addHook("PlayerCanDamage", function(player, mobj)
 			--we need to be able to make afterimages to do this!
 			not (takis.noability & (NOABIL_CLUTCH|NOABIL_HAMMER))
 		)
+		or (takis.transfo & TRANSFO_TORNADO)
 			if L_ZCollide(me,mobj)
-			and (((mobj.flags & MF_ENEMY)
+			and ((mobj.flags & MF_ENEMY)
 			--and (mobj.type ~= MT_ROSY)
 			and (mobj.type ~= MT_SHELL))
-			or (mobj.takis_flingme ~= false))
+			or (mobj.takis_flingme)
 				
 				--prevent killing blow sound from mobjs way above/below us
 				
@@ -2499,11 +2511,12 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		p.pflags = $ &~(PF_THOKKED|PF_JUMPED)
 		takis.thokked = false
 		takis.dived = false
-		if (dmgt & DMG_ELECTRIC)
+		if (dmgt == DMG_ELECTRIC)
 			S_StartSound(mo,sfx_buzz2)
 			mo.state = S_PLAY_DEAD
 			takis.transfo = $|TRANSFO_ELEC
 			takis.electime = TR*3/2
+			P_SetObjectMomZ(mo,4*mo.scale)
 		end
 		return true
 	
@@ -2808,9 +2821,7 @@ addHook("PlayerHeight",function(p)
 		
 		if me.skin == TAKIS_SKIN
 			if takis.crushtime
-				local div = (takis.crushtime/8)
-				div = max(1,$)
-				return P_GetPlayerHeight(p)/div
+				return FixedMul(P_GetPlayerHeight(p),FixedDiv(me.spriteyscale,FU))
 			end
 		end
 	end
@@ -2832,9 +2843,7 @@ addHook("PlayerCanEnterSpinGaps",function(p)
 		
 		if me.skin == TAKIS_SKIN
 			if takis.crushtime
-				local div = (takis.crushtime/8)
-				div = max(1,$)
-				local phigh = P_GetPlayerHeight(p)/div
+				local phigh = FixedMul(P_GetPlayerHeight(p),FixedDiv(me.spriteyscale,FU))
 				if phigh <= P_GetPlayerSpinHeight(p)
 					return true
 				end
@@ -3245,7 +3254,7 @@ addHook("AbilitySpecial", function(p)
 			ring.frame = $|FF_TRANS50
 			ring.startingtrans = FF_TRANS50
 			ring.scale = FixedDiv(me.scale,2*FU)
-			P_SetObjectMomZ(ring,-me.momz*2)
+			P_SetObjectMomZ(ring,FixedMul(-me.momz*2*takis.gravflip, sfactor))
 			--i thought this would fade out the object
 			ring.fuse = 10
 			ring.destscale = FixedMul(ring.scale,2*FU)
@@ -3333,6 +3342,15 @@ addHook("MobjMoveCollide",function(tm,t)
 				
 				S_StartSound(t,mobjinfo[t.type].painsound)
 				t.state = mobjinfo[t.type].raisestate
+				
+				--tornado transfo
+				if (mobjinfo[t.type].painsound == sfx_cdfm62)
+					if not (takis.transfo & TRANSFO_TORNADO)
+						takis.nadocount = 3
+						takis.transfo = $|TRANSFO_TORNADO
+					end
+				end
+				
 				return false
 			end
 		--people bowling
@@ -3383,5 +3401,74 @@ addHook("MobjMoveCollide",function(tm,t)
 		
 	end
 end,MT_PLAYER)
+
+-- collision stuff for 'nado
+addHook("MobjMoveBlocked", function(mo, thing, line)
+	if not mo
+	or not mo.valid
+		return
+	end
+	
+	local p = mo.player
+	local takis = p.takistable
+	
+	if p.mo
+	and p.mo.valid
+		local me = p.mo
+		
+		if me.skin ~= TAKIS_SKIN
+			return
+		end
+		
+		if ((thing) and (thing.valid)) or ((line) and (line.valid))
+			if (takis.transfo & TRANSFO_TORNADO)
+				if takis.nadotic then return end
+				if takis.accspeed <= 7*FU then return end
+				
+				local oldangle = me.angle
+				if thing and thing.valid
+					if thing.flags & MF_MONITOR
+						return
+					end
+					
+					me.angle = FixedAngle(180*FU-AngleFixed($))
+					p.drawangle = me.angle
+				elseif line and line.valid
+					me.angle = FixedAngle(180*FU-AngleFixed($))
+					p.drawangle = me.angle
+				end
+				P_InstaThrust(me,me.angle,FixedMul(takis.accspeed,me.scale))
+				
+				--thrust backwards if we're basically facing the same
+				--angle
+				local sameangle = false
+				if (AngleFixed(oldangle)-AngleFixed(me.angle) <= 135*FU)
+					sameangle = true
+				end
+				if (sameangle)
+					P_Thrust(me,me.angle,-10*me.scale)
+					me.angle = InvAngle($)
+					p.drawangle = me.angle
+				end
+				
+				DoQuake(p,15*me.scale,5)
+				S_StartSound(me,sfx_slam)
+				
+				takis.nadotic = 3
+				if (takis.nadocount == 1)
+					P_SetObjectMomZ(me,10*FU)
+					S_StartAntonOw(me)
+					me.state = S_PLAY_DEAD
+				end
+				
+				if (takis.nadocount > 0)
+					takis.nadocount = $-1
+				end
+				
+				return true
+			end
+		end
+	end
+end, MT_PLAYER)
 
 filesdone = $+1

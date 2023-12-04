@@ -618,55 +618,6 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 end
 addHook("MusicChange", happyhourmus)
 
-/*
-addHook("MobjMoveBlocked", function(mo, thing, line)
-	if not mo
-	or not mo.valid
-		return
-	end
-	
-	local p = mo.player
-	local takis = p.takistable
-	
-	if p.mo
-	and p.mo.valid
-		local me = p.mo
-		
-		if me.skin ~= TAKIS_SKIN
-			return
-		end
-		
-		if takis.accspeed < 8*skins[TAKIS_SKIN].normalspeed/5
-			return
-		end
-		
-		if ((thing) and (thing.valid)) or ((line) and (line.valid))
-			if takis.afterimaging
-				if thing and thing.valid
-					if thing.flags & MF_MONITOR
-						return
-					end
-					
-					P_DoPlayerPain(p, thing, thing)
-					local ang = R_PointToAngle2(me.x,me.y, thing.x,thing.y)
-					P_InstaThrust(me,ang,-takis.accspeed/5)
-				elseif line and line.valid
-					P_DoPlayerPain(p)
-					P_InstaThrust(me,p.drawangle,-takis.accspeed/5)
-				end
-				
-				DoFlash(p,PAL_NUKE,5)
-				DoQuake(p,15*me.scale,5)
-				S_StartSound(me,sfx_shldls)				
-				S_StartSound(me,sfx_slam)	
-				me.momz = (7*me.scale)*takis.gravflip
-				S_StartAntonOw(me)
-			end
-		end
-	end
-end, MT_PLAYER)
-*/
-
 addHook("MobjThinker",function(mo)
 	if not mo
 	or not mo.valid
@@ -760,10 +711,10 @@ addHook("MobjThinker",function(mo)
 		
 		if mo.target.eflags & MFE_VERTICALFLIP
 			mo.eflags = $|MFE_VERTICALFLIP
-			P_MoveOrigin(mo, mo.target.x+(16*x), mo.target.y+(16*y), (mo.target.z + mo.target.height - mo.height)-(mo.target.height/2))
 		else
-			P_MoveOrigin(mo, mo.target.x+(16*x), mo.target.y+(16*y), mo.target.z+(mo.target.height/2) )
+			mo.eflags = $ &~MFE_VERTICALFLIP
 		end
+		P_MoveOrigin(mo, mo.target.x+(16*x), mo.target.y+(16*y), GetActorZ(mo.target,mo,1)+(mo.target.height/2*P_MobjFlip(mo.target)) )
 		
 		if not (camera.chase)
 			mo.flags2 = $|MF2_DONTDRAW
@@ -960,7 +911,17 @@ addHook("PreThinkFrame",function()
 		if (takis.cosmenu.menuinaction)
 			TakisMenuThinker(p)
 		end
-				
+		
+		if (takis.transfo & TRANSFO_TORNADO)
+			local force = 50
+			--brake a bit
+			if P_GetPlayerControlDirection(p) == 2
+				force = $-((25-p.cmd.forwardmove)/2)
+				force = min(50,$)
+			end
+			p.cmd.forwardmove = force
+			p.cmd.sidemove = $/2
+		end
 	end
 end)
 
@@ -1549,41 +1510,58 @@ for k,type in ipairs(dontflinglist)
 end
 
 --shields will squish with us
-addHook("MobjThinker", function(shield)
-	if shield and shield.valid
-		if not shield.target return end
+local shieldlist = {
+	MT_ELEMENTAL_ORB,
+	MT_ATTRACT_ORB,
+	MT_FORCE_ORB,
+	MT_ARMAGEDDON_ORB,
+	MT_WHIRLWIND_ORB,
+	MT_PITY_ORB,
+	MT_FLAMEAURA_ORB,
+	MT_BUBBLEWRAP_ORB,
+	MT_THUNDERCOIN_ORB,
+}
+local shieldsquash = function(shield)
+	if not shield
+	or not shield.valid
+		return
+	end
 	
-		if not (shield.flags2 & MF2_SHIELD)
-			return
-		end
-		
-		if shield.target.player
-			local p = shield.target.player
-			local takis = p.takistable
-			local me = shield.target
-			
-			if takis
-				if me.skin == TAKIS_SKIN
-					shield.stretched = true
-					shield.spritexscale,spriteyscale = me.spritexscale,me.spriteyscale
-					/*
-					if (takis.transfo & TRANSFO_PANCAKE)
-					else
-						if (shield.stretched)
-							shield.spritexscale,spriteyscale = FU,FU
-							shield.stretched = false
-						end
-					end
-					*/
-				else
-					if (shield.stretched)
-						shield.spritexscale,spriteyscale = FU,FU
-						shield.stretched = false
-					end
-				end
+	if not shield.target
+	or not shield.target.valid
+		return
+	end
+	
+	local p = shield.target.player
+	local me = shield.target
+	local takis = p.takistable
+	
+	if takis
+		if (me.skin == TAKIS_SKIN)
+			shield.stretched = true
+			shield.spritexscale,shield.spriteyscale = me.spritexscale,me.spriteyscale
+			shield.spriteyoffset = me.spriteyoffset
+		else
+			if (shield.stretched)
+				shield.spritexscale,shield.spriteyscale = FU,FU
+				shield.spriteyoffset = 0
+				shield.stretched = false
 			end
 		end
 	end
-end, MT_OVERLAY)
+	
+	--multi layered
+	if (shield.tracer and shield.tracer.valid)
+		local overlay = shield.tracer
+		overlay.spritexscale,overlay.spriteyscale = shield.spritexscale,shield.spriteyscale
+		overlay.spriteyoffset = shield.spriteyoffset
+	end
+	
+end
+
+for k,type in ipairs(shieldlist)
+	addHook("MobjThinker",shieldsquash,type)
+end
+
 
 filesdone = $+1

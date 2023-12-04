@@ -161,6 +161,7 @@ local transfoenum = {
 	"PANCAKE",
 	"BALL",
 	"ELEC",
+	"TORNADO",
 }
 for k,v in ipairs(transfoenum)
 	rawset(_G,"TRANSFO_"..v,1<<(k-1))
@@ -337,6 +338,11 @@ rawset(_G, "TakisInitTable", function(p)
 		pancaketime = 0,
 		electime = 0,
 		hhexiting = false,
+		crushscale = FU/3,
+		prevz = 0,
+		ballretain = 0,
+		nadocount = 0,
+		nadotic = 0,
 		
 		taunttime = 0,
 		tauntid = 0,
@@ -859,6 +865,10 @@ sfxinfo[sfx_s_tak3].caption = "/"
 
 SafeFreeslot("sfx_trnsfo")
 sfxinfo[sfx_trnsfo].caption = "/"
+SafeFreeslot("sfx_tknado")
+sfxinfo[sfx_tknado].caption = "Tornado spin"
+SafeFreeslot("sfx_tkfndo")
+sfxinfo[sfx_tkfndo].caption = "Tornado spin!"
 
 --spr_ freeslot
 

@@ -195,12 +195,13 @@ end,COM_ADMIN)
 
 COM_AddCommand("setdebug", function(p,...)
 	local args = {...}
-	
+	/*
 	if args == {}
 		CONS_Printf(p,"Current flag is "..TAKIS_DEBUGFLAG)
 		CONS_Printf(p,"Use: speedometer, happyhour, buttons")
 		return
 	end
+	*/
 	
 	for _, enum in ipairs(args)
 		local todo = string.upper(enum)
