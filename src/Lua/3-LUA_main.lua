@@ -479,10 +479,10 @@ addHook("PlayerThink", function(p)
 						end
 						
 						if p.gotflag
-							thrust = $/4
+							thrust = $/6
 						end
 						
-						local  ang = GetControlAngle(p)
+						local ang = GetControlAngle(p)
 						
 						if (takis.accspeed > 55*FU)
 						and not (p.powers[pw_sneakers])
@@ -1454,6 +1454,15 @@ addHook("PlayerThink", function(p)
 				if takis.hammerblastjumped == (6*7)
 					takis.hammerblastjumped = 0
 				end
+			end
+			
+			if stupidbouncesectors(me,me.subsector.sector)
+				if me.state ~= S_PLAY_ROLL
+					me.state = S_PLAY_ROLL
+				end
+				p.pflags = $|PF_JUMPED
+				takis.thokked = false
+				takis.dived = false
 			end
 			
 			if takis.clutchingtime
@@ -2823,6 +2832,9 @@ addHook("PlayerHeight",function(p)
 			if takis.crushtime
 				return FixedMul(P_GetPlayerHeight(p),FixedDiv(me.spriteyscale,FU))
 			end
+			if (takis.transfo & TRANSFO_TORNADO)
+				return P_GetPlayerHeight(p)
+			end
 		end
 	end
 end)
@@ -3345,8 +3357,8 @@ addHook("MobjMoveCollide",function(tm,t)
 				
 				--tornado transfo
 				if (mobjinfo[t.type].painsound == sfx_cdfm62)
+					takis.nadocount = 3
 					if not (takis.transfo & TRANSFO_TORNADO)
-						takis.nadocount = 3
 						takis.transfo = $|TRANSFO_TORNADO
 					end
 				end
@@ -3378,14 +3390,10 @@ addHook("MobjMoveCollide",function(tm,t)
 		elseif (SPIKE_LIST[t.type] == true)
 			--we mightve ran into a spike thing
 			if t.health
-			and (p.powers[pw_strong] & STR_SPIKE or takis.afterimaging)
+			and (p.powers[pw_strong] & STR_SPIKE or takis.afterimaging or takis.transfo & TRANSFO_TORNADO)
 				P_KillMobj(t,tm,tm)
 				return false
 			end
-		elseif (t.type == MT_ROSY)
-		--and (takis.afterimaging or p.pflags & PF_SPINNING)
-			print("ASDSD")
-			spawnragthing(t,tm,tm)
 		--TODO: fling solids
 		elseif (t.flags & MF_SOLID|MF_SCENERY == MF_SOLID|MF_SCENERY)
 		and not (t.flags & (MF_SPECIAL|MF_ENEMY|MF_MONITOR|MF_PUSHABLE))
@@ -3431,23 +3439,13 @@ addHook("MobjMoveBlocked", function(mo, thing, line)
 						return
 					end
 					
-					me.angle = FixedAngle(180*FU-AngleFixed($))
+					P_BounceMove(me)
+					me.angle = FixedAngle(AngleFixed($)+(180*FU))
 					p.drawangle = me.angle
 				elseif line and line.valid
-					me.angle = FixedAngle(180*FU-AngleFixed($))
-					p.drawangle = me.angle
-				end
-				P_InstaThrust(me,me.angle,FixedMul(takis.accspeed,me.scale))
-				
-				--thrust backwards if we're basically facing the same
-				--angle
-				local sameangle = false
-				if (AngleFixed(oldangle)-AngleFixed(me.angle) <= 135*FU)
-					sameangle = true
-				end
-				if (sameangle)
-					P_Thrust(me,me.angle,-10*me.scale)
-					me.angle = InvAngle($)
+					--me.angle = FixedAngle(180*FU-AngleFixed($))
+					P_BounceMove(me)
+					me.angle = FixedAngle(AngleFixed($)+(180*FU))
 					p.drawangle = me.angle
 				end
 				
@@ -3456,7 +3454,6 @@ addHook("MobjMoveBlocked", function(mo, thing, line)
 				
 				takis.nadotic = 3
 				if (takis.nadocount == 1)
-					P_SetObjectMomZ(me,10*FU)
 					S_StartAntonOw(me)
 					me.state = S_PLAY_DEAD
 				end

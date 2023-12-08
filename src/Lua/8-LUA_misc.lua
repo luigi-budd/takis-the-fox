@@ -1302,7 +1302,18 @@ addHook("PostThinkFrame", function ()
 		if not (p.mo and p.mo.valid) then continue end
 		if not (p.mo.skin == TAKIS_SKIN) then continue end
 		
+		local me = p.realmo
 		local takis = p.takistable
+		
+		if (takis.transfo & TRANSFO_TORNADO)
+			p.drawangle = me.angle+takis.nadoang
+			local state = S_PLAY_TAKIS_TORNADO
+			if (p.playerstate == PST_LIVE)
+				if (me.state ~= state)
+					me.state = state
+				end
+			end
+		end
 		
         if takis.inwaterslide
 		and not (takis.inPain or takis.inFakePain) then

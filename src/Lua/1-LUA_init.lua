@@ -343,6 +343,8 @@ rawset(_G, "TakisInitTable", function(p)
 		ballretain = 0,
 		nadocount = 0,
 		nadotic = 0,
+		nadouse = 0,
+		nadoang = 0,
 		
 		taunttime = 0,
 		tauntid = 0,
@@ -518,6 +520,7 @@ rawset(_G, "TakisInitTable", function(p)
 		inNIGHTSMode = false,
 		justHitFloor = false,
 		inSRBZ = false,
+		inChaos = false,
 		
 		--fake powers
 		fakeflashing = 0,
@@ -574,8 +577,8 @@ rawset(_G, "TakisInitTable", function(p)
 			},
 			--timer has 2 different sets for spectator and when finished
 			timer = {
-				text = 90-(13*6)+7-5,
-				int = {90-(13*6)+75+15 +15, (62-6)+4},		
+				text = 14,
+				int = {117, 60},		
 				spectator = {90-(13*6)+75+15 +15,(62-6)+20+24},
 				finished = {90-(13*6)+75+15 +15,(62-6)+20},
 			},
@@ -912,10 +915,18 @@ SafeFreeslot("SPR2_CLKB")
 SafeFreeslot("SPR2_PLHD")
 --fireass
 SafeFreeslot("SPR2_FASS")
+SafeFreeslot("SPR2_NADO")
 
 --
 
 --state freeslot
+
+freeslot("S_PLAY_TAKIS_TORNADO")
+states[S_PLAY_TAKIS_TORNADO] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_NADO,
+    tics = -1,
+}
 
 freeslot("S_PLAY_TAKIS_SHOULDERBASH")
 states[S_PLAY_TAKIS_SHOULDERBASH] = {

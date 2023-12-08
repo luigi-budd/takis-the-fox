@@ -418,10 +418,12 @@ local function howtotimer(player)
 	return flash, tics, extratext, extrafunc, timertype
 end
 
-local function drawtimer(v,p)
+local function drawtimer(v,p,altpos)
 
 	if (customhud.CheckType("time") != modname) return end
-
+	
+	if altpos == nil then altpos = false end
+	
 	if p.takistable.inNIGHTSMode
 	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
@@ -436,8 +438,9 @@ local function drawtimer(v,p)
 	local flashflag = 0
 	local flash,timetic,extratext,extrafunc,type = howtotimer(p)
 	
-	if type == "regular"
-	and (gametype == GT_COOP)
+	if (type == "regular"
+	and (gametype == GT_COOP))
+	and (not altpos)
 		if not p.exiting then return end
 	end
 	
@@ -485,9 +488,21 @@ local function drawtimer(v,p)
 	end
 	*/
 	
-	v.drawString(timex, timey, hours..extrac..minutes..":"..spad..seconds.."."..tictrn..tpad,V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER|flashflag,"thin-right")		v.drawString(timetx, timey, "Time"..extra,V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER|flashflag,"thin")
+	local flag = V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER|flashflag
+	if altpos
+		flag = $ &~V_HUDTRANS
+		if multiplayer
+			flag = $ &~(V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER)
+			timetx = 4
+			timex = timetx+103
+			timey = 184
+		end
+	end
+	
+	v.drawString(timex, timey, hours..extrac..minutes..":"..spad..seconds.."."..tictrn..tpad,flag,"thin-right")
+	v.drawString(timetx, timey, "Time"..extra,flag,"thin")
 	if extrastring ~= ''
-		v.drawString(timetx, timey+8, extratext,V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER|flashflag,"thin")			
+		v.drawString(timetx, timey+8, extratext,flag,"thin")			
 	end
 end
 
@@ -509,7 +524,7 @@ local function drawscore(v,p)
 		if PTSR.intermission_tics and (PTSR.intermission_tics < 324)
 			return
 		end
-	end
+	end	
 	
 	local takis = p.takistable
 	
@@ -526,18 +541,34 @@ local function drawscore(v,p)
 	--buggie's tf2 engi code
 	local scorenum = "SCREFT"
 	score = takis.HUD.flyingscore.scorenum
+	local align = "right"
 	
 	local prevw
 	if not prevw then prevw = 0 end
 	
+	--alignment stuff
+	local x,y = 300-15,15
+	local snap = V_SNAPTORIGHT|V_SNAPTOTOP
+	if takis.inChaos
+		x = 303
+		y = 55
+	end
+	
 	local width = (string.len(score))*(v.cachePatch(scorenum.."1").width*4/10)
+	if align == "left"
+		width = 0
+	elseif align == "center"
+		width = $/2
+	end
+	--
+	
 	for i = 1,string.len(score)
 		local n = string.sub(score,i,i)
-		v.drawScaled((300-15+prevw-width)*FU+xshake,
-			15*FU+yshake,
+		v.drawScaled((x+prevw-width)*FU+xshake,
+			y*FU+yshake,
 			FU/2,
 			v.cachePatch(scorenum+n),
-			V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER
+			snap|V_HUDTRANS|V_PERPLAYER
 		)
 			
 		prevw = $+v.cachePatch(scorenum+n).width*4/10
@@ -1128,7 +1159,9 @@ local function drawnadocount(v,p,cam)
 			flip = P_MobjFlip(mo)
 		end
 	else
-		x, y, scale = 160*FRACUNIT, (100 + bubble.height >> 1)*FRACUNIT, FRACUNIT
+		scale = FU
+		x = (160*FU)
+		y = 100*FU
 	end
 	
 	if splitscreen
@@ -3127,4 +3160,21 @@ addHook("HUD", function(v)
 	end
 end,"title")
 
+addHook("HUD", function(v)
+	if consoleplayer
+	and consoleplayer.takistable
+		local p = consoleplayer
+		local takis = p.takistable
+		if takis.isTakis
+			local flash,timetic,extratext,extrafunc,type = howtotimer(p)
+			
+			if not (type == "regular"
+			and (gametype == GT_COOP))
+				return
+			end
+			
+			drawtimer(v,p,true)
+		end
+	end
+end,"scores")
 filesdone = $+1
