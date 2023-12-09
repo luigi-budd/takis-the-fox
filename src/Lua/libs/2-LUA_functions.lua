@@ -677,8 +677,9 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 		local sfx_nado2 = sfx_tkfndo
 		
 		if (takis.nadocount > 0)
-			takis.noability = $|NOABIL_SPIN|NOABIL_DIVE|NOABIL_SLIDE|NOABIL_SHIELD
+			takis.noability = $|NOABIL_ALL
 			takis.thokked = true
+			takis.nadotime = $+2
 			
 			takis.nadoang = $+FixedAngle(20*FU)
 			local nadodist = 30
@@ -687,10 +688,18 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			local speed = 30*me.scale
 			
 			nadodist = $*2
-			local thok = P_SpawnMobjFromMobj(me,me.momx+nadodist*cos(me.angle+takis.nadoang),me.momy+nadodist*sin(me.angle+takis.nadoang),0,MT_THOK)
+			local waveforce = FU*5
+			local ay = FixedMul(waveforce,sin(takis.nadotime*2*ANG2))
+			local thok = P_SpawnMobjFromMobj(me,
+				me.momx+nadodist*cos(me.angle+takis.nadoang),
+				me.momy+nadodist*sin(me.angle+takis.nadoang),
+				2*me.scale+FixedMul(ay,me.scale),
+				MT_THOK
+			)
 			thok.angle = me.angle+takis.nadoang+ANGLE_90
 			thok.renderflags = $|RF_PAPERSPRITE
 			thok.height,thok.radius = me.height,me.radius
+			thok.tics = 3
 			thok.flags2 = $|MF2_DONTDRAW
 			nadodist = $/2
 			
@@ -701,6 +710,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			if (takis.use)
 			or (not takis.onGround and takis.accspeed >= 45*FU)
 				takis.nadoang = $+FixedAngle(10*FU)
+				takis.nadotime = $+3
 				otherwind(thok)
 				otherwind(thok)
 				
@@ -711,8 +721,8 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 				--pull stuff in!
 				local px = me.x+(me.momx)
 				local py = me.y+(me.momy)
-				local br = 250*me.scale
-				local rbr = 225*me.scale
+				local br = 350*me.scale
+				local rbr = br
 				local h = 5
 				
 				if (TAKIS_DEBUGFLAG & DEBUG_BLOCKMAP)
@@ -749,8 +759,9 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 						and (collide3(me,found,zrange*me.scale))
 						--the real range
 						and (FixedHypot(found.x-me.x,found.y-me.y) <= rbr)
-							if (found.flags & (MF_ENEMY|MF_BOSS))
-							or (found.takis_flingme)
+							if ((found.flags & (MF_ENEMY|MF_BOSS))
+							or (found.takis_flingme))
+							or (found.type == MT_PLAYER)
 								local source = found
 								local enemy = thok
 								local zdist = enemy.z - source.z
@@ -762,9 +773,35 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 								local dist = FixedHypot(FixedHypot(enx - source.x,eny - source.y),zdist)
 								local speed = FixedMul(FixedDiv(dist,rbr),rbr)/15
 								
-								source.momx = $+FixedMul(FixedDiv(enx - source.x,dist),FixedMul(speed,source.scale))
-								source.momy = $+FixedMul(FixedDiv(eny - source.y,dist),FixedMul(speed,source.scale))
-								source.momz = $+FixedMul(FixedDiv(zdist,dist),FixedMul(speed,source.scale))
+								local cando = true
+								if (source.player)
+									local p2 = source.player
+									if (P_PlayerInPain(p2))
+									or (p2.powers[pw_flashing])
+									or not (CanPlayerHurtPlayer(p,p2))
+										cando = false
+									end
+								end
+								if cando
+									source.momx = $+FixedMul(FixedDiv(enx - source.x,dist),FixedMul(speed,source.scale))
+									source.momy = $+FixedMul(FixedDiv(eny - source.y,dist),FixedMul(speed,source.scale))
+									source.momz = $+FixedMul(FixedDiv(zdist,dist),FixedMul(speed,source.scale))
+									
+									if (source.player)
+										source.state = S_PLAY_PAIN
+										if (dist <= nadodist*FU*3)
+											--?? please??
+											TakisAddHurtMsg(source.player,HURTMSG_NADO)
+											TakisAddHurtMsg(source.player,HURTMSG_NADO)
+											P_DamageMobj(source,enemy,enemy)
+											P_Thrust(source,R_PointToAngle2(
+												source.x,source.y, enx,eny
+												),
+												-26*source.scale
+											)
+										end
+									end
+								end
 							end
 						end
 					end
@@ -835,8 +872,29 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			S_StopSoundByID(me,sfx_nado)
 			S_StopSoundByID(me,sfx_nado2)
 			takis.nadoang = 0
-			S_StartSound(me,sfx_shgnk)
-			takis.transfo = $ &~TRANSFO_TORNADO		
+			takis.nadotime = 0
+			
+			p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
+			p.normalspeed = skins[TAKIS_SKIN].normalspeed
+			
+			if (takis.nadocrash)
+				takis.stasistic = 2
+				takis.noability = NOABIL_ALL
+				local state = S_PLAY_DEAD
+				if (me.state ~= state)
+					me.state = state
+				end
+				
+				if takis.nadocrash == 1
+					S_StartAntonOw(me)
+				end
+				takis.nadocrash = $-1
+			else
+				P_DoJump(p,true)
+				me.momz = $/10
+				S_StartSound(me,sfx_shgnk)
+				takis.transfo = $ &~TRANSFO_TORNADO		
+			end
 		end
 		
 	end
@@ -861,7 +919,7 @@ rawset(_G, "TakisTransfo", function(p,me,takis)
 	end
 	
 	if (takis.c3 == 1)
-	and not multiplayer
+	--and not multiplayer
 		takis.transfo = $|TRANSFO_TORNADO
 		takis.nadocount = 3
 	end
@@ -906,6 +964,13 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.dived = false
 		takis.thokked = false
 		takis.inFakePain = false
+	end
+	
+	if not (p.pflags & PF_SPINNING)
+	or not (takis.transfo & TRANSFO_TORNADO)
+		if (p.thrustfactor ~= skins[TAKIS_SKIN].thrustfactor)
+			p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
+		end
 	end
 	
 	TakisTransfo(p,me,takis)
@@ -1530,7 +1595,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 		if (PTSR.gameover)
 			takis.hhexiting = true
-			takis.noability = NOABIL_SPIN|NOABIL_SLIDE
+			takis.noability = NOABIL_ALL
 			
 			if (p.playerstate == PST_LIVE and not p.spectator)
 				if not (p.pflags & PF_FINISHED)
@@ -1562,7 +1627,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if (p.spectator)
-		takis.noability = $|NOABIL_SPIN|NOABIL_DIVE|NOABIL_SLIDE
+		takis.noability = $|NOABIL_ALL
 	end
 	
 	p.alreadyhascombometer = 2
@@ -2094,8 +2159,16 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 	
 	local speed = FixedHypot(t.momx,t.momy)
 	if t.player
-		speed = t.player.takistable.accspeed
-		DoQuake(t.player,t.scale*10+(speed/4),10)
+		local p = t.player
+		local takis = p.takistable
+		
+		speed = takis.accspeed
+		DoQuake(p,t.scale*10+(speed/4),10)
+		
+		if (takis.inChaos)
+			P_DamageMobj(tm,t,t,1)
+			return
+		end
 	end
 	
 	if not (tm.flags & MF_BOSS)
@@ -2798,7 +2871,7 @@ end)
 rawset(_G,"TakisPowerfulArma",function(p)
 	local me = p.mo
 	local takis = p.takistable
-	local rad = 8000*FU
+	local rad = 2000*FU
 	
 	if not (TAKIS_NET.nerfarma)
 		S_StartSound(me, sfx_bkpoof)
@@ -3437,4 +3510,190 @@ rawset(_G,"GetControlAngle",function(p)
 	return (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
 end)
 
+-- https://github.com/STJr/SRB2/blob/SRB2_release_2.2.13/src/p_inter.c#L1998
+rawset(_G,"VanillaHurtMsg",function(p,inf,sor,dmgt,died)
+	local deathonly = false
+	local deadsource = false
+	local deadtarget = false
+	local deathtxt = "by idiocy"
+	
+	if not (gametyperules & GTR_RINGSLINGER|GTR_HURTMESSAGES)
+		return
+	end
+	
+	if not p then return end
+	if not p.mo then return end
+	if p.spectator then return end
+	if not netgame then return end
+	
+	deadtarget = p.mo.health <= 0
+	if died then deadtarget = true end
+	
+	if not (CV_FindVar("hazardlog").value) then return end
+	
+	if sor
+		if sor.player
+			if sor.player.playerstate == PST_DEAD
+			and sor.player ~= p
+			and (inf.flags2 & MF2_BEYONDTHEGRAVE)
+				deadsource = true
+			end
+			
+			if (inf.flags & MF_PUSHABLE)
+				deathtxt = "playtime with heavy objects"
+			--switch case for type
+			else
+				local ty = inf.type
+				
+				if ty == MT_PLAYER
+					if (dmgt == DMG_NUKE)
+						deathtxt = "armageddon blast"
+					elseif inf.player.powers[pw_shield] & SH_NOSTACK == SH_ELEMENTAL
+					and inf.player.pflags & PF_SHIELDABILITY
+						deathtxt = "elemental stomp"
+					elseif inf.player.powers[pw_invulnerability]
+						deathtxt = "invincibility aura"
+					elseif inf.player.powers[pw_super]
+						deathtxt = "super aura"
+					else
+						deathtxt = "tagging hand"
+					end
+				elseif ty == MT_SPINFIRE
+					deathtxt = "elemental fire trail"
+				--weapon rings
+				elseif ty == MT_THROWNBOUNCE
+					deathtxt = "bounce ring"
+				elseif ty == MT_THROWNINFINITY
+					deathtxt = "infinity ring"
+				elseif ty == MT_THROWNAUTOMATIC
+					deathtxt = "automatic ring"
+				elseif ty == MT_THROWNSCATTER
+					deathtxt = "scatter ring"
+				elseif ty == MT_THROWNEXPLOSION
+					deathtxt = "explosion ring"
+				elseif ty == MT_THROWNGRENADE
+					deathtxt = "grenade ring"
+				elseif ty == MT_REDRING
+					if (inf.flags2 & MF2_RAILRING)
+						deathtxt = "rail ring"
+					else
+						deathtxt = "thrown ring"
+					end
+				else
+					deathtxt = 'idiocy'
+				end
+				
+				local sortxt = (deadsource) and "The late" or ''
+				local livetext = p.mo.health and "hurt" or "killed"
+				
+				print(sortxt..sor.player.ctfnamecolor.."'s "..deathtxt.." "..livetext.." "..p.ctfnamecolor)
+			end
+		
+		--type switch case
+		else
+			deathtxt = "by their idiocy"
+			local ty = sor.type
+			
+			if ty == MT_EGGMAN_ICON
+				deathtxt = "by Eggman's nefarious TV magic"
+			elseif SPIKE_LIST[ty] == true
+				deathtxt = "by spikes"
+			else
+				deathtxt = "by an environmental hazard"
+			end
+		end
+	--no source
+	else
+		--dmgt switch case
+		if dmgt == DMG_WATER
+			deathtxt = "by dangerous water"
+		elseif dmgt == DMG_FIRE
+			deathtxt = "by molten lava"
+		elseif dmgt == DMG_ELECTRIC
+			deathtxt = "by electricity"
+		elseif dmgt == DMG_SPIKE
+			deathtxt = "by spikes"
+		--death
+		elseif dmgt == DMG_DROWNED
+			deathonly = true
+			deathtxt = "drowned"
+		elseif dmgt == DMG_CRUSHED
+			deathonly = true
+			deathtxt = "was crushed"
+		elseif dmgt == DMG_DEATHPIT
+			if deadtarget
+				deathonly = true
+				deathtxt = "fell into a bottomless pit"
+			end
+		elseif dmgt == DMG_SPACEDROWN
+			if deadtarget
+				deathonly = true
+				deathtxt = "asphyxiated in space"
+			end
+		else
+			if deadtarget
+				deathonly = true
+				deathtxt = "died"
+			end
+		end
+	end
+	
+	if not deathtxt then return end
+	
+	if deathonly
+		if not deadtarget then return end
+		print(p.ctfnamecolor.." "..deathtxt)
+	else
+		local livetext = p.mo.health and "hurt" or "killed"
+		print(p.ctfnamecolor.." was "..livetext.." "..deathtxt)	
+	end
+end)
+
+rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
+	if (gametype == GT_COOP)
+	or (not (p.mo and p.mo.valid))
+		return
+	end
+	if p.spectator
+		return
+	end
+	if not inf
+	or not inf.valid
+		VanillaHurtMsg(p,inf,sor,dmgt,p.playerstate ~= PST_LIVE)
+		print("1")
+		return
+	end
+	if not sor
+	or not sor.valid
+		VanillaHurtMsg(p,inf,sor,dmgt,p.playerstate ~= PST_LIVE)
+		print("2")
+		return
+	end
+	if not (netgame)
+		return
+	end
+	
+	if not (inf.skin == TAKIS_SKIN
+	or sor.skin == TAKIS_SKIN)
+		VanillaHurtMsg(p,inf,sor,dmgt)
+		print("3")
+		return
+	end
+	
+	local takis = p.takistable
+	local me = p.mo
+	
+	local livetext = me.health and "hurt" or "killed"
+	local sortext = sor.health and '' or "The late "
+	
+	for i = 0, #takis.hurtmsg
+		print("i "..i)
+		print(takis.hurtmsg[i].tics)
+		if takis.hurtmsg[i].tics
+			print(sortext..sor.player.ctfnamecolor.."'s "..takis.hurtmsg[i].text.." "..livetext.." "..p.ctfnamecolor)
+			return true
+		end
+	end
+	VanillaHurtMsg(p,inf,sor,dmgt)
+end)
 filesdone = $+1

@@ -2166,7 +2166,7 @@ addHook("PlayerThink", function(p)
 			takis.lastrank = ranktonum[p.ptsr_rank]
 		end
 
-		for i = 0,#takis.hurtmsg-1
+		for i = 0,#takis.hurtmsg
 			if takis.hurtmsg[i].tics > 0
 				takis.hurtmsg[i].tics = $-1
 			end
@@ -2184,6 +2184,8 @@ addHook("PlayerThink", function(p)
 		takis.lastmap = gamemap
 		takis.lastgt = gametype
 		takis.lastdestroyed = takis.thingsdestroyed
+		
+		--CONS_Printf(p,mapmusname)
 	end
 	
 end)
@@ -2366,15 +2368,6 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		return
 	end
 	
-	if (sor and sor.valid)
-	and (sor.skin == TAKIS_SKIN)
-	and( not (gametyperules & GTR_FRIENDLY))
-	and (sor.player.takistable.heartcards ~= TAKIS_MAX_HEARTCARDS)
-	and not (mo.health)
-		TakisHealPlayer(sor.player,sor,1,1)
-		S_StartSound(mo,sfx_takhel,sor.player)
-	end
-	
 	if mo.skin ~= TAKIS_SKIN
 		return
 	end
@@ -2448,7 +2441,9 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	or (takis.heartcards)
 		S_StartSound(mo,sfx_smack)
 		DoQuake(p,30*FU*(max(1,p.timeshit*2/3)),15)
-		S_StartAntonOw(mo)
+		if takis.heartcards > 1
+			S_StartAntonOw(mo)
+		end
 	end
 
 	if p.powers[pw_carry] == CR_NIGHTSMODE
@@ -2467,7 +2462,6 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	end
 	
 	if takis.heartcards > 0
-	and (p.powers[pw_shield] == SH_NONE)
 		TakisResetHammerTime(p)
 		--DIE
 		if takis.heartcards == 1
@@ -2477,6 +2471,11 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 			P_PlayerRingBurst(p,p.rings)
 			P_PlayerWeaponAmmoBurst(p)
 			P_PlayerWeaponPanelBurst(p)
+			P_PlayerEmeraldBurst(p)
+			
+			if (p.gotflag)
+				P_PlayerFlagBurst(p,false)
+			end
 			--award points to source
 			if (sor and sor.valid
 			and sor.player and sor.player.valid)
@@ -2488,33 +2487,39 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 			end
 			return true
 		end
+		TakisHurtMsg(p,inf,sor,dmgt)
+		print("4")
 		
-		--award points to source
-		if (sor and sor.valid
-		and sor.player and sor.player.valid)
-			if (gametyperules &
-			(GTR_POINTLIMIT|GTR_RINGSLINGER|GTR_HURTMESSAGES)
-			or G_RingSlingerGametype())
-				P_AddPlayerScore(sor.player,50)
-			end
-		end
-		
-		p.powers[pw_flashing] = TR
+		P_DoPlayerPain(p,sor,inf)
+		--p.powers[pw_flashing] = TR
 		takis.ticsforpain = TR
 		S_StartSound(mo,sfx_shldls)
 		if (dmgt & DMG_SPIKE)
 			S_StartSound(mo,sfx_spkdth)
 		end
 		
-		TakisHealPlayer(p,mo,takis,3)
+		if (p.powers[pw_shield] == SH_NONE)
+			TakisHealPlayer(p,mo,takis,3)
+			if (p.rings >= 15)
+				P_PlayerRingBurst(p,15)
+				p.rings = $-15
+			else
+				P_PlayerRingBurst(p,-1)
+				p.rings = 0
+			end
+			P_PlayerWeaponAmmoBurst(p)
+			P_PlayerWeaponPanelBurst(p)
+		else
+			P_RemoveShield(p)
+		end
 		p.timeshit = $+1
 		
 		if inf
 		and inf.valid
 			local ang = R_PointToAngle2(mo.x,mo.y, inf.x, inf.y)
-			P_InstaThrust(mo,ang,-9*mo.scale)
+			P_InstaThrust(mo,ang,-5*mo.scale)
 		end
-		P_SetObjectMomZ(mo,14*mo.scale)
+		P_SetObjectMomZ(mo,8*mo.scale)
 		mo.state = S_PLAY_PAIN
 		takis.inFakePain = true
 		p.pflags = $ &~(PF_THOKKED|PF_JUMPED)
@@ -2527,6 +2532,20 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 			takis.electime = TR*3/2
 			P_SetObjectMomZ(mo,4*mo.scale)
 		end
+		
+		if (p.gotflag)
+			P_PlayerFlagBurst(p,false)
+		end
+		--award points to source
+		if (sor and sor.valid
+		and sor.player and sor.player.valid)
+			if (gametyperules &
+			(GTR_POINTLIMIT|GTR_RINGSLINGER|GTR_HURTMESSAGES)
+			or G_RingSlingerGametype())
+				P_AddPlayerScore(sor.player,50)
+			end
+		end
+		
 		return true
 	
 	end
@@ -2789,6 +2808,8 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 				p.timeshit = $+1
 				S_StartSound(mo,sfx_smack)
 				S_StartAntonOw(mo)
+				TakisHurtMsg(p,inf,sor,DMG_DEATHPIT)
+				print("5")
 			end
 			
 			takis.timesdeathpitted = $+1
@@ -2833,7 +2854,8 @@ addHook("PlayerHeight",function(p)
 				return FixedMul(P_GetPlayerHeight(p),FixedDiv(me.spriteyscale,FU))
 			end
 			if (takis.transfo & TRANSFO_TORNADO)
-				return P_GetPlayerHeight(p)
+			and not (takis.nadocrash)
+				return P_GetPlayerSpinHeight(p)
 			end
 		end
 	end
@@ -2854,36 +2876,22 @@ addHook("PlayerCanEnterSpinGaps",function(p)
 		local takis = p.takistable
 		
 		if me.skin == TAKIS_SKIN
+			local phigh = me.height
+			
 			if takis.crushtime
-				local phigh = FixedMul(P_GetPlayerHeight(p),FixedDiv(me.spriteyscale,FU))
-				if phigh <= P_GetPlayerSpinHeight(p)
-					return true
-				end
+				phigh = FixedMul(P_GetPlayerHeight(p),FixedDiv(me.spriteyscale,FU))
+			end
+			if (takis.transfo & TRANSFO_TORNADO)
+			and not (takis.nadocrash)
+				phigh = P_GetPlayerSpinHeight(p)
+			end
+			
+			if phigh <= P_GetPlayerSpinHeight(p)
+				return true
 			end
 		end
 	end
 end)
-
-/*
-local function KillSpike(spike, plmo)
-    if not (plmo and plmo.valid and plmo.skin == TAKIS_SKIN) then return end
-    if plmo.type ~= MT_PLAYER then return end
-    if plmo.z + plmo.height < spike.z or (spike.z + (spike.height+(spike.height/2))) < plmo.z then return end
-
-    local player = plmo.player
-	
-    if player.takistable.afterimaging
-	or player.powers[pw_invulnerability]
-	and L_ZCollide(spike,plmo)
-		P_KillMobj(spike, plmo, plmo)
-    end
-end
-
-addHook("MobjCollide", KillSpike, MT_SPIKE)
-addHook("MobjCollide", KillSpike, MT_WALLSPIKE)
-addHook("MobjCollide", KillSpike, MT_SPIKEBALL)
-addHook("MobjCollide", KillSpike, MT_BOMBSPHERE)
-*/
 
 local function hammerhitbox(t,tm)
 	if not t
@@ -2918,6 +2926,7 @@ local function hammerhitbox(t,tm)
 		end
 		
 		if tm.flags & (MF_ENEMY|MF_BOSS|MF_MONITOR)
+		or (tm.takis_flingme)
 			P_DamageMobj(tm,t,t.parent)
 		--	P_SetObjectMomZ(t.parent,14*t.parent.scale)
 		end
@@ -2998,7 +3007,7 @@ local function tauntbox(t,tm)
 			
 			if tm.flags & (MF_ENEMY|MF_BOSS)
 			or (tm.flags & MF_MONITOR)
-			or (tm.takis_flingme ~= false)
+			or (tm.takis_flingme)
 				spawnragthing(tm,t.tracer)
 				local ghs = P_SpawnGhostMobj(t)
 				ghs.fuse = 10*TR
@@ -3184,49 +3193,66 @@ addHook("MobjDeath", hurtbytakis)
 addHook("MobjDamage", diedbytakis)
 
 --takis died by thing
-addHook("MobjDeath", function(mo,_,_,dmgt)
+addHook("MobjDeath", function(mo,i,s,dmgt)
+	local p = mo.player
+	local takis = p.takistable
+	
+	if (s and s.valid)
+	and (s.skin == TAKIS_SKIN)
+	and (s.player.takistable.heartcards ~= TAKIS_MAX_HEARTCARDS)
+	and (not (gametyperules & GTR_FRIENDLY))
+		TakisHealPlayer(s.player,s,s.player.takistable,1,1)
+		S_StartSound(mo,sfx_takhel,s.player)
+	end
+	
 	if mo.skin ~= TAKIS_SKIN
 		return
+	end
+	
+	if (p.gotflag)
+		P_PlayerFlagBurst(p,false)
 	end
 	
 	if (mo.state ~= S_PLAY_DEAD)
 		mo.state = S_PLAY_DEAD
 	end
 	
-	TakisResetHammerTime(mo.player)
+	TakisResetHammerTime(p)
 	
-	if (mo.player.takistable.heartcards > 0)
-		mo.player.takistable.HUD.heartcards.shake = $+TAKIS_HEARTCARDS_SHAKETIME
+	if (takis.heartcards > 0)
+		takis.HUD.heartcards.shake = $+TAKIS_HEARTCARDS_SHAKETIME
 	end
 	
-	mo.player.takistable.combo.time = 0
-	mo.player.takistable.saveddmgt = dmgt
+	takis.combo.time = 0
+	takis.saveddmgt = dmgt
 	
 	if (mo.eflags & MFE_UNDERWATER)
-		mo.player.takistable.saveddmgt = DMG_DROWNED
+		takis.saveddmgt = DMG_DROWNED
 	end
 	if P_InSpaceSector(mo)
-		mo.player.takistable.saveddmgt = DMG_SPACEDROWN
+		takis.saveddmgt = DMG_SPACEDROWN
 	end
 	
-	if mo.player.takistable.saveddmgt == DMG_DROWNED
-		if (not mo.player.takistable.inWater) and mo.player.powers[pw_spacetime]
+	if takis.saveddmgt == DMG_DROWNED
+		if (not takis.inWater) and mo.player.powers[pw_spacetime]
 			--we need to set this because srb2 is silly
-			mo.player.takistable.saveddmgt = DMG_SPACEDROWN
+			takis.saveddmgt = DMG_SPACEDROWN
 		else
-			mo.player.takistable.saveddmgt = DMG_DROWNED
+			takis.saveddmgt = DMG_DROWNED
 		end
-	elseif mo.player.takistable.saveddmgt == DMG_SPACEDROWN
-		mo.player.takistable.saveddmgt = DMG_SPACEDROWN
+	elseif takis.saveddmgt == DMG_SPACEDROWN
+		takis.saveddmgt = DMG_SPACEDROWN
 	end
 	
-	S_StopSoundByID(mo,sfx_antow1)
-	S_StopSoundByID(mo,sfx_antow2)
-	S_StopSoundByID(mo,sfx_antow3)
-	S_StopSoundByID(mo,sfx_antow4)
-	S_StopSoundByID(mo,sfx_antow5)
-	S_StopSoundByID(mo,sfx_antow6)
-	S_StopSoundByID(mo,sfx_antow7)
+	if p == consoleplayer
+		S_StopSoundByID(mo,sfx_antow1)
+		S_StopSoundByID(mo,sfx_antow2)
+		S_StopSoundByID(mo,sfx_antow3)
+		S_StopSoundByID(mo,sfx_antow4)
+		S_StopSoundByID(mo,sfx_antow5)
+		S_StopSoundByID(mo,sfx_antow6)
+		S_StopSoundByID(mo,sfx_antow7)
+	end
 	
 end,MT_PLAYER)
 addHook("AbilitySpecial", function(p)
@@ -3454,7 +3480,7 @@ addHook("MobjMoveBlocked", function(mo, thing, line)
 				
 				takis.nadotic = 3
 				if (takis.nadocount == 1)
-					S_StartAntonOw(me)
+					takis.nadocrash = TR*3/2
 					me.state = S_PLAY_DEAD
 				end
 				

@@ -912,7 +912,9 @@ addHook("PreThinkFrame",function()
 			TakisMenuThinker(p)
 		end
 		
+		/*
 		if (takis.transfo & TRANSFO_TORNADO)
+		and not (takis.nadocrash)
 			local force = 50
 			--brake a bit
 			if P_GetPlayerControlDirection(p) == 2
@@ -922,6 +924,8 @@ addHook("PreThinkFrame",function()
 			p.cmd.forwardmove = force
 			p.cmd.sidemove = $/2
 		end
+		*/
+		
 	end
 end)
 
@@ -1181,36 +1185,8 @@ addHook("MobjThinker",function(effect)
 	
 end,MT_TAKIS_DRILLEFFECT)
 
-addHook("HurtMsg", function(p, inf, sor)
-	if (gametype == GT_COOP) or not (p.mo and p.mo.valid)
-	or not (gametyperules & GTR_HURTMESSAGES)
-		return
-	end
-	if not inf
-	or not inf.valid
-		return
-	end
-	if not sor
-	or not sor.valid
-		return
-	end
-	
-	if not (inf.skin == TAKIS_SKIN
-	or sor.skin == TAKIS_SKIN)
-		return
-	end
-	
-	local takis = p.takistable
-	local me = p.mo
-	
-	local livetext = me.health and "hurt" or "killed"
-	
-	for i = 0, #takis.hurtmsg-1
-		if takis.hurtmsg[i].tics
-			print(sor.player.ctfnamecolor.."'s "..takis.hurtmsg[i].text.." "..livetext.." "..p.ctfnamecolor)
-			return true
-		end
-	end
+addHook("HurtMsg", function(p, inf, sor, dmgt)
+	return TakisHurtMsg(p,inf,sor,dmgt)
 end)
 
 --fix this stupid zfighting issue in opengl
@@ -1307,12 +1283,6 @@ addHook("PostThinkFrame", function ()
 		
 		if (takis.transfo & TRANSFO_TORNADO)
 			p.drawangle = me.angle+takis.nadoang
-			local state = S_PLAY_TAKIS_TORNADO
-			if (p.playerstate == PST_LIVE)
-				if (me.state ~= state)
-					me.state = state
-				end
-			end
 		end
 		
         if takis.inwaterslide

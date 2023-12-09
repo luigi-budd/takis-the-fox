@@ -41,6 +41,7 @@ local dbgflags = {
 	"DEATH",
 	"SPEEDOMETER",
 	"TRANSFO",
+	"HURTMSG",
 }
 for k,v in ipairs(dbgflags)
 	rawset(_G,"DEBUG_"..v,1<<(k-1))
@@ -134,6 +135,7 @@ local hurtmsgenum = {
 	"HAMMERQUAKE",
 	"ARMA",
 	"BALL",
+	"NADO",
 }
 for k,v in ipairs(hurtmsgenum)
 	rawset(_G,"HURTMSG_"..v,k-1)
@@ -155,6 +157,7 @@ for k,v in ipairs(noabflags)
 end
 --anything that uses spin
 rawset(_G,"NOABIL_SPIN",NOABIL_CLUTCH|NOABIL_HAMMER|NOABIL_SHOTGUN|NOABIL_WAVEDASH)
+rawset(_G,"NOABIL_ALL",NOABIL_SPIN|NOABIL_SLIDE|NOABIL_SHIELD|NOABIL_DIVE)
 
 local transfoenum = {
 	"SHOTGUN",
@@ -216,6 +219,7 @@ rawset(_G, "TAKIS_NET", {
 		["letter"] = true,
 		["creds"] = true,
 		["_conga"] = true,
+		--spice runers
 		["ovrtme"] = true,
 		["rnk_a"] = true,
 		["rnk_cb"] = true,
@@ -345,6 +349,8 @@ rawset(_G, "TakisInitTable", function(p)
 		nadotic = 0,
 		nadouse = 0,
 		nadoang = 0,
+		nadocrash = 0,
+		nadotime = 0,
 		
 		taunttime = 0,
 		tauntid = 0,
@@ -354,7 +360,7 @@ rawset(_G, "TakisInitTable", function(p)
 		tauntjoinable = false,
 		--quick taunts activated by
 		--tossflag+c2/c3
-		--uses taunt ids
+		--uses taunt idss
 		--these are actually io but they arent in the io table :trol:
 		tauntquick1 = 0,
 		tauntquick2 = 0,
@@ -470,6 +476,7 @@ rawset(_G, "TakisInitTable", function(p)
 			[HURTMSG_HAMMERQUAKE] = {text = "Earthquake",tics = 0},
 			[HURTMSG_ARMA] = {text = "Armageddon Shield",tics = 0},
 			[HURTMSG_BALL] = {text = "tumble",tics = 0},
+			[HURTMSG_NADO] = {text = "Tornado Spin",tics = 0},
 		},
 		bonuses = {
 			["shotgun"] = {
@@ -592,12 +599,17 @@ rawset(_G, "TakisInitTable", function(p)
 			flyingscore = {
 				num = 0,
 				tics = 0,
-				x = (hudinfo[HUD_RINGS].x+5-8)*FU+(45*FU),
-				y = (hudinfo[HUD_RINGS].y+14)*FU+(20*FU),
+				x = 0,
+				y = 0,
 				lastscore = 0,
 				scorenum = 0,
 				xshake = 0,
 				yshake = 0,
+				
+				scorex = 0,
+				scorey = 0,
+				scorea = 0,
+				scores = 0,
 			},
 			funny = {
 				y = 500*FU,

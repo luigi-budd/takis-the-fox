@@ -528,19 +528,20 @@ local function drawscore(v,p)
 	
 	local takis = p.takistable
 	
-	local xshake = takis.HUD.flyingscore.xshake
-	local yshake = takis.HUD.flyingscore.yshake
+	local fs = takis.HUD.flyingscore
+	local xshake = fs.xshake
+	local yshake = fs.yshake
 		
 	local score = p.score
-	if takis.HUD.flyingscore.tics
-		score = p.score-takis.HUD.flyingscore.lastscore
+	if fs.tics
+		score = p.score-fs.lastscore
 	end
 	
 	--v.drawString((300-15)*FU+xshake, 15*FU+yshake, takis.HUD.flyingscore.scorenum,V_SNAPTORIGHT|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER,"fixed-right")
 	
 	--buggie's tf2 engi code
 	local scorenum = "SCREFT"
-	score = takis.HUD.flyingscore.scorenum
+	score = fs.scorenum
 	local align = "right"
 	
 	local prevw
@@ -548,6 +549,7 @@ local function drawscore(v,p)
 	
 	--alignment stuff
 	local x,y = 300-15,15
+	
 	local snap = V_SNAPTORIGHT|V_SNAPTOTOP
 	if takis.inChaos
 		x = 303
@@ -555,12 +557,16 @@ local function drawscore(v,p)
 	end
 	
 	local width = (string.len(score))*(v.cachePatch(scorenum.."1").width*4/10)
-	if align == "left"
-		width = 0
-	elseif align == "center"
+	if align == "center"
 		width = $/2
+	elseif align ~= "right"
+		width = 0
 	end
 	--
+	
+	fs.scorex, fs.scorey = x,y
+	fs.scorea = align
+	fs.scores = snap
 	
 	for i = 1,string.len(score)
 		local n = string.sub(score,i,i)
@@ -590,17 +596,17 @@ local function drawscore(v,p)
 	end
 	*/
 	
-	if takis.HUD.flyingscore.tics
+	if fs.tics
 		local snap = V_SNAPTOLEFT
-		if takis.HUD.flyingscore.tics < 4
+		if fs.tics < 4
 			snap = V_SNAPTORIGHT
 		end
 		
-		local x = takis.HUD.flyingscore.x
-		local y = takis.HUD.flyingscore.y
+		local x = fs.x
+		local y = fs.y
 		
 		v.drawString(x, y, 
-			takis.HUD.flyingscore.num,
+			fs.num,
 			snap|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER,
 			"thin-fixed-center"
 		)
@@ -817,7 +823,7 @@ local function drawlivesarea(v,p)
 			for i = 1, 7
 				v.drawScaled(
 					workx*FU,
-					(hudinfo[HUD_LIVES].y-9)*FU,
+					(hudinfo[HUD_LIVES].y-7)*FU,
 					FU/4,
 					emeraldpics[i],
 					V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER|additive
@@ -1234,7 +1240,7 @@ local function drawcombostuff(v,p)
 		
 		v.drawCropped(backx,backy,comboscale,comboscale,
 			v.cachePatch("TAKCOFILL"),
-			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP, 
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER, 
 			v.getColormap(nil,color),
 			0,0,
 			width,v.cachePatch("TAKCOFILL").height*FU
@@ -1242,13 +1248,13 @@ local function drawcombostuff(v,p)
 		
 		v.drawScaled(backx,backy,comboscale,
 			v.cachePatch("TAKCOBACK"),
-			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER
 		)
 		
 		v.drawString(backx+5*comboscale+(FixedMul(patchx,comboscale)),
 			backy+7*comboscale,
 			takis.combo.score,
-			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP,
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
 			"thin-fixed-center"
 		)
 		
@@ -1284,7 +1290,7 @@ local function drawcombostuff(v,p)
 			v.drawString(backx+5*comboscale+(FixedMul(patchx,comboscale)),
 				backy-2*comboscale,
 				"C1+C2: Cash in!",
-				V_ALLOWLOWERCASE|V_GREENMAP|V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP,
+				V_ALLOWLOWERCASE|V_GREENMAP|V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
 				"thin-fixed-center"
 			)
 		end
@@ -2309,11 +2315,15 @@ local function drawbonuses(v,p)
 	local takis = p.takistable
 	local HUD = takis.HUD
 	local me = p.mo
+	local fs = HUD.flyingscore
+	
+	local snap = "-"..fs.scorea
+	if fs.scorea ~= "center" and fs.scorea ~= "right" then snap = '' end
 	
 	TakisDrawBonuses(
 		v, p, -- Self explanatory.
-		(300-15)*FU, 30*FU, V_SNAPTORIGHT|V_SNAPTOTOP|V_ALLOWLOWERCASE, -- Powerups X & Y. Flags.
-		'thin-fixed-right', -- string alignment.
+		fs.scorex*FU, (fs.scorey*FU)+15*FU, fs.scores|V_ALLOWLOWERCASE, -- Powerups X & Y. Flags.
+		'thin-fixed'..snap, -- string alignment.
 		8*FU, ANGLE_90-- Distance to shift and which angle to do so.
 	)
 end
@@ -2841,6 +2851,14 @@ local function drawdebug(v,p)
 		drawflag(v,x+45,y-70,"EL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_ELEC))
 		drawflag(v,x+60,y-70,"TR",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_TORNADO))
 	end
+	if (TAKIS_DEBUGFLAG & DEBUG_HURTMSG)
+		for i = 0,#takis.hurtmsg
+			local strings = prtable("i "..i,takis.hurtmsg[i],false)
+			for k,va in ipairs(strings)
+				v.drawString(100,(4*(k-1))+(16*i),va,V_ALLOWLOWERCASE,"small")
+			end
+		end
+	end
 end
 
 --draw the stuff
@@ -3003,6 +3021,7 @@ addHook("HUD", function(v,p,cam)
 					"thin-center"
 				)
 			end
+			
 		else
 			customhud.SetupItem("rings",altmodname)
 			if not (HAPPY_HOUR.othergt)
