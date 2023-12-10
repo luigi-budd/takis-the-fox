@@ -551,13 +551,12 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 	if (HAPPY_HOUR.happyhour)
 	and dohhmus
 	
-		local nomus = string.lower(mapheaderinfo[gamemap].takis_hh_nomusic or '') == "true"
-		local noendmus = string.lower(mapheaderinfo[gamemap].takis_hh_noendmusic or '') == "true"
+		local hh = HAPPY_HOUR
+		local nomus = hh.nosong
+		local noendmus = hh.noendsong
 		
-		local song = mapheaderinfo[gamemap].takis_hh_music or "hapyhr"
-		local songend = mapheaderinfo[gamemap].takis_hh_endmusic or "hpyhre"
-		
-		song,songend = string.lower($1),string.lower($2)
+		local song = hh.song
+		local songend = hh.songend
 		
 		newname = string.lower(newname)
 		
@@ -580,6 +579,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 					local tics = HAPPY_HOUR.timeleft
 					
 					if tics <= (56*TR)
+					and (hh.noendsong == false)
 						changetohappy = false
 					end
 				end
@@ -912,7 +912,6 @@ addHook("PreThinkFrame",function()
 			TakisMenuThinker(p)
 		end
 		
-		/*
 		if (takis.transfo & TRANSFO_TORNADO)
 		and not (takis.nadocrash)
 			local force = 50
@@ -924,7 +923,6 @@ addHook("PreThinkFrame",function()
 			p.cmd.forwardmove = force
 			p.cmd.sidemove = $/2
 		end
-		*/
 		
 	end
 end)
@@ -1352,7 +1350,7 @@ for k,type in pairs(flinglist)
 end
 
 --heartcards mt
-addHook("MobjSpawn",function(card)
+local function cardspawn(card,spawnedfrommt,hasambush)
 	local cardscale = 2*FU
 	
 	if not card
@@ -1361,11 +1359,21 @@ addHook("MobjSpawn",function(card)
 	end
 	
 	if (card.flags2 & MF2_AMBUSH)
+	or (hasambush)
+	or (card.cardhadambush)
 		card.flags = $|MF_NOGRAVITY
+		card.cardhadambush = true
 	end
 	
 	card.spritexscale,card.spriteyscale = cardscale,cardscale
+	card.spawnedfrommt = spawnedfrommt
+end
+
+addHook("MapThingSpawn",function(mo,mt)
+	if not (mo and mo.valid) then return end
+	cardspawn(mo,true,mt.options & MTF_AMBUSH)
 end,MT_TAKIS_HEARTCARD)
+addHook("MobjSpawn",cardspawn,MT_TAKIS_HEARTCARD)
 
 addHook("MobjThinker",function(card)
 	if not card
@@ -1373,7 +1381,7 @@ addHook("MobjThinker",function(card)
 		return
 	end
 	
-	if not (TAKIS_NET.cards) then P_RemoveMobj(card) return end
+	if (TAKIS_NET.cards == false and card.spawnedfrommt ~= true) then P_RemoveMobj(card) return end
 	
 	local grounded = P_IsObjectOnGround(card)
 	card.angle = $+FixedAngle(5*FU)
@@ -1390,12 +1398,27 @@ addHook("MobjThinker",function(card)
 		card.timealive = $+1
 	end
 	
+	if card.spawnedfrommt
+		if card.tics > 0
+			card.tics = -1
+		end
+	end
+	
 	--end of life blinking
 	if (card.timealive >= 50*TR)
-		if (card.timealive%2)
-			card.flags2 = $ &~MF2_DONTDRAW
+	and (card.spawnedfrommt ~= true)
+		if card.timealive < 57*TR
+			if (card.timealive/2%2)
+				card.flags2 = $ &~MF2_DONTDRAW
+			else
+				card.flags2 = $|MF2_DONTDRAW
+			end
 		else
-			card.flags2 = $|MF2_DONTDRAW
+			if (card.timealive%2)
+				card.flags2 = $ &~MF2_DONTDRAW
+			else
+				card.flags2 = $|MF2_DONTDRAW
+			end		
 		end
 	end
 	
@@ -1454,6 +1477,16 @@ addHook("MobjDeath",function(card,_,sor)
 			doreturn = true
 		end
 		if (doreturn)
+			--make a thok do our bidding (respawn the card)
+			if (card.spawnedfrommt)
+			and (CV_FindVar("respawnitem").value
+			and (splitscreen or multiplayer))
+				local new = P_SpawnMobjFromMobj(card,0,0,0,MT_THOK)
+				new.camefromcard = true
+				new.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
+				new.cardflags = card.spawnflags or mobjinfo[card.type].flags
+				new.cardhadambush = card.cardhadambush
+			end
 			return
 		end
 		card.health = 1000
@@ -1467,6 +1500,31 @@ addHook("MobjDeath",function(card,_,sor)
 	
 	
 end,MT_TAKIS_HEARTCARD)
+
+--thok respawns cards for us
+addHook("MobjThinker",function(th)
+	if not (th and th.valid) then return end
+	if not (th.camefromcard) then return end
+	
+	th.flags2 = $|MF2_DONTDRAW
+	--tic respawn timer
+	if (th.respawntime)
+		if th.respawntime > CV_FindVar("respawnitemtime").value * TICRATE
+			th.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
+		end
+		th.tics,th.fuse = -1,-1
+		th.respawntime = $-1
+	else
+		local card = P_SpawnMobjFromMobj(th,0,0,0,MT_TAKIS_HEARTCARD)
+		card.spawnflags = th.cardflags
+		card.spawnedfrommt = true
+		if th.cardhadambush
+			card.cardhadambush = th.cardhadambush
+			card.flags = $|MF_NOGRAVITY
+		end
+		P_RemoveMobj(th)
+	end
+end,MT_THOK)
 
 local function dontfling(mo)
 	if not mo

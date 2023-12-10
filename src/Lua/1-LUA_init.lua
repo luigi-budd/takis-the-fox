@@ -241,8 +241,8 @@ freeslot("S_TAKIS_TAUNT_HITBOX")
 mobjinfo[MT_TAKIS_TAUNT_HITBOX] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_TAUNT_HITBOX,
-	height = 60*FU,
-	radius = 35*FU,
+	height = 60*FRACUNIT,
+	radius = 35*FRACUNIT,
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID
 }
 states[S_TAKIS_TAUNT_HITBOX] = {
@@ -1154,11 +1154,15 @@ states[S_TAKIS_HEARTCARD_SPIN] = {
 --server sustainability comes first!
 freeslot("MT_TAKIS_HEARTCARD")
 mobjinfo[MT_TAKIS_HEARTCARD] = {
+	--$Name Heartcard
+	--$Sprite HTCDALAR
+	--$Category Takis Stuff
+	--$Flags8Text No Gravity
 	doomednum = 3003,
 	spawnstate = S_TAKIS_HEARTCARD_SPIN,
 	spawnhealth = 1000,
-	height = 50*FU,
-	radius = 25*FU,
+	height = 50*FRACUNIT,
+	radius = 25*FRACUNIT,
 	flags = MF_SLIDEME|MF_SPECIAL
 }
 
@@ -1166,8 +1170,8 @@ freeslot("MT_TAKIS_DRILLEFFECT")
 mobjinfo[MT_TAKIS_DRILLEFFECT] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_DRILLEFFECT,
-	height = 60*FU,
-	radius = 35*FU,
+	height = 60*FRACUNIT,
+	radius = 35*FRACUNIT,
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID
 }
 
@@ -1176,8 +1180,8 @@ freeslot("MT_TAKIS_AFTERIMAGE")
 mobjinfo[MT_TAKIS_AFTERIMAGE] = {
 	doomednum = -1,
 	spawnstate = S_PLAY_WAIT,
-	radius = 12*FU,
-	height = 10*FU,
+	radius = 12*FRACUNIT,
+	height = 10*FRACUNIT,
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_NOBLOCKMAP	
 }
 
@@ -1201,8 +1205,8 @@ freeslot("S_TAKIS_HAMMERHITBOX")
 mobjinfo[MT_TAKIS_HAMMERHITBOX] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_HAMMERHITBOX,
-	height = 60*FU,
-	radius = 20*FU,
+	height = 60*FRACUNIT,
+	radius = 20*FRACUNIT,
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID
 }
 states[S_TAKIS_HAMMERHITBOX] = {
@@ -1215,16 +1219,16 @@ mobjinfo[MT_TAKIS_BADNIK_RAGDOLL] = {
 	doomednum = -1,
 	spawnstate = S_PLAY_WAIT,
 	deathstate = S_XPLD1,
-	height = 25*FU,
-	radius = 25*FU,
+	height = 25*FRACUNIT,
+	radius = 25*FRACUNIT,
 }
 
 freeslot("MT_TAKIS_SWEAT")
 mobjinfo[MT_TAKIS_SWEAT] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_SWEAT1,
-	height = 5*FU,
-	radius = 5*FU,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
 
 }
@@ -1233,8 +1237,8 @@ freeslot("MT_TAKIS_TAUNT_JOIN")
 mobjinfo[MT_TAKIS_TAUNT_JOIN] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_TAUNT_JOIN,
-	height = 5*FU,
-	radius = 5*FU,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
 
 }
@@ -1252,8 +1256,8 @@ mobjinfo[MT_TAKIS_DEADBODY] = {
 	spawnstate = S_NULL,
 	--mt_playuer
 	flags = MF_NOCLIP|MF_SLIDEME|MF_NOCLIPTHING|MF_NOGRAVITY,
-	height = 16*FU,
-	radius = 26*FU,
+	height = 16*FRACUNIT,
+	radius = 26*FRACUNIT,
 }
 
 freeslot("MT_TAKIS_SHOTGUN")
@@ -1262,8 +1266,8 @@ mobjinfo[MT_TAKIS_SHOTGUN] = {
 	spawnstate = S_TAKIS_SHOTGUN,
 	--mt_playuer
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING|MF_NOGRAVITY,
-	height = 5*FU,
-	radius = 5*FU,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
 }
 
 freeslot("MT_TAKIS_CLUTCHDUST")
@@ -1271,8 +1275,8 @@ mobjinfo[MT_TAKIS_CLUTCHDUST] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_CLUTCHDUST,
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING|MF_NOGRAVITY,
-	height = 5*FU,
-	radius = 5*FU,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
 }
 
 freeslot("MT_TAKIS_BADNIK_RAGDOLL_A")
@@ -1280,8 +1284,8 @@ mobjinfo[MT_TAKIS_BADNIK_RAGDOLL_A] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_BADNIK_RAGDOLL_A,
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING|MF_NOGRAVITY,
-	height = 5*FU,
-	radius = 5*FU,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
 }
 
 function A_ShotgunBox(mo)
@@ -1330,6 +1334,9 @@ states[S_SHOTGUN_ICON2] = {
 freeslot("MT_SHOTGUN_BOX")
 freeslot("MT_SHOTGUN_ICON")
 mobjinfo[MT_SHOTGUN_BOX] = {
+	--$Name Shotgun Box
+	--$Sprite TVSGA0
+	--$Category Takis Stuff
 	doomednum = 3002,
 	spawnstate = S_SHOTGUN_BOX,
 	painstate = S_SHOTGUN_BOX,
@@ -1340,20 +1347,20 @@ mobjinfo[MT_SHOTGUN_BOX] = {
 	damage = MT_SHOTGUN_ICON,
 	mass = 100,
 	flags = MF_SOLID|MF_SHOOTABLE|MF_MONITOR,
-	height = 40*FU,
-	radius = 18*FU,
+	height = 40*FRACUNIT,
+	radius = 18*FRACUNIT,
 }
 mobjinfo[MT_SHOTGUN_ICON] = {
 	doomednum = -1,
 	spawnstate = S_SHOTGUN_ICON1,
 	seesound = sfx_ncitem,
 	reactiontime = 10,
-	speed = 2*FU,
-	damage = 62*FU,
+	speed = 2*FRACUNIT,
+	damage = 62*FRACUNIT,
 	mass = 100,
 	flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY|MF_NOGRAVITY|MF_BOXICON,
-	height = 14*FU,
-	radius = 8*FU,
+	height = 14*FRACUNIT,
+	radius = 8*FRACUNIT,
 }
 
 /*
@@ -1367,6 +1374,13 @@ mobjinfo[MT_TAKIS_SHOTGUN_HITBOX] = {
 	radius = 60*FU,
 }
 */
+freeslot("MT_TAKIS_FLINGSOLID")
+states[MT_TAKIS_FLINGSOLID] = {
+	sprite = SPR_TVSG,
+	frame = A,
+	tics = 2,
+	nextstate = S_BOX_FLICKER
+}
 
 
 addHook("NetVars",function(n)

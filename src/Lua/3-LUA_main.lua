@@ -2130,31 +2130,7 @@ addHook("PlayerThink", function(p)
 				end
 				
 			end
-			if HAPPY_HOUR.timelimit
 			
-				if HAPPY_HOUR.timeleft
-					local tics = HAPPY_HOUR.timeleft
-					local time = hud.timeshake
-					
-					if tics <= (56*TR)
-					and (takis.io.nohappyhour == 0)
-						hud.timeshake = $+1
-						if not takis.sethappyend
-							ChangeTakisMusic("hpyhre",false,p,0,0,3*MUSICRATE)
-							takis.sethappyend = true
-						end
-						DoQuake(p,(time*FU)/50,1)
-					end
-					
-				else
-					takis.sethappyend = false
-					hud.timeshake = 0
-				end
-				
-			else
-				hud.timeshake = 0
-			end
-
 			if (takis.shotgunned)
 				TakisDeShotgunify(p)
 			end

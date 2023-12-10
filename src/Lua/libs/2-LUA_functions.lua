@@ -348,12 +348,13 @@ rawset(_G, "TakisHUDStuff", function(p)
 			if (HAPPY_HOUR.othergt)
 				dontdo = takis.io.nohappyhour == 1
 			end
-	
+			
 			if tics <= (56*TR)
 			and not (dontdo)
 				hud.timeshake = $+1
 				if not takis.sethappyend
-					ChangeTakisMusic("hpyhre",false,p,0,0,3*MUSICRATE)
+				and (HAPPY_HOUR.noendsong == false)
+					ChangeTakisMusic(HAPPY_HOUR.songend,false,p,0,0,3*MUSICRATE)
 					takis.sethappyend = true
 				end
 				DoQuake(p,(time*FU)/50,1)
@@ -916,12 +917,6 @@ rawset(_G, "TakisTransfo", function(p,me,takis)
 			me.state = S_PLAY_ROLL
 			takis.transfo = $|TRANSFO_BALL
 		end
-	end
-	
-	if (takis.c3 == 1)
-	--and not multiplayer
-		takis.transfo = $|TRANSFO_TORNADO
-		takis.nadocount = 3
 	end
 	
 	TakisTransfoHandle(p,me,takis)
@@ -3304,8 +3299,12 @@ local musdefaults = {
 }
 --returns the music name for a takis song, returns '' if the
 --player doesnt have takismusic.pk3
+--also returns a bool if it is a takis song
 rawset(_G, "ReturnTakisMusic",function(mus,p)
+	local istakis = false
 	mus = string.lower(tostring(mus))
+	
+	if musdefaults[mus] ~= nil then istakis = true end
 	
 	--if we CAN play it
 	if (S_MusicExists(mus,false,true))
@@ -3313,7 +3312,7 @@ rawset(_G, "ReturnTakisMusic",function(mus,p)
 			CV_StealthSet(CV_FindVar("takis_loadedmus"),"true")
 		end
 		
-		return mus
+		return mus,istakis
 	end
 	
 	if not p.takistable.io.ihavemusicwad
@@ -3322,10 +3321,10 @@ rawset(_G, "ReturnTakisMusic",function(mus,p)
 	
 	if mus == ''
 	or mus == nil
-		return nil
+		return '',istakis
 	end
 	
-	return mus
+	return mus,istakis
 	
 end)
 

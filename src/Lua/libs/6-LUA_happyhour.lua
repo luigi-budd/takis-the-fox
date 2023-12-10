@@ -14,6 +14,11 @@ rawset(_G,"HAPPY_HOUR",{
 	trigger = 0,
 	exit = 0,
 	overtime = false,
+	
+	song = "hapyhr",
+	songend = "hpyhre",
+	nosong = false,
+	noendsong = false,
 })
 
 local hh = HAPPY_HOUR
@@ -29,7 +34,9 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 		hh.time = 1
 		
 		for p in players.iterate
-			ChangeTakisMusic("HAPYHR",p)
+			if (hh.nosong == false)
+				ChangeTakisMusic(hh.song,p)
+			end
 		end
 		
 		if not (actor and actor.valid) then return end
@@ -64,6 +71,19 @@ end)
 
 addHook("ThinkFrame",do
 
+	local nomus = string.lower(mapheaderinfo[gamemap].takis_hh_nomusic or '') == "true"
+	local noendmus = string.lower(mapheaderinfo[gamemap].takis_hh_noendmusic or '') == "true"
+	
+	local song = mapheaderinfo[gamemap].takis_hh_music or "hapyhr"
+	local songend = mapheaderinfo[gamemap].takis_hh_endmusic or "hpyhre"
+	
+	song,songend = string.lower($1),string.lower($2)
+	
+	hh.song = song
+	hh.songend = songend
+	hh.nosong = nomus
+	hh.noendsong = noendmus
+	
 	hh.othergt = (gametype == GT_PTSPICER)
 	if hh.othergt
 		hh.happyhour = PTSR.pizzatime --and (PTSR.gameover == false)
@@ -173,13 +193,16 @@ states[S_HHTRIGGER_ACTIVE] = {
 }
 
 mobjinfo[MT_HHTRIGGER] = {
+	--$Name Happy Hour Trigger
+	--$Sprite HHT_A0
+	--$Category Takis Stuff
 	doomednum = 3000,
 	spawnstate = S_HHTRIGGER_IDLE,
 	spawnhealth = 1,
 	deathstate = S_HHTRIGGER_PRESSED,
 	deathsound = sfx_mclang,
-	height = 60*FU,
-	radius = 35*FU, --FixedDiv(35*FU,2*FU),
+	height = 60*FRACUNIT,
+	radius = 35*FRACUNIT, --FixedDiv(35*FU,2*FU),
 	flags = MF_SOLID,
 }
 
@@ -282,11 +305,14 @@ states[S_HHEXIT] = {
 }
 
 mobjinfo[MT_HHEXIT] = {
+	--$Name Happy Hour Exit
+	--$Sprite RINGA0
+	--$Category Takis Stuff
 	doomednum = 3001,
 	spawnstate = S_HHEXIT,
 	spawnhealth = 1,
-	height = 90*FU,
-	radius = 45*FU,
+	height = 96*FRACUNIT,
+	radius = 45*FRACUNIT,
 	flags = MF_SPECIAL,
 }
 
