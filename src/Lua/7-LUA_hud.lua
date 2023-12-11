@@ -1431,8 +1431,8 @@ local function drawhappyhour(v,p)
 	
 	if (HAPPY_HOUR.time) and (HAPPY_HOUR.time <= 5*TR)
 	and not (dontdo)
-	
-		local date = os.date("*t", 906000490)
+	and (HAPPY_HOUR.gameover == false)
+		local date = os.date("*t")
 		
 		local tics = HAPPY_HOUR.time
 
@@ -1562,10 +1562,10 @@ local function drawpizzatips(v,p)
 	local exitingCount, playerCount = PTSR_COUNT()
 
 	if (not p.pizzaface)
-	and (p.exiting)
-	and (not PTSR.quitting)
-	and (p.playerstate ~= PST_DEAD)
-	and (not p.spectator)
+	and (p.ptsr_outofgame)
+	and (p.playerstate ~= PST_DEAD) 
+	and not (p.lapsdid >= PTSR.maxlaps and CV_PTSR.default_maxlaps.value)
+	and not PTSR.gameover then
 		if not p.hold_newlap then
 			v.drawString(160, 130, "\x85Hold FIRE to try a new lap!", V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-center")
 		else
@@ -2988,8 +2988,25 @@ addHook("HUD", function(v,p,cam)
 			if (takis.cosmenu.menuinaction)
 				drawcosmenu(v,p)
 			end
+			if takis.nadotuttic
+				local trans = 0
+				
+				if takis.nadotuttic >= 4*TR-9
+					trans = (takis.nadotuttic-(4*TR-9))<<V_ALPHASHIFT
+				elseif takis.nadotuttic < 10
+					trans = (10-takis.nadotuttic)<<V_ALPHASHIFT
+				end
+				local waveforce = FU/10
+				local ay = FixedMul(waveforce,sin(leveltime*ANG2))
+				v.drawScaled(160*FU,65*FU,FU+ay,v.cachePatch("SPIKEYBOX"),trans)
+				v.drawString(160,55,"\x82Tornado Transfo!",V_ALLOWLOWERCASE|trans,"thin-center")
+				v.drawString(160,65,"Spin to go faster!",V_ALLOWLOWERCASE|trans,"thin-center")
+				v.drawString(160,75,"C3 - Whatever",V_ALLOWLOWERCASE|trans,"thin-center")
+				
+			end
 			drawcfgnotifs(v,p)
 			drawhappyhour(v,p)
+			
 			
 			if takis.fchelper
 				--fc helper

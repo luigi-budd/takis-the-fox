@@ -229,6 +229,11 @@ rawset(_G, "TakisHUDStuff", function(p)
 		hud.cfgnotifstuff = $-1
 	end
 	
+	if takis.nadotuttic
+		if takis.c3 then takis.nadotuttic = 1 end
+		takis.nadotuttic = $-1
+	end
+	
 	local bonus = takis.bonuses
 	if bonus["shotgun"].tics
 		bonus["shotgun"].tics = $-1
@@ -351,6 +356,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 			
 			if tics <= (56*TR)
 			and not (dontdo)
+			and not HAPPY_HOUR.gameover
 				hud.timeshake = $+1
 				if not takis.sethappyend
 				and (HAPPY_HOUR.noendsong == false)
@@ -1306,6 +1312,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if HAPPY_HOUR.time
 	and not (dontdo)
+	and not HAPPY_HOUR.gameover
 		local tics = HAPPY_HOUR.time
 		
 		if (tics == 1)

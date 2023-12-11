@@ -81,7 +81,7 @@
 	-[done]fix the clutch being slow with smaller scales
 	-MORE EFFECTS!!
 	-placements in drawscore?
-	-happy hour trigger and exit objects
+	-[done]happy hour trigger and exit objects
 	-[done??]dedicated servers may be breaking heart cards?
 	-[done]rings give too much score
 	-[done?]we may be loading other people's cfgs??
@@ -1990,6 +1990,8 @@ addHook("PlayerThink", function(p)
 						and ((takis.onGround) or P_CheckDeathPitCollide(me))
 						and takis.yeahwait == 0
 							if not takis.camerascale
+							--keep the camera zoomed out on the door
+							and not (HAPPY_HOUR.exit and HAPPY_HOUR.exit.valid)
 								takis.camerascale = p.camerascale
 								p.camerascale = 28221
 							end
@@ -2096,6 +2098,7 @@ addHook("PlayerThink", function(p)
 			if HAPPY_HOUR.time
 			and (takis.io.nohappyhour == 0
 			and takis.io.morehappyhour == 1)
+			and not HAPPY_HOUR.gameover
 				local tics = HAPPY_HOUR.time
 				
 				if (tics == 1)
@@ -2167,12 +2170,13 @@ addHook("PlayerThink", function(p)
 end)
 
 addHook("PlayerSpawn", function(p)
-	local x,y = ReturnTrigAngles(p.realmo.angle)
+	local x,y = ReturnTrigAngles(FixedAngle(180*FU-AngleFixed(p.realmo.angle)))
 	/*
 	if (TAKIS_DEBUGFLAG & DEBUG_HAPPYHOUR)
 		P_SpawnMobjFromMobj(p.mo,100*x,100*y,0,MT_HHTRIGGER)
 	end
 	*/
+	--	P_SpawnMobjFromMobj(p.mo,100*x,100*y,0,MT_HHEXIT)
 	
 	if (skins[p.skin].name == TAKIS_SKIN)
 		if (maptol & TOL_NIGHTS)
@@ -2351,7 +2355,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	--BUT!!
 	if (p.powers[pw_shield] == SH_ARMAGEDDON)
 		TakisPowerfulArma(p)
-		takis.fakeflashing = flashingtics
+		takis.fakeflashing = flashingtics*2
 		return true
 	end
 	
@@ -2426,6 +2430,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		if not multiplayer
 			if HAPPY_HOUR.happyhour
 				HAPPY_HOUR.timelimit = p.nightstime
+				p.powers[pw_flashing] = $*2
 			end
 		end
 		
@@ -3363,6 +3368,11 @@ addHook("MobjMoveCollide",function(tm,t)
 					if not (takis.transfo & TRANSFO_TORNADO)
 						takis.transfo = $|TRANSFO_TORNADO
 					end
+					if not (TakisReadAchievements(p) & ACHIEVEMENT_TORNADO)
+						takis.nadotuttic = 5*TR
+					end
+					
+					TakisAwardAchievement(p,ACHIEVEMENT_TORNADO)
 				end
 				
 				return false

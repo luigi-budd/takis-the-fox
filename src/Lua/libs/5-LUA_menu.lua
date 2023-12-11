@@ -25,7 +25,7 @@ tm.entries = {
 	[1] = {
 		title = "Achievements",
 		color = SKINCOLOR_CARBON,
-		text = {},
+		text = {''},
 	},
 	[2] = {
 		title = "Takis Options",
@@ -194,13 +194,6 @@ if (TAKIS_ISDEBUG)
 		end
 	end)
 	
-end
-
-for i = 1,NUMACHIEVEMENTS
-	if i > 7
-		continue
-	end
-	table.insert(tm.entries[1].text,'')
 end
 
 filesdone = $+1

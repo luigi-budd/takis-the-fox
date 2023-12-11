@@ -14,6 +14,7 @@ rawset(_G,"HAPPY_HOUR",{
 	trigger = 0,
 	exit = 0,
 	overtime = false,
+	gameover = false,
 	
 	song = "hapyhr",
 	songend = "hpyhre",
@@ -32,6 +33,7 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 		hh.timelimit = timelimit
 		hh.happyhour = true
 		hh.time = 1
+		hh.gameover = false
 		
 		for p in players.iterate
 			if (hh.nosong == false)
@@ -48,9 +50,12 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 		end
 		
 		for mobj in mobjs.iterate()
-			if (mobj.type == MT_NIGHTSDRONE)
-			or (mobj.type == MT_HHEXIT)
+			--if (mobj.type == MT_NIGHTSDRONE)
+			if (mobj.type == MT_HHEXIT)
 				hh.exit = mobj
+				if (mobj.type == MT_HHEXIT)
+					mobj.state = S_HHEXIT_OPEN
+				end
 			else
 				continue
 			end
@@ -67,6 +72,7 @@ rawset(_G,"HH_Reset",function()
 	hh.time = 0
 	hh.trigger = 0
 	hh.exit = 0
+	hh.gameover = false
 end)
 
 addHook("ThinkFrame",do
@@ -95,31 +101,60 @@ addHook("ThinkFrame",do
 	
 		if hh.happyhour
 			
-			if ((hh.timeleft ~= 0)
-			and (hh.timelimit))
-				hh.time = $+1
+			if not hh.gameover
+				if ((hh.timeleft ~= 0)
+				and (hh.timelimit))
+					hh.time = $+1
+				end
 			end
 			if (hh.timelimit)
 				hh.timeleft = hh.timelimit-hh.time
 			end
 			
 			if (G_EnoughPlayersFinished())
-				HH_Reset()
-				return
+			and not hh.gameover
+				for p in players.iterate()
+					if skins[p.skin].name == TAKIS_SKIN then continue end
+					S_StopMusic(p)
+				end
+				hh.gameover = true
 			end
 			
 			for p in players.iterate
 				if not (p and p.valid) then continue end
 				if not (p.mo and p.mo.valid) then continue end
 				if (not p.mo.health) or (p.playerstate ~= PST_LIVE) then continue end
-				if (p.exiting or p.pflags & PF_FINISHED) then continue end
 				
-				if not (hh.time % TR)
-				and (hh.time)
-					if (p.score > 5)
-						p.score = $-5
-					else
-						p.score = 0
+				local me = p.mo
+				local takis = p.takistable
+				
+				--finish thinker
+				if (p.exiting or p.pflags & PF_FINISHED)
+				and (hh.exit and hh.exit.valid)
+					P_DoPlayerExit(p)
+					me.flags2 = $|MF2_DONTDRAW
+					me.momx,me.momy,me.momz = 0,0,0
+					P_SetOrigin(me,hh.exit.x,hh.exit.y,hh.exit.z)
+					p.pflags = $|PF_FINISHED
+					p.exiting = min(99,$)
+					p.powers[pw_flashing] = 3
+					p.powers[pw_shield] = 0
+					if (takis.isTakis)
+						takis.goingfast = false
+						takis.wentfast = 0
+					end
+					
+					continue
+				end
+				
+				if not hh.gameover
+					if not (hh.time % TR)
+					and (hh.time)
+						if (p.score > 5)
+							p.score = $-5
+						else
+							p.score = 0
+						end
 					end
 				end
 				
@@ -137,15 +172,21 @@ addHook("ThinkFrame",do
 						for p in players.iterate
 							if not (p and p.valid) then continue end
 							if not (p.mo and p.mo.valid) then continue end
-							--already dead
-							if (not p.mo.health) or (p.playerstate ~= PST_LIVE) then continue end
 							if (p.exiting or p.pflags & PF_FINISHED) then continue end
 							
 							if not (p.happydeath)
 								P_KillMobj(p.mo)
-								--still wanna get through the level
-								p.pflags = $|PF_FINISHED
 								p.happydeath = true
+								--too bad! sucks to suck!
+								if (p.score < 10000)
+									p.score = 0
+								else
+									p.score = $-10000
+								end
+								p.exiting = 99
+								--no time bonus
+								p.rings = 0
+								p.realtime = leveltime*99
 							--DONT let them respawn....
 							else
 								if (multiplayer)
@@ -177,7 +218,7 @@ sfxinfo[freeslot("sfx_hhtsnd")] = {
 
 states[S_HHTRIGGER_IDLE] = {
 	sprite = SPR_HHT_,
-	frame = A,
+	frame = O,
 	tics = -1
 }
 states[S_HHTRIGGER_PRESSED] = {
@@ -194,7 +235,7 @@ states[S_HHTRIGGER_ACTIVE] = {
 
 mobjinfo[MT_HHTRIGGER] = {
 	--$Name Happy Hour Trigger
-	--$Sprite HHT_A0
+	--$Sprite HHT_O0
 	--$Category Takis Stuff
 	doomednum = 3000,
 	spawnstate = S_HHTRIGGER_IDLE,
@@ -223,9 +264,14 @@ addHook("MobjThinker",function(trig)
 	trig.spriteyscaleadd = $ or 0
 	
 	if trig.state == S_HHTRIGGER_ACTIVE
-		trig.frame = ((5*(HAPPY_HOUR.time)/6)%14)
-		if not S_SoundPlaying(trig,sfx_hhtsnd)
-			S_StartSound(trig,sfx_hhtsnd)
+		if not (hh.gameover)
+			trig.frame = ((5*(HAPPY_HOUR.time)/6)%14)
+			if not S_SoundPlaying(trig,sfx_hhtsnd)
+				S_StartSound(trig,sfx_hhtsnd)
+			end
+		else
+			trig.frame = A
+			S_StopSound(trig)
 		end
 	end
 	
@@ -296,25 +342,146 @@ end,MT_HHTRIGGER)
 ----
 
 ----	exit stuff
+freeslot("SPR_HHE_")
+freeslot("SPR_HHF_")
 freeslot("S_HHEXIT")
-freeslot("MT_HHEXIT")
 states[S_HHEXIT] = {
-	sprite = SPR_PLAY,
+	sprite = SPR_HHE_,
 	frame = A,
 	tics = -1
+} 
+freeslot("S_HHEXIT_OPEN")
+states[S_HHEXIT_OPEN] = {
+	sprite = SPR_HHE_,
+	frame = B,
+	tics = -1
+} 
+freeslot("S_HHEXIT_CLOSE1")
+freeslot("S_HHEXIT_CLOSE2")
+freeslot("S_HHEXIT_CLOSE3")
+freeslot("S_HHEXIT_CLOSE4")
+states[S_HHEXIT_CLOSE1] = {
+	sprite = SPR_HHE_,
+	frame = P|FF_ANIMATE,
+	var1 = 3,
+	var2 = 2,
+	tics = 3*2,
+	nextstate = S_HHEXIT_CLOSE2
+} 
+states[S_HHEXIT_CLOSE2] = {
+	sprite = SPR_HHE_,
+	frame = S,
+	tics = 15,
+	nextstate = S_HHEXIT_CLOSE3,
+} 
+states[S_HHEXIT_CLOSE3] = {
+	sprite = SPR_HHF_,
+	frame = B|FF_ANIMATE,
+	var1 = 13,
+	var2 = 1,
+	tics = 13*6,
+	nextstate = S_HHEXIT_CLOSE4
+} 
+states[S_HHEXIT_CLOSE4] = {
+	sprite = SPR_HHF_,
+	frame = A,
+	tics = -1
+} 
+sfxinfo[freeslot("sfx_elebel")] = {
+	flags = SF_X2AWAYSOUND,
+	caption = "Elevator bell"
 }
 
+freeslot("MT_HHEXIT")
 mobjinfo[MT_HHEXIT] = {
 	--$Name Happy Hour Exit
 	--$Sprite RINGA0
 	--$Category Takis Stuff
 	doomednum = 3001,
 	spawnstate = S_HHEXIT,
+	seestate = S_HHEXIT_OPEN,
 	spawnhealth = 1,
-	height = 96*FRACUNIT,
-	radius = 45*FRACUNIT,
+	height = 115*FRACUNIT,
+	radius = 25*FRACUNIT,
 	flags = MF_SPECIAL,
 }
+
+addHook("MobjSpawn",function(mo)
+	--mo.shadowscale = mo.scale*9/10
+	local scale = FU*2
+	mo.spritexscale,mo.spriteyscale = scale,scale
+	mo.boltrate = 10
+	hh.exit = mo
+end,MT_HHEXIT)
+addHook("TouchSpecial",function(door,mo)
+	if not (mo and mo.valid) then return true end
+	if not (door and door.valid) then return true end
+	if not (hh.happyhour) then return true end
+	if (hh.othergt) then return true end
+	
+	local p = mo.player
+	
+	if (p.exiting or p.pflags & PF_FINISHED) then return true end
+	
+	chatprint("\x82*\x83"..p.name.."\x82 reached the exit.")
+	P_DoPlayerExit(p)
+	mo.momx,mo.momy,mo.momz = 0,0,0
+	P_SetOrigin(mo,door.x,door.y,door.z)
+	mo.flags2 = $|MF2_DONTDRAW
+	
+	if (G_EnoughPlayersFinished())
+		door.state = S_HHEXIT_CLOSE1
+	end
+	
+	return true
+end,MT_HHEXIT)
+addHook("MobjThinker",function(door)
+	if not (door and door.valid) then return end
+	
+	if door.state == S_HHEXIT_OPEN
+		door.frame = 1+((hh.time)%14)
+	elseif door.state == S_HHEXIT_CLOSE3
+		if not (door.exittic)
+			door.exittic = 1
+		else
+			if not (leveltime % 2)
+				door.exittic = $+1
+			end
+		end
+		local ay = FU+(door.exittic*FU/40)
+		if P_RandomChance(FU/2)
+			ay = FU/2+door.exittic*FU/20
+		end
+		
+		door.spritexscale = FixedMul(2*FU,ay)
+		door.spriteyscale = FixedDiv(2*FU,ay)
+		
+		if not (leveltime % 3)
+			local rad = door.radius/FRACUNIT
+			local hei = door.height/FRACUNIT
+			local x = P_RandomRange(-rad,rad)*FRACUNIT
+			local y = P_RandomRange(-rad,rad)*FRACUNIT
+			local z = P_RandomRange(0,hei)*FRACUNIT
+			local spark = P_SpawnMobjFromMobj(door,x,y,z,MT_SOAP_SUPERTAUNT_FLYINGBOLT)
+			spark.tracer = door
+			spark.state = P_RandomRange(S_SOAP_SUPERTAUNT_FLYINGBOLT1,S_SOAP_SUPERTAUNT_FLYINGBOLT5)			
+			spark.blendmode = AST_ADD
+			spark.color = P_RandomRange(SKINCOLOR_WHITE,SKINCOLOR_GREY)
+			spark.angle = door.angle+(FixedAngle( (P_RandomRange(-337,337)*FU)+P_RandomFixed() ))
+			spark.momz = P_RandomRange(0,4)*door.scale*P_MobjFlip(door)
+			P_Thrust(spark,spark.angle,P_RandomRange(1,5)*door.scale)
+			spark.scale = P_RandomRange(1,3)*FU+P_RandomFixed()
+		end
+	elseif door.state == S_HHEXIT_CLOSE4
+		if (door.exittic ~= nil)
+			S_StartSound(door,sfx_elebel)
+			door.exittic = nil
+		end
+		door.spritexscale = 2*FU
+		door.spriteyscale = 2*FU
+	end
+
+end,MT_HHEXIT)
 
 ----
 

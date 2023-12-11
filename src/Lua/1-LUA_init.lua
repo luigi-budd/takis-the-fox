@@ -351,6 +351,7 @@ rawset(_G, "TakisInitTable", function(p)
 		nadoang = 0,
 		nadocrash = 0,
 		nadotime = 0,
+		nadotuttic = 0,
 		
 		taunttime = 0,
 		tauntid = 0,

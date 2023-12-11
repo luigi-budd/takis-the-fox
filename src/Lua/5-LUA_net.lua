@@ -109,8 +109,10 @@ addHook("MapLoad", function(mapid)
 	t.livescount = 0
 	
 	for mt in mapthings.iterate
+		
 		if mt.mobj and mt.mobj.valid
 			local mobj = mt.mobj
+				
 			
 			if mobj.type == MT_CYBRAKDEMON
 				t.inbrakmap = true

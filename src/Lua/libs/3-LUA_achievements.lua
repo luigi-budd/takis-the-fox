@@ -15,6 +15,7 @@ local achs = {
 	"COMBOALMOST",
 	"BOOMSTICK",
 	"BRAKMAN",
+	"TORNADO"
 }
 for k,v in ipairs(achs)
 	rawset(_G,"ACHIEVEMENT_"..string.upper(v),1<<(k-1))
@@ -110,6 +111,12 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		icon = "ACH_PLACEHOLDER",
 		scale = FU/4,
 		text = "Deal the finishing blow\nto Brak Eggman.",
+	},
+	[ACHIEVEMENT_TORNADO] = {
+		name = "Hurricane Taykis",
+		icon = "ACH_PLACEHOLDER",
+		scale = FU/4,
+		text = "Turn into the Tornado\nTransfomation.",
 	},
 })
 
