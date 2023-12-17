@@ -408,4 +408,44 @@ COM_AddCommand("invuln", function(p,tics,flags)
 	p.powers[pw_invulnerability] = tics
 end,COM_ADMIN)
 
+local boolean = {
+	["true"] = true,
+	["false"] = false,
+}
+
+/*
+COM_AddCommand("_gmodify", function(p,gdex,value,vty)
+	local dex = _G[gdex]
+	
+	if dex == nil
+		prn(p,"This global var is nil")
+		return
+	end
+	
+	local type = type(dex)
+	
+	if type == "no value"
+		prn(p,"This global var has no value")
+		return
+	elseif type == "function"
+		prn(p,"This global var is a function")
+		return
+	elseif type == "table"
+		prtable(gdex,dex)
+		return
+	end
+	
+	if vty == "boolean"
+		value = boolean[string.lower($)]
+	elseif vty == "number"
+		value = tonumber($)
+	end
+	
+	print("Changing "..gdex.." from "..tostring(dex).." to "..tostring(value))
+	dex = value
+	print(dex)
+	
+end,COM_ADMIN)
+*/
+
 filesdone = $+1

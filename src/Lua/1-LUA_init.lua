@@ -14,14 +14,6 @@
 	
 */
 
---quit loading the musicwad so many times
-CV_RegisterVar({
-	"takis_loadedmus",
-	"false",
-	CV_NOSHOWHELP,
-	CV_TrueFalse,
-})
-
 local pnk = "\x8E"
 local wht = "\x80"
 
@@ -85,6 +77,7 @@ addHook("ThinkFrame",do
 end)
 
 rawset(_G, "TAKIS_MAX_HEARTCARDS", 6)
+rawset(_G, "TAKIS_MAX_HEARTCARD_FUSE", 30*TR)
 rawset(_G, "TAKIS_HEARTCARDS_SHAKETIME", 17)
 rawset(_G, "TAKIS_MAX_COMBOTIME", 7*TR)
 rawset(_G, "TAKIS_PART_COMBOTIME", 4*TR/5)
@@ -322,7 +315,6 @@ rawset(_G, "TakisInitTable", function(p)
 		lastmap = 1,
 		lastgt = 0,
 		lastskincolor = 0,
-		thingsdestroyed = 0,
 		lastdestroyed = 0,
 		fchelper = false,
 		achfile = 0,
@@ -398,7 +390,6 @@ rawset(_G, "TakisInitTable", function(p)
 			introtics = 0,
 			outrotics = 0,
 			outrotointro = 0,
-			gravity = 0,
 			frozen = false,
 		},
 		io = {
@@ -414,7 +405,6 @@ rawset(_G, "TakisInitTable", function(p)
 			flashes = 1,
 			windowstyle = 'win10', --for cosmenu, all lowercase
 			additiveai = 0,
-			ihavemusicwad = 0, --samus-like check for music stuff
 			clutchstyle = 1, --0 for bar, 1 for meter
 			sharecombos = 1,
 			dontshowach = 0, --1 to not show ach messages
@@ -591,6 +581,9 @@ rawset(_G, "TakisInitTable", function(p)
 				finished = {90-(13*6)+75+15 +15,(62-6)+20},
 			},
 			combo = {
+				basey = 70*FU,
+				y = 70*FU,
+				momy = 0,
 				scale = FU,
 				shake = 0,
 				patchx = 0,
@@ -758,7 +751,7 @@ sfxinfo[sfx_takst0].caption = "Step"
 
 freeslot("sfx_tkapow")
 sfxinfo[sfx_tkapow] = {
-	flags = SF_X2AWAYSOUND,
+	flags = SF_X2AWAYSOUND|SF_NOMULTIPLESOUND|SF_TOTALLYSINGLE,
 	caption = "\x82KaPOW!!!\x80"
 }
 freeslot("sfx_tacrit")
@@ -858,7 +851,11 @@ sfxinfo[sfx_tcmupc].caption = "\x83".."Combo up!\x80"
 SafeFreeslot("sfx_shgnbs")
 sfxinfo[sfx_shgnbs].caption = "Shoulder Bash"
 SafeFreeslot("sfx_hrtcdt")
-sfxinfo[sfx_hrtcdt].caption = "Tink"
+sfxinfo[sfx_hrtcdt] = {
+	caption = "Tink",
+	flags = SF_NOMULTIPLESOUND|SF_TOTALLYSINGLE,
+}
+
 --tb = textbox
 --open
 SafeFreeslot("sfx_tb_opn")
@@ -906,6 +903,7 @@ SafeFreeslot("SPR_TNDE")
 SafeFreeslot("SPR_RGDA") --ragdoll A
 SafeFreeslot("SPR_THND")
 SafeFreeslot("SPR_TVSG")
+SafeFreeslot("SPR_TGIB")
 
 --
 
@@ -1144,7 +1142,7 @@ freeslot("S_TAKIS_HEARTCARD_SPIN")
 states[S_TAKIS_HEARTCARD_SPIN] = {
     sprite = SPR_HTCD,
     frame = A|FF_PAPERSPRITE,
-	tics = 60*TR,
+	tics = TAKIS_MAX_HEARTCARD_FUSE,
 }
 
 --
@@ -1375,14 +1373,35 @@ mobjinfo[MT_TAKIS_SHOTGUN_HITBOX] = {
 	radius = 60*FU,
 }
 */
+freeslot("S_TAKIS_FLINGSOLID")
 freeslot("MT_TAKIS_FLINGSOLID")
-states[MT_TAKIS_FLINGSOLID] = {
+states[S_TAKIS_FLINGSOLID] = {
 	sprite = SPR_TVSG,
 	frame = A,
-	tics = 2,
-	nextstate = S_BOX_FLICKER
+	tics = 5*TR,
+}
+mobjinfo[MT_TAKIS_FLINGSOLID] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_FLINGSOLID,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING,
+	height = 14*FRACUNIT,
+	radius = 8*FRACUNIT,
 }
 
+freeslot("S_TAKIS_GIB")
+freeslot("MT_TAKIS_GIB")
+states[S_TAKIS_GIB] = {
+	sprite = SPR_TGIB,
+	frame = A,
+	tics = 5*TR,
+}
+mobjinfo[MT_TAKIS_GIB] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_GIB,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING,
+	height = 4*FRACUNIT,
+	radius = 4*FRACUNIT,
+}
 
 addHook("NetVars",function(n)
 	--TAKIS_NET = n($)

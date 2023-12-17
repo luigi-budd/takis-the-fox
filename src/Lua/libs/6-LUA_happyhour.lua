@@ -4,17 +4,27 @@ local function L_ZCollide(mo1,mo2)
 	if mo2.z > mo1.height+mo1.z then return false end
 	return true
 end
+local function choosething(...)
+	local args = {...}
+	local choice = P_RandomRange(1,#args)
+	return args[choice]
+end
 
 rawset(_G,"HAPPY_HOUR",{
 	happyhour = false,
+	
 	timelimit = 0,
 	timeleft = 0,
 	time = 0,
+	
 	othergt = false,
+	overtime = false,
+	
 	trigger = 0,
 	exit = 0,
-	overtime = false,
+		
 	gameover = false,
+	gameovertics = 0,
 	
 	song = "hapyhr",
 	songend = "hpyhre",
@@ -30,35 +40,34 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 		if timelimit == nil
 			timelimit = 3*60*TR
 		end
-		hh.timelimit = timelimit
+		--add 2 more seconds for the timer tween
+		hh.timelimit = timelimit+2*TR
 		hh.happyhour = true
 		hh.time = 1
 		hh.gameover = false
+		hh.gameovertics = 0
 		
 		for p in players.iterate
 			if (hh.nosong == false)
-				ChangeTakisMusic(hh.song,p)
+				S_ChangeMusic(hh.song,p)
+				mapmusname = hh.song
 			end
 		end
 		
 		if not (actor and actor.valid) then return end
 		
-		local tag = actor.lastlook
-		if (actor.type == MT_HHTRIGGER)
-			tag = AngleFixed(actor.angle)/FU
+		local tag = nil
+		if (mapheaderinfo[gamemap].takis_hh_tag ~= nil
+		and (tonumber(mapheaderinfo[gamemap].takis_hh_tag)))
+			tag = tonumber(mapheaderinfo[gamemap].takis_hh_tag)
 			P_LinedefExecute(tag,actor,nil)
 		end
 		
-		for mobj in mobjs.iterate()
-			--if (mobj.type == MT_NIGHTSDRONE)
-			if (mobj.type == MT_HHEXIT)
-				hh.exit = mobj
-				if (mobj.type == MT_HHEXIT)
-					mobj.state = S_HHEXIT_OPEN
-				end
-			else
-				continue
-			end
+		if (hh.exit and hh.exit.valid)
+		and hh.exit.type == MT_HHEXIT
+			if (hh.exit.type == MT_HHEXIT)
+				hh.exit.state = S_HHEXIT_OPEN
+			end		
 		end
 		
 		hh.trigger = actor
@@ -73,6 +82,7 @@ rawset(_G,"HH_Reset",function()
 	hh.trigger = 0
 	hh.exit = 0
 	hh.gameover = false
+	hh.gameovertics = 0
 end)
 
 addHook("ThinkFrame",do
@@ -106,7 +116,10 @@ addHook("ThinkFrame",do
 				and (hh.timelimit))
 					hh.time = $+1
 				end
+			else
+				hh.gameovertics = $+1
 			end
+			
 			if (hh.timelimit)
 				hh.timeleft = hh.timelimit-hh.time
 			end
@@ -133,12 +146,18 @@ addHook("ThinkFrame",do
 				and (hh.exit and hh.exit.valid)
 					P_DoPlayerExit(p)
 					me.flags2 = $|MF2_DONTDRAW
+					
 					me.momx,me.momy,me.momz = 0,0,0
 					P_SetOrigin(me,hh.exit.x,hh.exit.y,hh.exit.z)
+					
 					p.pflags = $|PF_FINISHED
-					p.exiting = min(99,$)
+					if hh.gameovertics < (2*TR)+(TR/2)+5
+						p.exiting = max(99,$)
+					end
+					
 					p.powers[pw_flashing] = 3
 					p.powers[pw_shield] = 0
+					
 					if (takis.isTakis)
 						takis.goingfast = false
 						takis.wentfast = 0
@@ -395,7 +414,7 @@ sfxinfo[freeslot("sfx_elebel")] = {
 freeslot("MT_HHEXIT")
 mobjinfo[MT_HHEXIT] = {
 	--$Name Happy Hour Exit
-	--$Sprite RINGA0
+	--$Sprite HHE_A0
 	--$Category Takis Stuff
 	doomednum = 3001,
 	spawnstate = S_HHEXIT,
@@ -479,6 +498,31 @@ addHook("MobjThinker",function(door)
 		end
 		door.spritexscale = 2*FU
 		door.spriteyscale = 2*FU
+	end
+	
+	if (hh.gameover)
+		if (P_RandomChance(FU/(max(2,100-(hh.gameovertics/2)))))
+			local fa = FixedAngle(P_RandomRange(0,360)*FU)
+			local x,y = ReturnTrigAngles(fa)
+			local range = 300
+			local xvar = 50*P_RandomRange(1,2)
+			local yvar = 50*P_RandomRange(1,2)
+			local thok = P_SpawnMobjFromMobj(door,
+				range*x+P_RandomRange(-yvar,yvar)*door.scale,
+				range*y+P_RandomRange(-yvar,yvar)*door.scale,
+				P_RandomRange(-yvar,yvar)*door.scale,
+				MT_THOK
+			)
+			thok.scale = P_RandomRange(1,5)*FU+P_RandomFixed()
+			thok.flags2 = $|MF2_DONTDRAW
+			A_BossScream(thok,1,choosething(MT_BOSSEXPLODE,MT_SONIC3KBOSSEXPLODE))
+			
+			local sfx = P_SpawnGhostMobj(thok)
+			sfx.flags2 = $|MF2_DONTDRAW
+			sfx.tics = TR*3/4
+			sfx.fuse = TR*3/4
+			S_StartSound(sfx,sfx_tkapow)
+		end
 	end
 
 end,MT_HHEXIT)

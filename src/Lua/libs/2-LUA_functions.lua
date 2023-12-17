@@ -312,17 +312,30 @@ rawset(_G, "TakisHUDStuff", function(p)
 			hud.ptsr.yoffset = 200*FU
 		end
 		
-		if tics <= 2*TR
-			if hud.ptsr.yoffset ~= 0
-				local et = 2*TR
-				hud.ptsr.yoffset = ease.outquad(( FU / et )*tics,200*FU,0)
+		if not (HAPPY_HOUR.gameover)
+			if tics <= 2*TR
+				if hud.ptsr.yoffset ~= 0
+					local et = 2*TR
+					hud.ptsr.yoffset = ease.outquad(( FU / et )*tics,200*FU,0)
+				end
+			else
+				if hud.ptsr.yoffset ~= 0
+					hud.ptsr.yoffset = 0
+				end
 			end
 		else
-			if hud.ptsr.yoffset ~= 0
-				hud.ptsr.yoffset = 0
+			tics = HAPPY_HOUR.gameovertics
+			if tics <= 2*TR
+				if hud.ptsr.yoffset ~= 200*FU
+					local et = 2*TR
+					hud.ptsr.yoffset = ease.inquad(( FU / et )*tics,0,200*FU)
+				end
+			else
+				if hud.ptsr.yoffset ~= 200*FU
+					hud.ptsr.yoffset = 200*FU
+				end
 			end
 		end
-		
 	end
 	
 	if (PTSR)
@@ -360,7 +373,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 				hud.timeshake = $+1
 				if not takis.sethappyend
 				and (HAPPY_HOUR.noendsong == false)
-					ChangeTakisMusic(HAPPY_HOUR.songend,false,p,0,0,3*MUSICRATE)
+					S_ChangeMusic(HAPPY_HOUR.songend,false,p,0,0,3*MUSICRATE)
 					takis.sethappyend = true
 				end
 				DoQuake(p,(time*FU)/50,1)
@@ -479,8 +492,10 @@ rawset(_G, "TakisHUDStuff", function(p)
 		hud.combo.fillnum = ease.outquad(FU/5,$,takis.combo.time*FU)
 	end
 	
+	--red
 	if hud.combo.fillnum <= TAKIS_MAX_COMBOTIME*FU/4
 		hud.combo.shake = (P_RandomFixed())*3/2
+	--orange
 	elseif hud.combo.fillnum <= TAKIS_MAX_COMBOTIME*FU/2
 		hud.combo.shake = P_RandomFixed()*2/3
 	else
@@ -1038,37 +1053,25 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if takis.combo.outrotics
 		takis.combo.outrotics = $-1
-		if takis.combo.gravity == 0
-			takis.combo.gravity = $-(FU)
-		else
-			takis.combo.gravity = $*6/5
-		end
+		takis.HUD.combo.momy = $-(FU/2)
+		takis.HUD.combo.y = $-takis.HUD.combo.momy
 	else
-		if (takis.combo.gravity ~= 0)
-			takis.combo.gravity = 0
+		if not takis.combo.outrotointro
+			if (takis.HUD.combo.y ~= takis.HUD.combo.basey)
+				takis.HUD.combo.y = takis.HUD.combo.basey
+				takis.HUD.combo.momy = 0
+			end
+		else
+			if (takis.HUD.combo.y ~= takis.HUD.combo.basey)
+				takis.HUD.combo.y = takis.HUD.combo.basey
+				takis.HUD.combo.momy = 0
+			end
+			takis.combo.outrotointro = $*4/5
+			takis.HUD.combo.y = $-takis.combo.outrotointro
 		end
-	end
-	
-	if takis.combo.outrotointro
-		takis.combo.outrotointro = $*4/5
 	end
 	
 	if (p.powers[pw_sneakers] > 0)
-		/*
-		if takis.shotgunned
-			if not takis.critcharged
-				S_StartSound(me,sfx_tacrtc)
-			end
-				
-			takis.critcharged = true
-			
-			if p.powers[pw_sneakers] == 1
-				S_StartSound(me,sfx_tacrtd)
-			end
-			
-		end
-		*/
-		
 		local rad = me.radius/FRACUNIT
 		local hei = me.height/FRACUNIT
 		local x = P_RandomRange(-rad,rad)*FRACUNIT
@@ -1495,14 +1498,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		TakisAwardAchievement(p,ACHIEVEMENT_RAKIS)
 	end
 	
-	if TAKIS_NET.numdestroyables
-		if takis.thingsdestroyed >= TAKIS_NET.numdestroyables
-		and (takis.lastdestroyed < TAKIS_NET.numdestroyables)
-		and (p.powers[pw_carry] ~= CR_NIGHTSMODE)
-			TakisAwardAchievement(p,ACHIEVEMENT_FULLCOMBO)
-		end
-	end
-
 	if takis.clutchspamtime
 		takis.clutchspamtime = $-1
 	elseif takis.clutchspamcount
@@ -1630,6 +1625,20 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if (p.spectator)
 		takis.noability = $|NOABIL_ALL
+	end
+	
+	if takis.resettingtoslide
+		takis.noability = $|NOABIL_SLIDE
+	end
+	
+	if (me.state == S_PLAY_MELEE)
+	and not (takis.hammerblastdown)
+		if (me.momz*takis.gravflip > 0)
+			me.state = S_PLAY_SPRING
+		else
+			ne.state = S_PLAY_FALL
+		end
+		
 	end
 	
 	p.alreadyhascombometer = 2
@@ -2314,10 +2323,11 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 			S_StartSound(nil,sfx_kc3c,p)
 			takis.HUD.combo.scale = $+(FU/5)
 			if takis.combo.outrotics
-				takis.combo.outrotointro = takis.combo.gravity
+				takis.combo.outrotointro = takis.HUD.combo.basey - takis.HUD.combo.y
 				if takis.combo.failcount >= 50 --TAKIS_NET.partdestoy
 					TakisAwardAchievement(p,ACHIEVEMENT_COMBOALMOST)
 				end
+				takis.combo.outrotics = 0
 			end
 		elseif takis.combo.count >= 50
 			if (takis.combo.time <= TAKIS_MAX_COMBOTIME/4)
@@ -2873,7 +2883,7 @@ end)
 rawset(_G,"TakisPowerfulArma",function(p)
 	local me = p.mo
 	local takis = p.takistable
-	local rad = 2000*FU
+	local rad = 2700*FU
 	
 	if not (TAKIS_NET.nerfarma)
 		S_StartSound(me, sfx_bkpoof)
@@ -3297,62 +3307,6 @@ rawset(_G,"Takis_GiveScore",function(p,num)
 end)
 */
 
-local musdefaults = {
-	["hapyhr"] = "mp_mrz",
-	["hpyhre"] = "spec7",
-	["letter"] = "_chsel",
-	["_conga"] = "_chsel",
-	["war"] = "vsbrak"
-}
---returns the music name for a takis song, returns '' if the
---player doesnt have takismusic.pk3
---also returns a bool if it is a takis song
-rawset(_G, "ReturnTakisMusic",function(mus,p)
-	local istakis = false
-	mus = string.lower(tostring(mus))
-	
-	if musdefaults[mus] ~= nil then istakis = true end
-	
-	--if we CAN play it
-	if (S_MusicExists(mus,false,true))
-		if string.lower(CV_FindVar("takis_loadedmus").string) == "false"
-			CV_StealthSet(CV_FindVar("takis_loadedmus"),"true")
-		end
-		
-		return mus,istakis
-	end
-	
-	if not p.takistable.io.ihavemusicwad
-		mus = musdefaults[mus] or ''
-	end
-	
-	if mus == ''
-	or mus == nil
-		return '',istakis
-	end
-	
-	return mus,istakis
-	
-end)
-
-rawset(_G, "ChangeTakisMusic",function(mus,looping,p,f,g,fade)
-	local playert = consoleplayer
-	if p and p.valid
-	and userdataType(p) == "player_t"
-		playert = p
-	end
-	
-	mus = ReturnTakisMusic(mus,playert)
-	
-	if mus == ''
-	or mus == nil
-		return false
-	end
-	
-	S_ChangeMusic(mus,looping,p,f,g,fade)
-	return true
-end)
-
 rawset(_G, "TakisAddHurtMsg",function(p,enum)
 
 	if enum == nil
@@ -3412,7 +3366,7 @@ rawset(_G, "TakisShotgunify", function(p)
 	
 	takis.transfo = $|TRANSFO_SHOTGUN
 	takis.shotgunned = true
-	ChangeTakisMusic("war",true,p)
+	S_ChangeMusic("war",true,p)
 	S_StartSound(nil,sfx_shgnl,p)
 	
 	if not (TakisReadAchievements(p) & ACHIEVEMENT_BOOMSTICK)
@@ -3442,7 +3396,7 @@ rawset(_G, "TakisDeShotgunify", function(p)
 	takis.shotgun = 0
 	takis.shotgunned = false
 	takis.transfo = $ &~TRANSFO_SHOTGUN
-	if string.lower(S_MusicName()) == ReturnTakisMusic("war",p)
+	if string.lower(S_MusicName()) == "war"
 		P_RestoreMusic(p)
 	end
 	TakisResetHammerTime(p)
@@ -3516,145 +3470,6 @@ rawset(_G,"GetControlAngle",function(p)
 	return (p.cmd.angleturn << 16) + R_PointToAngle2(0, 0, p.cmd.forwardmove << 16, -p.cmd.sidemove << 16)
 end)
 
--- https://github.com/STJr/SRB2/blob/SRB2_release_2.2.13/src/p_inter.c#L1998
-rawset(_G,"VanillaHurtMsg",function(p,inf,sor,dmgt,died)
-	local deathonly = false
-	local deadsource = false
-	local deadtarget = false
-	local deathtxt = "by idiocy"
-	
-	if not (gametyperules & GTR_RINGSLINGER|GTR_HURTMESSAGES)
-		return
-	end
-	
-	if not p then return end
-	if not p.mo then return end
-	if p.spectator then return end
-	if not netgame then return end
-	
-	deadtarget = p.mo.health <= 0
-	if died then deadtarget = true end
-	
-	if not (CV_FindVar("hazardlog").value) then return end
-	
-	if sor
-		if sor.player
-			if sor.player.playerstate == PST_DEAD
-			and sor.player ~= p
-			and (inf.flags2 & MF2_BEYONDTHEGRAVE)
-				deadsource = true
-			end
-			
-			if (inf.flags & MF_PUSHABLE)
-				deathtxt = "playtime with heavy objects"
-			--switch case for type
-			else
-				local ty = inf.type
-				
-				if ty == MT_PLAYER
-					if (dmgt == DMG_NUKE)
-						deathtxt = "armageddon blast"
-					elseif inf.player.powers[pw_shield] & SH_NOSTACK == SH_ELEMENTAL
-					and inf.player.pflags & PF_SHIELDABILITY
-						deathtxt = "elemental stomp"
-					elseif inf.player.powers[pw_invulnerability]
-						deathtxt = "invincibility aura"
-					elseif inf.player.powers[pw_super]
-						deathtxt = "super aura"
-					else
-						deathtxt = "tagging hand"
-					end
-				elseif ty == MT_SPINFIRE
-					deathtxt = "elemental fire trail"
-				--weapon rings
-				elseif ty == MT_THROWNBOUNCE
-					deathtxt = "bounce ring"
-				elseif ty == MT_THROWNINFINITY
-					deathtxt = "infinity ring"
-				elseif ty == MT_THROWNAUTOMATIC
-					deathtxt = "automatic ring"
-				elseif ty == MT_THROWNSCATTER
-					deathtxt = "scatter ring"
-				elseif ty == MT_THROWNEXPLOSION
-					deathtxt = "explosion ring"
-				elseif ty == MT_THROWNGRENADE
-					deathtxt = "grenade ring"
-				elseif ty == MT_REDRING
-					if (inf.flags2 & MF2_RAILRING)
-						deathtxt = "rail ring"
-					else
-						deathtxt = "thrown ring"
-					end
-				else
-					deathtxt = 'idiocy'
-				end
-				
-				local sortxt = (deadsource) and "The late" or ''
-				local livetext = p.mo.health and "hurt" or "killed"
-				
-				print(sortxt..sor.player.ctfnamecolor.."'s "..deathtxt.." "..livetext.." "..p.ctfnamecolor)
-			end
-		
-		--type switch case
-		else
-			deathtxt = "by their idiocy"
-			local ty = sor.type
-			
-			if ty == MT_EGGMAN_ICON
-				deathtxt = "by Eggman's nefarious TV magic"
-			elseif SPIKE_LIST[ty] == true
-				deathtxt = "by spikes"
-			else
-				deathtxt = "by an environmental hazard"
-			end
-		end
-	--no source
-	else
-		--dmgt switch case
-		if dmgt == DMG_WATER
-			deathtxt = "by dangerous water"
-		elseif dmgt == DMG_FIRE
-			deathtxt = "by molten lava"
-		elseif dmgt == DMG_ELECTRIC
-			deathtxt = "by electricity"
-		elseif dmgt == DMG_SPIKE
-			deathtxt = "by spikes"
-		--death
-		elseif dmgt == DMG_DROWNED
-			deathonly = true
-			deathtxt = "drowned"
-		elseif dmgt == DMG_CRUSHED
-			deathonly = true
-			deathtxt = "was crushed"
-		elseif dmgt == DMG_DEATHPIT
-			if deadtarget
-				deathonly = true
-				deathtxt = "fell into a bottomless pit"
-			end
-		elseif dmgt == DMG_SPACEDROWN
-			if deadtarget
-				deathonly = true
-				deathtxt = "asphyxiated in space"
-			end
-		else
-			if deadtarget
-				deathonly = true
-				deathtxt = "died"
-			end
-		end
-	end
-	
-	if not deathtxt then return end
-	
-	if deathonly
-		if not deadtarget then return end
-		print(p.ctfnamecolor.." "..deathtxt)
-	else
-		local livetext = p.mo.health and "hurt" or "killed"
-		print(p.ctfnamecolor.." was "..livetext.." "..deathtxt)	
-	end
-end)
-
 rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	if (gametype == GT_COOP)
 	or (not (p.mo and p.mo.valid))
@@ -3665,14 +3480,10 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	end
 	if not inf
 	or not inf.valid
-		VanillaHurtMsg(p,inf,sor,dmgt,p.playerstate ~= PST_LIVE)
-		print("1")
 		return
 	end
 	if not sor
 	or not sor.valid
-		VanillaHurtMsg(p,inf,sor,dmgt,p.playerstate ~= PST_LIVE)
-		print("2")
 		return
 	end
 	if not (netgame)
@@ -3681,8 +3492,6 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	
 	if not (inf.skin == TAKIS_SKIN
 	or sor.skin == TAKIS_SKIN)
-		VanillaHurtMsg(p,inf,sor,dmgt)
-		print("3")
 		return
 	end
 	
@@ -3700,6 +3509,47 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 			return true
 		end
 	end
-	VanillaHurtMsg(p,inf,sor,dmgt)
 end)
+
+rawset(_G,"SpawnEnemyGibs",function(t,tm,ang)
+	local speed = t.player and t.player.takistable.accspeed or FixedHypot(t.momx,t.momy)
+	if (tm and tm.valid)
+		if ang == nil
+			ang = R_PointToAngle2(t.x,t.y, tm.x,tm.y)
+		end
+	else
+		ang = FixedAngle( AngleFixed(R_PointToAngle2(t.x,t.y, t.momx,t.momy)) + 180*FU)
+	end
+	
+	ang = $+ANGLE_90
+	
+	local x,y,z = t.x,t.y,t.z
+	
+	--midpoint
+	if (tm and tm.valid)
+		x = ((t.x + tm.x)/2)+P_RandomRange(-1,1)+P_RandomFixed()
+		y = ((t.y + tm.y)/2)+P_RandomRange(-1,1)+P_RandomFixed()
+		z = ((t.z + tm.z)/2)+P_RandomRange(-1,1)+P_RandomFixed()
+	end
+	
+	for i = 0,P_RandomRange(3,16)
+		local gib = P_SpawnMobj(x,y,z,MT_TAKIS_GIB)
+		gib.scale = tm and tm.scale or t.scale
+		gib.frame = P_RandomRange(A,G)
+		gib.flags2 = $|(t.flags2 & MF2_OBJECTFLIP)
+		
+		gib.angle = P_RandomRange(0,1) and ang or ang-ANGLE_180
+		gib.rollangle = FixedAngle(P_RandomRange(0,359)*FU+P_RandomFixed())
+		gib.angleroll = FixedAngle(P_RandomRange(-10,10)*FU+P_RandomFixed())
+		P_SetObjectMomZ(gib,P_RandomRange(6,20)*gib.scale+P_RandomFixed())
+		if (tm and tm.valid)
+			P_Thrust(gib,
+				R_PointToAngle2(t.x,t.y, tm.x,tm.y),
+				speed/6
+			)
+		end
+		P_Thrust(gib,gib.angle,P_RandomRange(1,10)*gib.scale+P_RandomFixed())
+	end
+end)
+
 filesdone = $+1

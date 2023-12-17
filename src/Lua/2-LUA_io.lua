@@ -9,7 +9,7 @@
 --Y7GDSUYFHIDJPK AAAAAAAAAAAHHHHHHHHH!!!!!!!!
 
 --if you use this manually and mess something up, its not my fault!
-COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,a13)
+COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12)
 	
 	if a1 == nil
 		CONS_Printf(p,"\x85"+"Do not use this command manually! You may risk messing up Takis or your config!")
@@ -32,7 +32,6 @@ COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,
 	a10 = tonumber($)
 	a11 = tonumber($)
 	a12 = tonumber($)
-	a13 = tonumber($)
 
 	--insert to buffer or set vars directly?
 	--well i say set vars as to  not clutter up the player's console
@@ -53,17 +52,6 @@ COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,
 	else
 		CONS_Printf(p,"\x85"+"Error loading No Happy Hour! Defaulting to 0...")
 	end
-	
-	--who even uses this
-	/*
-	if a3 == 1
-		takis.io.happyhourstyle = 1
-	elseif a3 == 2
-		takis.io.happyhourstyle = 2
-	else
-		CONS_Printf(p,"\x85"+"Error loading Happy Hour Style! Defaulting to new...")
-	end
-	*/
 	
 	if a4 == 1
 		takis.io.morehappyhour = 1
@@ -124,45 +112,24 @@ COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,
 	end
 
 	if a10 == 1
-		takis.io.ihavemusicwad = 1
-		if (string.lower(CV_FindVar("takis_loadedmus").string) == "false")
-			if not (modeattacking)
-				if (p and p.valid)
-					COM_BufInsertText(p, "addfile takismusic.pk3")
-				elseif consoleplayer
-					COM_BufInsertText(consoleplayer, "addfile takismusic.pk3")
-				end
-				if (leveltime > 2*TR)
-					P_RestoreMusic(p)
-				end
-				CV_StealthSet(CV_FindVar("takis_loadedmus"),"true")
-			end
-		end
-	elseif a10 == 0
-		takis.io.ihavemusicwad = 0
-	else
-		CONS_Printf(p,"\x85"+"Error telling if you have the Music Wad! Defaulting to 0...")
-	end
-
-	if a11 == 1
 		takis.io.clutchstyle = 1
-	elseif a11 == 0
+	elseif a10 == 0
 		takis.io.clutchstyle = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading Clutch Style! Defaulting to 1..")
 	end
 
-	if a12 == 1
+	if a11 == 1
 		takis.io.sharecombos = 1
-	elseif a12 == 0
+	elseif a11 == 0
 		takis.io.sharecombos = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading Share Combos! Defaulting to 1...")
 	end
 
-	if a13 == 1
+	if a12 == 1
 		takis.io.dontshowach = 1
-	elseif a13 == 0
+	elseif a12 == 0
 		takis.io.dontshowach = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading Don't show Achs.! Defaulting to 1...")
@@ -203,10 +170,9 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	a6 = t.quakes
 	a7 = t.flashes
 	a9 = t.additiveai
-	a10 = t.ihavemusicwad
-	a11 = t.clutchstyle
-	a12 = t.sharecombos
-	a13 = t.dontshowach
+	a10 = t.clutchstyle
+	a11 = t.sharecombos
+	a12 = t.dontshowach
 	
 	if io
 		DEBUG_print(p,IO_CONFIG|IO_SAVE)
@@ -216,7 +182,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 		local file = io.openlocal("client/takisthefox/config.dat", "w+")
 		file:write(" "..a1.." "..a2.." "..a4.." "..t1.." "
 			..t2.." "..a5.." "..a6.." "..a7.." "..a9.." "
-			..a10.." "..a11.." "..a12.." "..a13
+			..a10.." "..a11.." "..a12
 		)
 		
 		if not silent

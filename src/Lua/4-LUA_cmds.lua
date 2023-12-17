@@ -44,31 +44,6 @@ COM_AddCommand("takis_nohappyhour", function(p)
 	
 	TakisSaveStuff(p)
 end)
-/*
-COM_AddCommand("takis_happyhourstyle", function(p)
-	if gamestate ~= GS_LEVEL
-		prn(p,"You can't use this right now.")
-		return
-	end
-	
-	if not (p.takistable)
-		prn(p,"You can't use this right now.")
-		return	
-	end
-	
-	if p.takistable.io.happyhourstyle == 1
-		p.takistable.io.happyhourstyle = 2
-		prn(p,"Set Happy Hour style to Old")
-		COM_BufInsertText(p,"tunes -default")
-	else
-		p.takistable.io.happyhourstyle = 1
-		prn(p,"Set Happy Hour style to New")
-		COM_BufInsertText(p,"tunes -default")
-	end
-	
-	TakisSaveStuff(p)
-end)
-*/
 
 COM_AddCommand("takis_morehappyhour", function(p)
 	if gamestate ~= GS_LEVEL
@@ -94,9 +69,7 @@ end)
 
 COM_AddCommand("takis_debuginfo", takis_printdebuginfo)
 
-COM_AddCommand("takis_saveconfig", function(p)
-	TakisSaveStuff(p)
-end)
+COM_AddCommand("takis_saveconfig", TakisSaveStuff)
 COM_AddCommand("takis_loadconfig", function(p)
 	p.takistable.io.loaded = false
 	TakisLoadStuff(p)
@@ -269,7 +242,7 @@ COM_AddCommand("takis_importantletter", function(p)
 	
 	takis.HUD.showingletter = true
 	--maybe this one too?
-	ChangeTakisMusic("letter",true,p)
+	S_ChangeMusic("letter",true,p)
 end)
 
 COM_AddCommand("takis_openmenu", function(p)
@@ -342,28 +315,6 @@ COM_AddCommand("takis_deleteachievements", function(p)
 	
 end)
 
-COM_AddCommand("takis_ihavethemusicwad", function(p)
-	if gamestate ~= GS_LEVEL
-		prn(p,"You can't use this right now.")
-		return
-	end
-
-	local takis = p.takistable
-	
-	if not takis.io.ihavemusicwad
-		prn(p,"\x82Just gonna assume you've downloaded TakisMusic.pk3! Takis will start loading it on spawn!")
-		takis.io.ihavemusicwad = 1
-		if (p and p.valid)
-			COM_BufInsertText(p, "addfile takismusic.pk3; tunes -none")
-		elseif consoleplayer
-			COM_BufInsertText(consoleplayer, "addfile takismusic.pk3; tunes -none")
-		end
-		P_RestoreMusic(p)
-	else
-		prn(p,"\x82You have TakisMusic.pk3 downloaded or loaded, Takis will add it on load.")
-	end
-	TakisSaveStuff(p)
-end)
 COM_AddCommand("takis_clutchstyle", function(p)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")

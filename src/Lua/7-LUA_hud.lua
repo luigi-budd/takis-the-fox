@@ -849,6 +849,11 @@ local function drawlivesarea(v,p)
 		
 	end
 	
+	--draw the buttons
+	if modeattacking
+		disp = $-2
+	end
+	
 	if (takis.clutchcombo)
 	and (takis.io.clutchstyle == 0)
 		disp = $-20
@@ -1207,7 +1212,10 @@ local function drawcombostuff(v,p)
 		local comboscale = takis.HUD.combo.scale+FU
 		local shake = -FixedMul(takis.HUD.combo.shake,comboscale)
 		local backx = 15*FU
-		local backy = 70*FU+shake-(takis.combo.gravity or takis.combo.outrotointro)
+		local backy = takis.HUD.combo.y + shake
+		if (takis.combo.outrotointro)
+			backy = takis.HUD.combo.basey-takis.combo.outrotointro+shake
+		end
 		local combonum = takis.combo.count
 		if (takis.combo.outrotics) then combonum = takis.combo.failcount end
 		
@@ -1251,12 +1259,14 @@ local function drawcombostuff(v,p)
 			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER
 		)
 		
-		v.drawString(backx+5*comboscale+(FixedMul(patchx,comboscale)),
-			backy+7*comboscale,
-			takis.combo.score,
-			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
-			"thin-fixed-center"
-		)
+		if not (takis.combo.outrotics)
+			v.drawString(backx+5*comboscale+(FixedMul(patchx,comboscale)),
+				backy+7*comboscale,
+				takis.combo.score,
+				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
+				"thin-fixed-center"
+			)
+		end
 		
 		--draw combo rank
 		local length = #TAKIS_COMBO_RANKS
@@ -1683,7 +1693,18 @@ local function hhtimerbase(v,p)
 		local doot = false
 		
 		if not (HAPPY_HOUR.overtime)
-			TakisDrawPatchedText(v, 150+(h.xoffset), 173+(h.yoffset/FU), tostring(string),{font = TAKIS_HAPPYHOURFONT, flags = (V_SNAPTOBOTTOM|V_HUDTRANS), align = 'left', scale = 4*FU/5})
+			TakisDrawPatchedText(v,
+				(150+(h.xoffset))*FU,
+				173*FU+(h.yoffset),
+				tostring(string),
+				{
+					font = TAKIS_HAPPYHOURFONT,
+					flags = (V_SNAPTOBOTTOM|V_HUDTRANS),
+					align = 'left',
+					scale = 4*FU/5,
+					fixed = true
+				}
+			)
 		else
 			local x,y = happyshakelol(v)
 			v.drawScaled(
@@ -2300,7 +2321,7 @@ local function drawcfgnotifs(v,p)
 	
 	v.drawString(160,50,"You have no Config, check",trans|V_ALLOWLOWERCASE,"thin-center")
 	v.drawString(160,60,"out the \x86takis_openmenu\x80.",trans|V_ALLOWLOWERCASE,"thin-center")
-	v.drawString(160,70,"Make sure to get the Music Wad!",trans|V_ALLOWLOWERCASE,"thin-center")
+	v.drawString(160,70,"\x86(Hold FN+C3+C2)",trans|V_ALLOWLOWERCASE,"thin-center")
 	v.drawString(160,80,"\x86".."C3 - Dismiss",trans|V_ALLOWLOWERCASE,"thin-center")
 	
 end
@@ -2739,6 +2760,8 @@ local function drawdebug(v,p)
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
 		
+		local ypos = hudinfo[HUD_LIVES].y
+		if modeattacking then ypos = hudinfo[HUD_LIVES].y+10 end
 		local maxspeed = 200*FU
 		local speed = FixedDiv(takis.accspeed,maxspeed)
 		local roll
@@ -2749,34 +2772,45 @@ local function drawdebug(v,p)
 		else
 			roll = FixedAngle(180*FU)
 		end
-		if (takis.accspeed >= maxspeed)
-			scale = $+FixedDiv(takis.accspeed-maxspeed,20*FU)
-		end
-		if roll == 0
+		if AngleFixed(roll) == 0
 			offy2 = -4
 		end
 		
 		for i = 0,10
 			local offy = 0
 			local ra = FixedAngle(180*FU-(i*18)*FU)
-			if ra == 0
+			if i == 10
 				offy = -4
 			end
 			v.drawScaled((hudinfo[HUD_LIVES].x+30)*FU,
-				(hudinfo[HUD_LIVES].y-8+offy)*FU,
-				FU,
+				(hypos-8+offy)*FU,
+				FU/2,
 				v.getSpritePatch(SPR_THND,B,0,ra),
 				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
-			)		
+			)
+			if i == 5
+				v.drawString((hudinfo[HUD_LIVES].x+30)*FU+(30*cos(ra)),
+					(ypos-8+offy2)*FU-(35*sin(ra))-(4*FU),
+					"100",
+					V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
+					"thin-fixed-center"
+				)	
+			elseif i == 10
+				v.drawString((hudinfo[HUD_LIVES].x+30)*FU+(35*cos(ra)),
+					(ypos-8+offy2)*FU-(35*sin(ra))-(4*FU),
+					"200",
+					V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
+					"thin-fixed-center"
+				)	
+			end
 		end
 		
 		v.drawScaled((hudinfo[HUD_LIVES].x+30)*FU,
-			(hudinfo[HUD_LIVES].y-8+offy2)*FU,
-			FU,
+			(ypos-8+offy2)*FU,
+			FU/2,
 			v.getSpritePatch(SPR_THND,A,0,roll),
 			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
 		)
-		
 		
 		local scorenum = "CMBCF"
 		local score = L_FixedDecimal(takis.accspeed,3)
@@ -2788,7 +2822,7 @@ local function drawdebug(v,p)
 			local n = string.sub(score,i,i)
 			--if n == "." then n = "DOT" end
 			v.drawScaled(hudinfo[HUD_LIVES].x*FU+(prevw*scale),
-				(hudinfo[HUD_LIVES].y)*FU-(v.cachePatch(scorenum+n).height*FixedDiv(scale-FU,2*FU)),
+				(ypos)*FU-(v.cachePatch(scorenum+n).height*FixedDiv(scale-FU,2*FU)),
 				FixedDiv(scale,2*FU),
 				v.cachePatch(scorenum+n),
 				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
@@ -2797,6 +2831,7 @@ local function drawdebug(v,p)
 			prevw = $+v.cachePatch(scorenum+n).width*4/10
 		end
 		
+		/*
 		//height debug
 		local scale = FU/10
 		local floorz = me.floorz
@@ -2840,6 +2875,7 @@ local function drawdebug(v,p)
 			V_SNAPTOBOTTOM,
 			"thin-fixed"
 		)
+		*/
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_TRANSFO)
 		local x, y = 16, 156
@@ -2991,8 +3027,8 @@ addHook("HUD", function(v,p,cam)
 			if takis.nadotuttic
 				local trans = 0
 				
-				if takis.nadotuttic >= 4*TR-9
-					trans = (takis.nadotuttic-(4*TR-9))<<V_ALPHASHIFT
+				if takis.nadotuttic >= 5*TR-9
+					trans = (takis.nadotuttic-(5*TR-9))<<V_ALPHASHIFT
 				elseif takis.nadotuttic < 10
 					trans = (10-takis.nadotuttic)<<V_ALPHASHIFT
 				end
@@ -3192,7 +3228,15 @@ addHook("HUD", function(v)
 			x = -$
 		end
 		
-		v.drawScaled(((300/2)*FU)+x,TAKIS_TITLEFUNNYY,scale,p,0)	
+		v.drawScaled((160*FU)+x,TAKIS_TITLEFUNNYY,scale,p,0)	
+	else
+		if (TAKIS_TITLETIME >= 60*TR)
+			local erm = FixedDiv((TAKIS_TITLETIME-60*TR)*FU or 1,60*TR*FU)
+			local mul = FixedMul(erm,10*FU)
+			
+			mul = $/FU
+			v.fadeScreen(35,mul)
+		end
 	end
 end,"title")
 

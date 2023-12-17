@@ -181,6 +181,7 @@ addHook("MobjThinker", function(rag)
 				if (found.takis_flingme ~= false)
 					if (found.flags & (MF_ENEMY|MF_BOSS))
 					or (found.takis_flingme)
+						SpawnEnemyGibs(rag,found)
 						SpawnBam(found)
 						SpawnRagThing(found,rag,rag.parent2)
 						local sfx = P_SpawnGhostMobj(found)
@@ -201,6 +202,7 @@ addHook("MobjThinker", function(rag)
 	rag.angle = $-ANG10
 	if rag.speed == 0
 	or ((P_IsObjectOnGround(rag)) and (rag.timealive > 4))
+		SpawnEnemyGibs(rag,nil)
 		for i = 0, 34
 			A_BossScream(rag,1,MT_SONIC3KBOSSEXPLODE)
 		end
@@ -558,6 +560,10 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		local song = hh.song
 		local songend = hh.songend
 		
+		print("New music change:","HH Music: "..song,
+			"HH End Music: "..songend
+		)
+		
 		newname = string.lower(newname)
 		
 		local isspecsong
@@ -567,6 +573,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		end
 		
 		oldname = string.lower($)
+		print("Changing from "..oldname,"to "..newname,"")
 		
 		--stop any lap music
 		if (not isspecsong)
@@ -584,19 +591,23 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 					end
 				end
 			end
+			print(changetohappy)
 			
 			if changetohappy
 				if nomus then return end
 				
 				if oldname ~= song
-					return ReturnTakisMusic(song,consoleplayer),mflags,looping,pos,prefade,fade
+				and (oldname ~= '')
+					mapmusname = song
+					return song,mflags,looping,pos,prefade,fade
 				end
 			
 			else
 				if noendmus then return end
 				
 				if oldname ~= songend
-					return ReturnTakisMusic(songend,consoleplayer),mflags,looping,pos,prefade,fade
+					mapmusname = songend
+					return songend,mflags,looping,pos,prefade,fade
 				end
 			end
 			
@@ -612,7 +623,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		local newname = string.lower(newname)
 		
 		if (TAKIS_NET.specsongs[newname] ~= true)
-			return ReturnTakisMusic("war",consoleplayer),mflags,looping,pos,prefade,fade
+			return "war",mflags,looping,pos,prefade,fade
 		end
 	end
 end
@@ -819,10 +830,14 @@ addHook("MobjDeath",function(gun,i,s)
 		and s.health
 		and (s.player and s.player.valid)
 			if (s.skin == TAKIS_SKIN)
+				if (s.player.takistable.transfo & TRANSFO_SHOTGUN)
+					return true
+				end
 				TakisShotgunify(s.player)
 				TakisGiveCombo(s.player,s.player.takistable,false,true)
 			else
-				gunragdoll(gun,s)
+				return true
+				--gunragdoll(gun,s)
 			end
 		end
 	end
@@ -1404,10 +1419,12 @@ addHook("MobjThinker",function(card)
 		end
 	end
 	
+	card.flags2 = $ &~MF2_DONTDRAW
+	
 	--end of life blinking
-	if (card.timealive >= 50*TR)
+	if (card.timealive >= TAKIS_MAX_HEARTCARD_FUSE-(10*TR))
 	and (card.spawnedfrommt ~= true)
-		if card.timealive < 57*TR
+		if card.timealive < TAKIS_MAX_HEARTCARD_FUSE-(3*TR)
 			if (card.timealive/2%2)
 				card.flags2 = $ &~MF2_DONTDRAW
 			else
@@ -1420,6 +1437,10 @@ addHook("MobjThinker",function(card)
 				card.flags2 = $|MF2_DONTDRAW
 			end		
 		end
+	end
+	
+	if (skins[displayplayer.skin].name ~= TAKIS_SKIN)
+		card.flags2 = $|MF2_DONTDRAW
 	end
 	
 	if grounded
@@ -1501,29 +1522,63 @@ addHook("MobjDeath",function(card,_,sor)
 	
 end,MT_TAKIS_HEARTCARD)
 
---thok respawns cards for us
+--thok respawns stuff for us
 addHook("MobjThinker",function(th)
 	if not (th and th.valid) then return end
-	if not (th.camefromcard) then return end
 	
-	th.flags2 = $|MF2_DONTDRAW
-	--tic respawn timer
-	if (th.respawntime)
-		if th.respawntime > CV_FindVar("respawnitemtime").value * TICRATE
-			th.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
+	if (th.camefromcard)
+		
+		th.flags2 = $|MF2_DONTDRAW
+		--tic respawn timer
+		if (th.respawntime)
+			if th.respawntime > CV_FindVar("respawnitemtime").value * TICRATE
+				th.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
+			end
+			th.tics,th.fuse = -1,-1
+			th.respawntime = $-1
+		else
+			local card = P_SpawnMobjFromMobj(th,0,0,0,MT_TAKIS_HEARTCARD)
+			card.spawnflags = th.cardflags
+			card.spawnedfrommt = true
+			if th.cardhadambush
+				card.cardhadambush = th.cardhadambush
+				card.flags = $|MF_NOGRAVITY
+			end
+			P_RemoveMobj(th)
 		end
-		th.tics,th.fuse = -1,-1
-		th.respawntime = $-1
+	elseif (th.camefromsolid)
+		th.flags2 = $|MF2_DONTDRAW
+		--tic respawn timer
+		if (th.respawntime)
+			if th.respawntime > CV_FindVar("respawnitemtime").value * TICRATE
+				th.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
+			end
+			if (th.respawntime <= TR)
+				if not (th.respawntime % 2)
+					th.state = th.solid.state
+					th.flags2 = $ &~MF2_DONTDRAW
+				else
+					th.state = S_THOK
+				end
+			end
+			
+			th.angle = th.solid.angle
+			th.tics,th.fuse = -1,-1
+			th.respawntime = $-1
+		else
+			local s = th.solid
+			local new = P_SpawnMobj(s.pos[1],s.pos[2],s.pos[3],s.type)
+			new.flags = s.flags
+			new.flags2 = s.flags2
+			new.angle = s.angle
+			new.scale = s.scale
+			
+			P_RemoveMobj(th)
+		end	
 	else
-		local card = P_SpawnMobjFromMobj(th,0,0,0,MT_TAKIS_HEARTCARD)
-		card.spawnflags = th.cardflags
-		card.spawnedfrommt = true
-		if th.cardhadambush
-			card.cardhadambush = th.cardhadambush
-			card.flags = $|MF_NOGRAVITY
-		end
-		P_RemoveMobj(th)
+		return
 	end
+	
 end,MT_THOK)
 
 local function dontfling(mo)
@@ -1602,5 +1657,30 @@ for k,type in ipairs(shieldlist)
 	addHook("MobjThinker",shieldsquash,type)
 end
 
+addHook("MobjThinker",function(fling)
+	if not (fling and fling.valid) then return end
+	fling.momz = $+(P_GetMobjGravity(fling)*P_MobjFlip(fling))
+	if not (leveltime % 5)
+		local dust = P_SpawnMobjFromMobj(fling,0,0,fling.height/2,MT_SPINDUST)
+		dust.scale = FixedMul(2*FU,fling.scale)
+		dust.destscale = fling.scale/4
+		dust.scalespeed = FU/4
+		dust.fuse = 10
+	end
+	if (fling.momz*P_MobjFlip(fling) < -10*fling.scale)
+		fling.rollangle = $+FixedAngle(fling.momz*P_MobjFlip(fling))
+	else
+		fling.rollangle = $-FixedAngle(10*fling.scale)
+	end
+	
+end,MT_TAKIS_FLINGSOLID)
+
+addHook("MobjThinker",function(gib)
+	if not (gib and gib.valid) then return end
+	local grav = P_GetMobjGravity(gib)
+	grav = $*3/5
+	gib.momz = $+(grav*P_MobjFlip(gib))
+	gib.rollangle = $+gib.angleroll
+end,MT_TAKIS_GIB)
 
 filesdone = $+1

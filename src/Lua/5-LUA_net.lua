@@ -94,6 +94,7 @@ addHook("MapChange", function(mapid)
 	
 	t.ideyadrones = {}
 	HH_Reset()
+	mapmusname = mapheaderinfo[mapid].musname
 end)
 --should these 2 HH_Resets be here?
 addHook("MapLoad", function(mapid)
@@ -125,7 +126,6 @@ addHook("MapLoad", function(mapid)
 			if (mobj.flags & (MF_ENEMY|MF_MONITOR))
 			or (SPIKE_LIST[mobj.type] == true)
 			or (mobj.takis_flingsme ~= false)
-				mobj.partofdestoys = true
 				t.numdestroyables = $+1
 			end
 		else
@@ -146,8 +146,8 @@ addHook("ThinkFrame", do
 		TAKIS_TITLETIME = $+1
 		
 		--you probably wont get this without stalling
-		if TAKIS_TITLETIME == (120*FU)
-			S_ChangeMusic("D",false)
+		if TAKIS_TITLETIME == (120*TR)
+			S_StopMusic()
 			S_StartSound(nil,sfx_jumpsc)
 			TAKIS_TITLEFUNNY = (TR)+1
 			TAKIS_TITLEFUNNYY = 500*FU

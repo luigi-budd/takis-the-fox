@@ -38,7 +38,6 @@ tm.entries = {
 			"Quakes",
 			"Flashes",
 			"Additive Afterimages",
-			"I have the Music Wad!",
 			"Clutch Meter Style",
 			"Share Combos",
 			"Don't Show Ach. Messages",
@@ -52,7 +51,6 @@ tm.entries = {
 			"quakes",
 			"flashes",
 			"additiveai",
-			"ihavemusicwad",
 			"clutchstyle",
 			"sharecombos",
 			"dontshowach"
@@ -65,7 +63,6 @@ tm.entries = {
 			"quakes",
 			"flashes",
 			"additiveafterimages",
-			"ihavethemusicwad",
 			"clutchstyle",
 			"sharecombos",
 			"dontshowach"

@@ -7,7 +7,6 @@ local achs = {
 	"PARTYPOOPER",
 	"TAKISFEST",
 	"HOMERUN",
-	"FULLCOMBO",
 	"JUMPSCARE",
 	"HARDCORE",
 	"CLUTCHSPAM",
@@ -62,12 +61,6 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		icon = "ACH_HOMERUN",
 		scale = FU/4,
 		text = "Hit someone with a Homerun\n".."bat."
-	},
-	[ACHIEVEMENT_FULLCOMBO] = {
-		name = "Full Combo",
-		icon = "ACH_FULLCOMBO",
-		scale = FU/4,
-		text = "Destroy everything in a\nmap."
 	},
 	[ACHIEVEMENT_JUMPSCARE] = {
 		name = "That didn't scare me!",
