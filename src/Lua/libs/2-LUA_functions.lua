@@ -1636,7 +1636,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		if (me.momz*takis.gravflip > 0)
 			me.state = S_PLAY_SPRING
 		else
-			ne.state = S_PLAY_FALL
+			me.state = S_PLAY_FALL
 		end
 		
 	end
@@ -2343,6 +2343,10 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 				p
 			)
 			takis.combo.rank = $+1
+			if (takis.combo.rank)
+			and not (takis.combo.rank % 2)
+				takis.HUD.statusface.evilgrintic = TR*3/2
+			end
 		end
 		
 		takis.combo.time = TAKIS_MAX_COMBOTIME
@@ -3511,38 +3515,58 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	end
 end)
 
+--t is the thing causing, tm is the thing gibbing
 rawset(_G,"SpawnEnemyGibs",function(t,tm,ang)
-	local speed = t.player and t.player.takistable.accspeed or FixedHypot(t.momx,t.momy)
-	if (tm and tm.valid)
+	if (tm.flags & MF_MONITOR) then return end
+	
+	local speed
+	if (t and t.valid)
+		speed = t.player and t.player.takistable.accspeed or FixedHypot(t.momx,t.momy)
 		if ang == nil
 			ang = R_PointToAngle2(t.x,t.y, tm.x,tm.y)
 		end
 	else
-		ang = FixedAngle( AngleFixed(R_PointToAngle2(t.x,t.y, t.momx,t.momy)) + 180*FU)
+		ang = FixedAngle( AngleFixed(R_PointToAngle2(tm.x,tm.y, tm.momx,tm.momy)) + 180*FU)
+		speed = FixedHypot(tm.momx,tm.momy)
 	end
 	
 	ang = $+ANGLE_90
 	
-	local x,y,z = t.x,t.y,t.z
+	local x,y,z = tm.x,tm.y,tm.z
 	
 	--midpoint
-	if (tm and tm.valid)
+	if (t and t.valid)
 		x = ((t.x + tm.x)/2)+P_RandomRange(-1,1)+P_RandomFixed()
 		y = ((t.y + tm.y)/2)+P_RandomRange(-1,1)+P_RandomFixed()
 		z = ((t.z + tm.z)/2)+P_RandomRange(-1,1)+P_RandomFixed()
 	end
 	
-	for i = 0,P_RandomRange(3,16)
+	local mo = tm or t
+	for i = 0,P_RandomRange(5,16)
 		local gib = P_SpawnMobj(x,y,z,MT_TAKIS_GIB)
-		gib.scale = tm and tm.scale or t.scale
-		gib.frame = P_RandomRange(A,G)
-		gib.flags2 = $|(t.flags2 & MF2_OBJECTFLIP)
+		gib.scale = mo.scale
 		
-		gib.angle = P_RandomRange(0,1) and ang or ang-ANGLE_180
+		gib.frame = P_RandomRange(A,I)
+		if (mo and mo.valid)
+			if (mo.flags & MF_ENEMY)
+			or (mo.type == MT_TAKIS_BADNIK_RAGDOLL)
+				if (TAKIS_NET.isretro)
+					gib.frame = choosething(A,B,E,G,H,I)
+				end
+			elseif (mo.type == MT_PLAYER)
+				if not (mo.player.charflags & SF_MACHINE)
+					gib.frame = choosething(A,B,E,G,H,I)
+				end
+			end
+		end
+		gib.flags2 = $|(mo.flags2 & MF2_OBJECTFLIP)
+		
+		local angrng = P_RandomRange(0,1)
+		gib.angle = angrng and ang or ang-ANGLE_180
 		gib.rollangle = FixedAngle(P_RandomRange(0,359)*FU+P_RandomFixed())
-		gib.angleroll = FixedAngle(P_RandomRange(-10,10)*FU+P_RandomFixed())
+		gib.angleroll = FixedAngle(P_RandomRange(1,15)*FU+P_RandomFixed())*(angrng or -1)
 		P_SetObjectMomZ(gib,P_RandomRange(6,20)*gib.scale+P_RandomFixed())
-		if (tm and tm.valid)
+		if (t and t.valid)
 			P_Thrust(gib,
 				R_PointToAngle2(t.x,t.y, tm.x,tm.y),
 				speed/6

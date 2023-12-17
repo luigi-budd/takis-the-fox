@@ -230,9 +230,10 @@ freeslot("S_HHTRIGGER_IDLE")
 freeslot("S_HHTRIGGER_PRESSED")
 freeslot("S_HHTRIGGER_ACTIVE")
 freeslot("MT_HHTRIGGER")
-sfxinfo[freeslot("sfx_hhtsnd")] = {
+freeslot("sfx_hhtsnd")
+sfxinfo[sfx_hhtsnd] = {
 	flags = SF_X2AWAYSOUND,
-	caption = "/"
+	caption = "/",
 }
 
 states[S_HHTRIGGER_IDLE] = {

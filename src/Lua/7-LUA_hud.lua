@@ -1268,7 +1268,26 @@ local function drawcombostuff(v,p)
 			)
 		end
 		
+		/*
+		if not (takis.combo.outrotics)
+			TakisDrawPatchedText(v,
+				backx+5*comboscale+(FixedMul(patchx,comboscale))-(v.stringWidth(tostring(takis.combo.score),0,"thin")*comboscale/2),
+				backy+(7*comboscale),
+				tostring(takis.combo.score),
+				{
+					font = "TNYFN",
+					flags = (V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER),
+					align = 'left',
+					scale = comboscale,
+					fixed = true
+				}
+			)
+		end
+		*/
+		
 		--draw combo rank
+		--this isnt patched text bnecause of issues with the
+		--color codes
 		local length = #TAKIS_COMBO_RANKS
 		v.drawString(backx+7*comboscale,
 			backy+20*comboscale,
@@ -3043,16 +3062,6 @@ addHook("HUD", function(v,p,cam)
 			drawcfgnotifs(v,p)
 			drawhappyhour(v,p)
 			
-			
-			if takis.fchelper
-				--fc helper
-				local t = V_HUDTRANS
-				if takis.thingsdestroyed == TAKIS_NET.numdestroyables
-					t = V_HUDTRANSHALF
-				end
-				v.drawString(300-15,94,takis.thingsdestroyed,V_SNAPTORIGHT|t|V_BLUEMAP,"center")
-				v.drawString(300-15,106,TAKIS_NET.numdestroyables,V_SNAPTORIGHT|t|V_BLUEMAP,"center")
-			end
 			
 			if (takis.shotguntuttic)
 				local string = ''

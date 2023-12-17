@@ -1103,7 +1103,6 @@ addHook("PlayerThink", function(p)
 			--hammer blast thinker
 			--hammerblast stuff
 			if takis.hammerblastdown
-				p.pflags = $|PF_JUMPSTASIS
 				p.charflags = $ &~SF_RUNONWATER
 				p.powers[pw_strong] = $|(STR_SPRING|STR_HEAVY)
 				takis.noability = $|NOABIL_SHOTGUN|NOABIL_HAMMER
@@ -1273,6 +1272,7 @@ addHook("PlayerThink", function(p)
 				--hit ground
 				if (takis.onGround or P_CheckDeathPitCollide(me))
 				or (stupidbouncesectors(me,me.subsector.sector))
+				or (takis.justHitFloor)
 					if ((takis.hammerblasthitbox) and (takis.hammerblasthitbox.valid))
 						P_RemoveMobj(takis.hammerblasthitbox)
 						takis.hammerblasthitbox = nil
@@ -1402,6 +1402,7 @@ addHook("PlayerThink", function(p)
 							me.state = S_PLAY_ROLL
 							me.momz = 20*takis.gravflip*me.scale+(time*takis.gravflip*me.scale/8)
 							S_StartSoundAtVolume(me,sfx_kc52,180)
+							p.pflags = $|PF_JUMPED &~PF_THOKKED
 							shouldntcontinueslide = true
 							
 						--holding spin while landing? boost us forward!
@@ -2200,8 +2201,8 @@ addHook("PlayerSpawn", function(p)
 	*/
 	--	P_SpawnMobjFromMobj(p.mo,100*x,100*y,0,MT_HHEXIT)
 	
-	mapmusname = mapheaderinfo[gamemap].musname
-	P_RestoreMusic(p)
+	--mapmusname = mapheaderinfo[gamemap].musname
+	--P_RestoreMusic(p)
 	
 	if (skins[p.skin].name == TAKIS_SKIN)
 		if (maptol & TOL_NIGHTS)
@@ -2997,6 +2998,9 @@ local function tauntbox(t,tm)
 			if tm.flags & (MF_ENEMY|MF_BOSS)
 			or (tm.flags & MF_MONITOR)
 			or (tm.takis_flingme)
+				if not (tm.flags & MF_MONITOR)
+					SpawnEnemyGibs(t,tm)
+				end
 				spawnragthing(tm,t.tracer)
 				local ghs = P_SpawnGhostMobj(t)
 				ghs.fuse = 10*TR

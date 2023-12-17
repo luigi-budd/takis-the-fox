@@ -219,6 +219,7 @@ rawset(_G, "TAKIS_NET", {
 		["rnk_d"] = true,
 		["rnk_p"] = true,
 		["rnk_s"] = true,
+		["p_int"] = true,
 	},
 	
 })
@@ -316,7 +317,6 @@ rawset(_G, "TakisInitTable", function(p)
 		lastgt = 0,
 		lastskincolor = 0,
 		lastdestroyed = 0,
-		fchelper = false,
 		achfile = 0,
 		drilleffect = 0,
 		issuperman = false,
@@ -1398,7 +1398,7 @@ states[S_TAKIS_GIB] = {
 mobjinfo[MT_TAKIS_GIB] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_GIB,
-	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING,
+	flags = MF_NOCLIP|MF_NOCLIPTHING,
 	height = 4*FRACUNIT,
 	radius = 4*FRACUNIT,
 }

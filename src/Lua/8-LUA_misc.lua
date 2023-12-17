@@ -202,7 +202,7 @@ addHook("MobjThinker", function(rag)
 	rag.angle = $-ANG10
 	if rag.speed == 0
 	or ((P_IsObjectOnGround(rag)) and (rag.timealive > 4))
-		SpawnEnemyGibs(rag,nil)
+		SpawnEnemyGibs(nil,rag)
 		for i = 0, 34
 			A_BossScream(rag,1,MT_SONIC3KBOSSEXPLODE)
 		end
@@ -501,6 +501,7 @@ addHook("MobjThinker",function(cart)
 	
 end,MT_MINECART)
 
+--give spikeballs a deathstate
 addHook("MobjDeath",function(mo,i,s)
 	local gst = P_SpawnGhostMobj(mo)
 	gst.flags2 = $|MF2_DONTDRAW
@@ -508,7 +509,7 @@ addHook("MobjDeath",function(mo,i,s)
 	
 	S_StartSound(gst,mobjinfo[MT_SPIKE].deathsound)
 
-	for i = 0,16
+	for i = 0,5
 		local debris = P_SpawnMobjFromMobj(mo,
 			(P_RandomRange(-10,10)*mo.scale),
 			(P_RandomRange(-10,10)*mo.scale),
@@ -560,9 +561,11 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		local song = hh.song
 		local songend = hh.songend
 		
-		print("New music change:","HH Music: "..song,
-			"HH End Music: "..songend
-		)
+		if not multiplayer
+			print("New music change:","HH Music: "..song,
+				"HH End Music: "..songend
+			)
+		end
 		
 		newname = string.lower(newname)
 		
@@ -573,7 +576,9 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		end
 		
 		oldname = string.lower($)
-		print("Changing from "..oldname,"to "..newname,"")
+		if not multiplayer
+			print("Changing from "..oldname,"to "..newname,"")
+		end
 		
 		--stop any lap music
 		if (not isspecsong)
@@ -591,14 +596,16 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 					end
 				end
 			end
-			print(changetohappy)
+			if not multiplayer
+				print(changetohappy)
+			end
 			
 			if changetohappy
 				if nomus then return end
 				
 				if oldname ~= song
 				and (oldname ~= '')
-					mapmusname = song
+					--mapmusname = song
 					return song,mflags,looping,pos,prefade,fade
 				end
 			
@@ -606,7 +613,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 				if noendmus then return end
 				
 				if oldname ~= songend
-					mapmusname = songend
+					--mapmusname = songend
 					return songend,mflags,looping,pos,prefade,fade
 				end
 			end
@@ -778,6 +785,7 @@ addHook("MobjMoveCollide",function(shot,mo)
 	end
 	
 	if (mo.flags & (MF_ENEMY|MF_BOSS))
+		SpawnEnemyGibs(mo,shot)
 		SpawnRagThing(mo,shot,shot.tracer)
 		return true
 	end
@@ -1681,6 +1689,12 @@ addHook("MobjThinker",function(gib)
 	grav = $*3/5
 	gib.momz = $+(grav*P_MobjFlip(gib))
 	gib.rollangle = $+gib.angleroll
+	if (P_IsObjectOnGround(gib)
+	and not gib.bounced)
+		gib.flags = $|MF_NOCLIPHEIGHT
+		P_SetObjectMomZ(gib,P_RandomRange(4,9)*FU+P_RandomFixed())
+		gib.bounced = true
+	end
 end,MT_TAKIS_GIB)
 
 filesdone = $+1

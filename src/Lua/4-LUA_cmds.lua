@@ -275,19 +275,6 @@ COM_AddCommand("takis_additiveafterimages", function(p)
 	
 	TakisSaveStuff(p)
 end)
-COM_AddCommand("takis_fchelper", function(p)
-	if gamestate ~= GS_LEVEL
-		prn(p,"You can't use this right now.")
-		return
-	end
-	
-	if not (p.takistable)
-		prn(p,"You can't use this right now.")
-		return	
-	end
-	
-	p.takistable.fchelper = not $
-end)
 COM_AddCommand("takis_deleteachievements", function(p)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
