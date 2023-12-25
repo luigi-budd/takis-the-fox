@@ -107,7 +107,8 @@
 	-[done]remove fc stuf
 	-fling solids kill stuff
 	-[done]thoks respawn flung solids
-	-switch all the takismusic funcs back to normal S_Sound stuff
+	-[done]switch all the takismusic funcs back to normal S_Sound stuff
+	-[done]happy hour quakes not working
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -480,6 +481,9 @@ addHook("PlayerThink", function(p)
 								takis.clutchcombo = 0
 								takis.clutchcombotime = 0
 								thrust = FU/5
+								if takis.clutchspamcount >= 3
+									thrust = 0
+								end
 								
 							end
 						end
@@ -502,7 +506,20 @@ addHook("PlayerThink", function(p)
 						
 						if (takis.accspeed > 55*FU)
 						and not (p.powers[pw_sneakers])
+							me.friction = FU
 							thrust = 0
+						end
+						
+						--stop that stupid momentum mod from givin
+						--us super speed for spamming
+						if thrust == 0
+						and not p.powers[pw_sneakers]
+						and (takis.clutchspamcount >= 3)
+							P_InstaThrust(me,ang,FixedDiv(
+									FixedMul(takis.accspeed,me.scale),
+									3*FU
+								)
+							)
 						end
 						
 						thrust = FixedMul(thrust,me.scale)
@@ -1179,7 +1196,8 @@ addHook("PlayerThink", function(p)
 						)
 						local box = takis.hammerblasthitbox
 						P_SetOrigin(box,box.x,box.y,box.z)
-						takis.hammerblasthitbox.parent = me
+						box.takis_flingme = false
+						box.parent = me
 						--takis.hammerblasthitbox.flags2 = $|MF2_DONTDRAW
 					end
 					
@@ -1351,26 +1369,21 @@ addHook("PlayerThink", function(p)
 							searchBlockmap("objects", function(me, found)
 								if found and found.valid
 								and (found.health)
-									if (found.type ~= MT_EGGMAN_BOX)
-									or (found.takis_flingme)
-										if (found.flags & (MF_ENEMY|MF_BOSS))
-										or (found.flags & MF_MONITOR)
-										or (found.takis_flingme)
-											spawnragthing(found,me)
-										elseif (found.type == MT_PLAYER)
-											if CanPlayerHurtPlayer(p,found.player)
-												TakisAddHurtMsg(found.player,HURTMSG_HAMMERQUAKE)
-												P_DamageMobj(found,me,me,abs(me.momz/FU/4))
-											end
-											DoQuake(found.player,
-												FixedMul(
-													75*FU, FixedDiv( br-FixedHypot(found.x-me.x,found.y-me.y),br )
-												),
-												15
-											)
-										elseif (SPIKE_LIST[found.type] == true)
-											P_KillMobj(found,me,me)
+									if CanFlingThing(found)
+										spawnragthing(found,me)
+									elseif (found.type == MT_PLAYER)
+										if CanPlayerHurtPlayer(p,found.player)
+											TakisAddHurtMsg(found.player,HURTMSG_HAMMERQUAKE)
+											P_DamageMobj(found,me,me,abs(me.momz/FU/4))
 										end
+										DoQuake(found.player,
+											FixedMul(
+												75*FU, FixedDiv( br-FixedHypot(found.x-me.x,found.y-me.y),br )
+											),
+											15
+										)
+									elseif (SPIKE_LIST[found.type] == true)
+										P_KillMobj(found,me,me)
 									end
 								end
 							end, me, px-br, px+br, py-br, py+br)		
@@ -1522,12 +1535,12 @@ addHook("PlayerThink", function(p)
 					end
 				end
 				
-				p.charflags = $|SF_CANBUSTWALLS
+				--p.charflags = $|SF_CANBUSTWALLS
 				
-				if (takis.accspeed >= skins[TAKIS_SKIN].normalspeed)
-					p.charflags = $|SF_RUNONWATER
+				if (takis.accspeed >= skins[TAKIS_SKIN].normalspeed*2)
+					p.charflags = $|SF_RUNONWATER|SF_CANBUSTWALLS
 				else
-					p.charflags = $ &~SF_RUNONWATER
+					p.charflags = $ &~(SF_RUNONWATER|SF_CANBUSTWALLS)
 				end
 				
 				if not (p.pflags & PF_SPINNING)
@@ -1761,7 +1774,7 @@ addHook("PlayerThink", function(p)
 				end
 				
 				if ((takis.body) and (takis.body.valid))
-					P_MoveOrigin(takis.body,me.x,me.y,me.z)
+					sP_MoveOrigin(takis.body,me.x,me.y,me.z)
 					takis.body.rollangle = me.rollangle
 				end
 				
@@ -2175,7 +2188,7 @@ addHook("PlayerThink", function(p)
 			end
 		end
 		
-		--holding FN, C3, C1 open menu
+		--holding FN, C3, C2 open menu
 		if (takis.firenormal >= TR)
 		and (takis.c3 >= TR)
 		and (takis.c2 >= TR)
@@ -2183,11 +2196,12 @@ addHook("PlayerThink", function(p)
 			TakisMenuOpenClose(p)
 		end
 		
+		if me.battime then me.battime = $-1 end
+		
 		takis.combo.lastcount = takis.combo.count
 		takis.lastmap = gamemap
 		takis.lastgt = gametype
 		
-		--CONS_Printf(p,mapmusname)
 	end
 	
 end)
@@ -2201,8 +2215,7 @@ addHook("PlayerSpawn", function(p)
 	*/
 	--	P_SpawnMobjFromMobj(p.mo,100*x,100*y,0,MT_HHEXIT)
 	
-	--mapmusname = mapheaderinfo[gamemap].musname
-	--P_RestoreMusic(p)
+	P_RestoreMusic(p)
 	
 	if (skins[p.skin].name == TAKIS_SKIN)
 		if (maptol & TOL_NIGHTS)
@@ -2323,11 +2336,13 @@ addHook("PlayerCanDamage", function(player, mobj)
 		)
 		or (takis.transfo & TRANSFO_TORNADO)
 			if L_ZCollide(me,mobj)
+			/*
 			and ((mobj.flags & MF_ENEMY)
 			--and (mobj.type ~= MT_ROSY)
 			and (mobj.type ~= MT_SHELL))
 			or (mobj.takis_flingme)
-				
+			*/
+			and CanFlingThing(mobj)
 				--prevent killing blow sound from mobjs way above/below us
 				SpawnEnemyGibs(me,mobj)
 				SpawnBam(mobj)
@@ -2717,20 +2732,26 @@ local function knockbacklolll(t,tm)
 		return
 	end
 	
-	if tm.flags & (MF_ENEMY|MF_BOSS|MF_SHOOTABLE)
-	or tm.takis_flingme
+	if CanFlingThing(tm,MF_ENEMY|MF_BOSS|MF_SHOOTABLE)
 		if takis.afterimaging
 		or p.pflags & PF_SPINNING
 			local ang = R_PointToAngle2(t.x,t.y, tm.x,tm.y)
 			stopmom(takis,me,ang)
 			
-			if not (p.pflags & PF_SPINNING)
+			--if not (p.pflags & PF_SPINNING)
 				S_StartSound(tm,sfx_smack)
-				SpawnBam(tm)
 				SpawnEnemyGibs(t,tm,ang)
+				SpawnBam(tm)
 				
 				spawnragthing(tm,t)
-			end
+				if (me.state == S_PLAY_TAKIS_SLIDE)
+					S_StartSound(me,sfx_smack)
+				end
+				if (takis.transfo & TRANSFO_BALL)
+					S_StartSound(me,sfx_bowl)
+				end
+				
+			--end
 			
 		end
 		
@@ -2965,11 +2986,13 @@ local function tauntbox(t,tm)
 		return
 	end
 	
-	if (t.alreadydid) then return end
-	
 	if (t.boxtype == "bat")
 		if tm.type == MT_PLAYER
 			
+			if tm.battime then return end 
+			
+			SpawnEnemyGibs(t,tm)
+			SpawnEnemyGibs(t,tm)
 			TakisResetTauntStuff(tm.player.takistable)
 			TakisAwardAchievement(t.tracer.player,ACHIEVEMENT_HOMERUN)
 			
@@ -2992,12 +3015,11 @@ local function tauntbox(t,tm)
 				tm.state = S_PLAY_PAIN
 			end
 			
-			t.alreadydid = true
+			tm.battime = 4
 		else
-			
-			if tm.flags & (MF_ENEMY|MF_BOSS)
-			or (tm.flags & MF_MONITOR)
-			or (tm.takis_flingme)
+			if (t.alreadydid) then return end
+					
+			if CanFlingThing(tm)
 				if not (tm.flags & MF_MONITOR)
 					SpawnEnemyGibs(t,tm)
 				end
@@ -3120,9 +3142,7 @@ local function hurtbytakis(mo,inf,sor)
 	
 	if sor.player
 	and sor.player.takistable
-		if ((mo.flags & MF_ENEMY) or (mo.flags & MF_BOSS))
-		or ( mo.flags & MF_MONITOR)
-		or (mo.takis_flingme)
+		if CanFlingThing(mo)
 			if sor.player.takistable.dived
 			or sor.player.takistable.thokked
 				sor.player.takistable.dived = false
@@ -3368,6 +3388,7 @@ addHook("MobjMoveCollide",function(tm,t)
 				t.state = mobjinfo[t.type].raisestate
 				
 				--tornado transfo
+				/*
 				if (mobjinfo[t.type].painsound == sfx_cdfm62)
 					takis.nadocount = 3
 					if not (takis.transfo & TRANSFO_TORNADO)
@@ -3379,6 +3400,7 @@ addHook("MobjMoveCollide",function(tm,t)
 					
 					TakisAwardAchievement(p,ACHIEVEMENT_TORNADO)
 				end
+				*/
 				
 				return false
 			end
@@ -3408,10 +3430,16 @@ addHook("MobjMoveCollide",function(tm,t)
 		elseif (SPIKE_LIST[t.type] == true)
 			--we mightve ran into a spike thing
 			if t.health
-			and (p.powers[pw_strong] & STR_SPIKE or takis.afterimaging or takis.transfo & TRANSFO_TORNADO)
+			and ((p.powers[pw_strong] & STR_SPIKE) 
+			or (takis.afterimaging)
+			or (takis.transfo & TRANSFO_TORNADO|TRANSFO_BALL))
 				P_KillMobj(t,tm,tm)
+				if takis.transfo & TRANSFO_BALL
+					S_StartSound(t,sfx_bowl)
+				end
 				return false
 			end
+		--fling solids
 		elseif (t.flags & MF_SOLID|MF_SCENERY == MF_SOLID|MF_SCENERY)
 		and not (t.flags & (MF_SPECIAL|MF_ENEMY|MF_MONITOR|MF_PUSHABLE))
 		and (t.health)
@@ -3427,7 +3455,7 @@ addHook("MobjMoveCollide",function(tm,t)
 			fling.radius = t.radius
 			fling.height = t.height
 			fling.state = t.state
-			fling.tics = -1
+			fling.fuse = 3*TR
 			P_SetObjectMomZ(fling,
 				P_RandomRange(10,15)*tm.scale+P_RandomFixed()
 			)

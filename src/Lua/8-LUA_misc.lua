@@ -178,19 +178,14 @@ addHook("MobjThinker", function(rag)
 			if found and found.valid
 			and (found.health)
 			and (L_ZCollide(rag,found))
-				if (found.takis_flingme ~= false)
-					if (found.flags & (MF_ENEMY|MF_BOSS))
-					or (found.takis_flingme)
-						SpawnEnemyGibs(rag,found)
-						SpawnBam(found)
-						SpawnRagThing(found,rag,rag.parent2)
-						local sfx = P_SpawnGhostMobj(found)
-						sfx.flags2 = $|MF2_DONTDRAW
-						sfx.tics = TR
-						S_StartSound(sfx,sfx_smack)
-					elseif (SPIKE_LIST[found.type] == true)
-						P_KillMobj(found,rag,rag.parent2)
-					end
+				if CanFlingThing(found,MF_ENEMY|MF_BOSS)
+					SpawnEnemyGibs(rag,found)
+					SpawnBam(found)
+					SpawnRagThing(found,rag,rag.parent2)
+					local sfx = P_SpawnGhostMobj(found)
+					sfx.flags2 = $|MF2_DONTDRAW
+				elseif (SPIKE_LIST[found.type] == true)
+					P_KillMobj(found,rag,rag.parent2)
 				end
 			end
 		end, rag, px-br, px+br, py-br, py+br)
@@ -249,13 +244,10 @@ addHook("MobjThinker", function(rag)
 			searchBlockmap("objects", function(helper, found)
 				if found and found.valid
 				and (found.health)
-					if (found.takis_flingme ~= false)
-						if (found.flags & (MF_ENEMY|MF_BOSS))
-						or (found.takis_flingme)
-							SpawnRagThing(found,helper,helper.parent2)
-						elseif (SPIKE_LIST[found.type] == true)
-							P_KillMobj(found,helper,helper.parent2)
-						end
+					if CanFlingThing(found,MF_ENEMY|MF_BOSS)
+						SpawnRagThing(found,helper,helper.parent2)
+					elseif (SPIKE_LIST[found.type] == true)
+						P_KillMobj(found,helper,helper.parent2)
 					end
 				end
 			end, helper, px-br, px+br, py-br, py+br)		
@@ -551,6 +543,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		dohhmus = false
 	end
 	
+	--print(" s "..tostring(HAPPY_HOUR.happyhour))
 	if (HAPPY_HOUR.happyhour)
 	and dohhmus
 	
@@ -561,11 +554,11 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		local song = hh.song
 		local songend = hh.songend
 		
-		if not multiplayer
-			print("New music change:","HH Music: "..song,
-				"HH End Music: "..songend
-			)
-		end
+		/*
+		print("New music change:","HH Music: "..song,
+			"HH End Music: "..songend
+		)
+		*/
 		
 		newname = string.lower(newname)
 		
@@ -576,13 +569,13 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		end
 		
 		oldname = string.lower($)
-		if not multiplayer
-			print("Changing from "..oldname,"to "..newname,"")
-		end
+		/*
+		print("Changing from "..oldname,"to "..newname,"")
+		print("Spec "..tostring(not isspecsong))
+		*/
 		
 		--stop any lap music
 		if (not isspecsong)
-		
 			local changetohappy = true
 			
 			if HAPPY_HOUR.timelimit
@@ -596,15 +589,11 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 					end
 				end
 			end
-			if not multiplayer
-				print(changetohappy)
-			end
 			
 			if changetohappy
 				if nomus then return end
 				
 				if oldname ~= song
-				and (oldname ~= '')
 					--mapmusname = song
 					return song,mflags,looping,pos,prefade,fade
 				end
@@ -776,15 +765,11 @@ addHook("MobjMoveCollide",function(shot,mo)
 		return
 	end
 	
-	if (mo.flags & MF_MONITOR)
-		SpawnRagThing(mo,shot,shot.tracer)
-	end
-	
 	if (SPIKE_LIST[mo.type] == true)
 		P_KillMobj(mo,shot,shot.tracer)
 	end
 	
-	if (mo.flags & (MF_ENEMY|MF_BOSS))
+	if CanFlingThing(mo)
 		SpawnEnemyGibs(mo,shot)
 		SpawnRagThing(mo,shot,shot.tracer)
 		return true
@@ -1447,7 +1432,8 @@ addHook("MobjThinker",function(card)
 		end
 	end
 	
-	if (skins[displayplayer.skin].name ~= TAKIS_SKIN)
+	if (displayplayer and displayplayer.valid)
+	and (skins[displayplayer.skin].name ~= TAKIS_SKIN)
 		card.flags2 = $|MF2_DONTDRAW
 	end
 	

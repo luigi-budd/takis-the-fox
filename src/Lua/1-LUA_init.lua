@@ -212,6 +212,7 @@ rawset(_G, "TAKIS_NET", {
 		["letter"] = true,
 		["creds"] = true,
 		["_conga"] = true,
+		["_gover"] = true,
 		--spice runers
 		["ovrtme"] = true,
 		["rnk_a"] = true,
@@ -308,7 +309,7 @@ rawset(_G, "TakisInitTable", function(p)
 		otherskin = false,
 		otherskintime = 0,
 		rmomz = 0,
-		lastrank = 0,
+		lastrank = 1,
 		lastmomz = 0,
 		recovwait = 0,
 		dropdashstale = 0,
@@ -1404,10 +1405,12 @@ mobjinfo[MT_TAKIS_GIB] = {
 }
 
 addHook("NetVars",function(n)
-	--TAKIS_NET = n($)
+	TAKIS_NET = n($)
+	/*
 	for k,v in ipairs(netsynchlist)
-		HAPPY_HOUR[k] = n($)
+		TAKIS_NET[k] = n($)
 	end
+	*/
 	
 	TAKIS_MAX_HEARTCARDS = n($)
 	--TAKIS_DEBUGFLAG = n($)
@@ -1418,9 +1421,15 @@ addHook("NetVars",function(n)
 		"timeleft",
 		"time",
 		"othergt",
+		"overtime",
 		"trigger",
 		"exit",
-		"overtime",
+		"gameover",
+		"gameovertics",
+		"song",
+		"songend",
+		"nosong",
+		"noendsong",
 	}
 	for _,v in ipairs(hhsync)
 		HAPPY_HOUR[v] = n($)

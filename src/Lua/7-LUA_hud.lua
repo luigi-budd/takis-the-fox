@@ -522,6 +522,7 @@ local function drawscore(v,p)
 	
 	if (PTSR)
 		if PTSR.intermission_tics and (PTSR.intermission_tics < 324)
+		or (PTSR:inVoteScreen())
 			return
 		end
 	end	
@@ -1842,6 +1843,7 @@ local function drawpizzaranks(v,p)
 	
 	if (PTSR)
 		if PTSR.intermission_tics and (PTSR.intermission_tics < 324)
+		or (PTSR:inVoteScreen())
 			return
 		end
 	end
@@ -2098,8 +2100,8 @@ local function drawcosmenu(v,p)
 	local timer = FixedDiv(leveltime*FU,2*FU) or 1
 	local bgoffx = FixedDiv(timer,2*FU)%(bgp.width*s)
 	local bgoffy = FixedDiv(timer,2*FU)%(bgp.height*s)
-	for i = 0,(v.width()/bgp.width)+1
-		for j = 0,(v.height()/bgp.height)+1
+	for i = 0,(v.width()/bgp.width)--+1
+		for j = 0,(v.height()/bgp.height)--+1
 			--Complicated
 			local x = 300
 			local y = bgp.height*(j-1)
@@ -2569,6 +2571,30 @@ local function drawdebug(v,p)
 		DrawButton(v, p, x+66, y, flags, color, color2, takis.fire,'F', 'left')
 		DrawButton(v, p, x+77, y, flags, color, color2, takis.firenormal,'FN', 'thin')
 		
+		v.drawString(x,y-108,"pw_strong",flags,"thin")
+		drawflag(v,x+00,y-100,"NN",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_NONE))
+		drawflag(v,x+15,y-100,"AN",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_ANIM))
+		drawflag(v,x+30,y-100,"PN",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_PUNCH))
+		drawflag(v,x+45,y-100,"TL",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_TAIL))
+		drawflag(v,x+60,y-100,"ST",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_STOMP))
+		drawflag(v,x+75,y-100,"UP",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_UPPER))
+		drawflag(v,x+90,y-100,"GD",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_GUARD))
+		--line 2
+		drawflag(v,x+00,y-90,"HV",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_HEAVY))
+		drawflag(v,x+15,y-90,"DS",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_DASH))
+		drawflag(v,x+30,y-90,"WL",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_WALL))
+		drawflag(v,x+45,y-90,"FL",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_FLOOR))
+		drawflag(v,x+60,y-90,"CL",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_CEILING))
+		drawflag(v,x+75,y-90,"SP",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_SPRING))
+		drawflag(v,x+90,y-90,"SK",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_SPIKE))
+		
+		v.drawString(x,y-78,"transfo",flags|V_GREENMAP,"thin")
+		drawflag(v,x+00,y-70,"SG",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_SHOTGUN))
+		drawflag(v,x+15,y-70,"BL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_BALL))
+		drawflag(v,x+30,y-70,"PC",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_PANCAKE))
+		drawflag(v,x+45,y-70,"EL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_ELEC))
+		drawflag(v,x+60,y-70,"TR",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_TORNADO))
+		
 		v.drawString(x,y-58,"noability",flags|V_GREENMAP,"thin")
 		drawflag(v,x+00,y-50,"CL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_CLUTCH))
 		drawflag(v,x+15,y-50,"HM",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_HAMMER))
@@ -2802,7 +2828,7 @@ local function drawdebug(v,p)
 				offy = -4
 			end
 			v.drawScaled((hudinfo[HUD_LIVES].x+30)*FU,
-				(hypos-8+offy)*FU,
+				(ypos-8+offy)*FU,
 				FU/2,
 				v.getSpritePatch(SPR_THND,B,0,ra),
 				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
@@ -2895,16 +2921,6 @@ local function drawdebug(v,p)
 			"thin-fixed"
 		)
 		*/
-	end
-	if (TAKIS_DEBUGFLAG & DEBUG_TRANSFO)
-		local x, y = 16, 156
-		local flags = V_HUDTRANS|V_PERPLAYER|V_SNAPTOBOTTOM|V_SNAPTOLEFT
-		v.drawString(x,y-78,"transfo",flags|V_GREENMAP,"thin")
-		drawflag(v,x+00,y-70,"SG",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_SHOTGUN))
-		drawflag(v,x+15,y-70,"BL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_BALL))
-		drawflag(v,x+30,y-70,"PC",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_PANCAKE))
-		drawflag(v,x+45,y-70,"EL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_ELEC))
-		drawflag(v,x+60,y-70,"TR",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_TORNADO))
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_HURTMSG)
 		for i = 0,#takis.hurtmsg

@@ -298,14 +298,14 @@ rawset(_G, "TakisHUDStuff", function(p)
 	end
 	
 
-	local dontdo = false
+	local dontdo2 = false
 	if (HAPPY_HOUR.othergt)
-		dontdo = takis.io.nohappyhour == 1
+		dontdo2 = takis.io.nohappyhour == 1
 	end
 	
 	--happy hour hud and stuff
 	if HAPPY_HOUR.time
-	and not (dontdo)
+	and not (dontdo2)
 		local tics = HAPPY_HOUR.time
 		
 		if (tics == 1)
@@ -370,25 +370,17 @@ rawset(_G, "TakisHUDStuff", function(p)
 			if tics <= (56*TR)
 			and not (dontdo)
 			and not HAPPY_HOUR.gameover
-				hud.timeshake = $+1
-				if not takis.sethappyend
-				and (HAPPY_HOUR.noendsong == false)
-					S_ChangeMusic(HAPPY_HOUR.songend,false,p,0,0,3*MUSICRATE)
-					takis.sethappyend = true
-				end
-				DoQuake(p,(time*FU)/50,1)
+				hud.timeshake = ((56*TR)-tics)+1
 			end
 			
 		else
-			takis.sethappyend = false
 			hud.timeshake = 0
 		end
 		
 	else
 		hud.timeshake = 0
-		takis.sethappyend = false
 	end
-
+	
 	if hud.flyingscore.tics > 0
 		local expectedtime = 2*TR
 		local tics = ((2*TR)+1)-hud.flyingscore.tics
@@ -1308,13 +1300,13 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 		
 	--happy hour hud and stuff
-	local dontdo = false
+	local dontdo2 = false
 	if (HAPPY_HOUR.othergt)
-		dontdo = takis.io.nohappyhour == 1
+		dontdo2 = takis.io.nohappyhour == 1
 	end
 	
 	if HAPPY_HOUR.time
-	and not (dontdo)
+	and not (dontdo2)
 	and not HAPPY_HOUR.gameover
 		local tics = HAPPY_HOUR.time
 		
@@ -1339,40 +1331,31 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 			DoQuake(p,(72-(2*tics))*FU,1,0)
 		end
 		
-		/*
-		if not (takis.isMusicOn)
-		and not (leveltime)
-			local t = tics % TR
-			local tl = JISK_TIMELEFT or PTJE.timeleft
+	end
+	
+	//end of happy hour quakes
+	if HAPPY_HOUR.timelimit
+	
+		if HAPPY_HOUR.timeleft
+			local tics = HAPPY_HOUR.timeleft
+			local time = takis.HUD.timeshake
 			
-			local istimelimit = false
-			if ( ((CV_PTJE) and (CV_PTJE.timelimit.value))
-			or ((JISK_TIMELIMIT) and (JISK_TIMELIMIT.value)) )
-				istimelimit = true
-			else
-				istimelimit = false
-			end
-			
-			if ((tl <= 56*TR)
-			and (istimelimit))
-				if t == 0
-					S_StartSound(nil,sfx_tactic,p)
-				elseif t == (TR/4)
-					S_StartSound(nil,sfx_tactoc,p)
-				elseif t == (TR/2)
-					S_StartSound(nil,sfx_tactic,p)
-				elseif t == (TR*3/4)
-					S_StartSound(nil,sfx_tactoc,p)
-				end				
-			else
-				if t == 0
-					S_StartSound(nil,sfx_tactic,p)
-				elseif t == 16
-					S_StartSound(nil,sfx_tactoc,p)
+			if tics <= (56*TR)
+			and (takis.io.nohappyhour == 0)
+				if not takis.sethappyend
+					S_ChangeMusic("hpyhre",false,p,0,0,3*MUSICRATE)
+					mapmusname = "hpyhre"
+					takis.sethappyend = true
 				end
+				DoQuake(p,(time*FU)/50,1,0)
 			end
+			
+		else
+			takis.sethappyend = false
 		end
-		*/
+		
+	else
+		takis.sethappyend = false
 	end
 	
 	if takis.glowyeffects
@@ -1531,7 +1514,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if (me.sprite2 == SPR2_CNT1)
 	or (me.sprite2 == SPR2_CNT2)
 	or (me.sprite2 == SPR2_CNT3)
-	or (takis.heartcards == 0 and me.health and not p.exiting)
+	or (takis.heartcards == 0 and me.health and not (p.exiting or HAPPY_HOUR.gameover))
 		P_KillMobj(me)
 	end
 	
@@ -1627,7 +1610,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.noability = $|NOABIL_ALL
 	end
 	
-	if takis.resettingtoslide
+	if (takis.resettingtoslide)
+	or (takis.inwaterslide)
 		takis.noability = $|NOABIL_SLIDE
 	end
 	
@@ -3401,6 +3385,7 @@ rawset(_G, "TakisDeShotgunify", function(p)
 	takis.shotgunned = false
 	takis.transfo = $ &~TRANSFO_SHOTGUN
 	if string.lower(S_MusicName()) == "war"
+	and (me.health)
 		P_RestoreMusic(p)
 	end
 	TakisResetHammerTime(p)
@@ -3574,6 +3559,27 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang)
 		end
 		P_Thrust(gib,gib.angle,P_RandomRange(1,10)*gib.scale+P_RandomFixed())
 	end
+end)
+
+rawset(_G,"CanFlingThing",function(en,flags)
+	if en.type == MT_EGGMAN_BOX then return false end
+	local flingable = false
+	flags = $ or MF_ENEMY|MF_BOSS|MF_MONITOR
+	
+	if en.flags & (flags)
+		flingable = true
+	end
+	
+	if en.takis_flingme
+		if en.takis_flingme == true
+			flingable = true
+		elseif en.takis_flingme == false
+			flingable = false
+		end
+	end
+	
+	return flingable
+	
 end)
 
 filesdone = $+1

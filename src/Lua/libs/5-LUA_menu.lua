@@ -75,7 +75,6 @@ tm.entries = {
 			"Toggles screen quakes.",
 			"Toggles screen flashes.",
 			"Toggles additive blending for the afterimages.",
-			"Do you have the music wad?",
 			"Clutch Bar or Clutch Meter.",
 			"Share combos with other Takis.",
 			"Don't show other Takis' achievements."

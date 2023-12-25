@@ -31,8 +31,7 @@ local function init_conga(p)
 	takis.taunttime = 2
 	takis.stasistic = 2
 	takis.tauntacceptspartners = false
-	--maybe put this in with takis?
-	ChangeTakisMusic("_CONGA",true,p)
+	S_ChangeMusic("_CONGA",true,p)
 	S_StartMusicCaption("Conga!!",300*TR,p)
 end
 

@@ -225,6 +225,11 @@ COM_AddCommand("panic", function(p,tics,flags)
 		return
 	end
 	
+	if (HAPPY_HOUR.othergt)
+		COM_BufInsertText(p,"ptsr_pizzatimenow")
+		return
+	end
+	
 	if tics == nil
 		return
 	end

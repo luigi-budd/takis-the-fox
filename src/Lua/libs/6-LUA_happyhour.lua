@@ -41,7 +41,12 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 			timelimit = 3*60*TR
 		end
 		--add 2 more seconds for the timer tween
-		hh.timelimit = timelimit+2*TR
+		if timelimit ~= 0
+			hh.timelimit = timelimit+2*TR
+		else
+			hh.timelimit = 0
+		end
+		
 		hh.happyhour = true
 		hh.time = 1
 		hh.gameover = false
@@ -107,21 +112,21 @@ addHook("ThinkFrame",do
 		hh.timeleft = PTSR.timeleft
 		hh.time = PTSR.pizzatime_tics
 		hh.overtime = hh.timeleft <= 0 and hh.happyhour
+		hh.gameover = PTSR.gameover
 	else
 	
 		if hh.happyhour
 			
 			if not hh.gameover
-				if ((hh.timeleft ~= 0)
-				and (hh.timelimit))
-					hh.time = $+1
-				end
+				hh.time = $+1
 			else
 				hh.gameovertics = $+1
 			end
 			
-			if (hh.timelimit)
-				hh.timeleft = hh.timelimit-hh.time
+			if (hh.timelimit and hh.timelimit ~= 0)
+				if hh.timeleft
+					hh.timeleft = $-1 --hh.timelimit-hh.time
+				end
 			end
 			
 			if (G_EnoughPlayersFinished())
@@ -272,6 +277,7 @@ addHook("MobjSpawn",function(mo)
 	mo.shadowscale = mo.scale*9/10
 	mo.spritexoffset = 19*FU
 	mo.spriteyoffset = 26*FU
+	mo.takis_flingme = false
 end,MT_HHTRIGGER)
 
 addHook("MobjThinker",function(trig)
@@ -318,14 +324,14 @@ addHook("MobjCollide",function(trig,mo)
 	
 	if HAPPY_HOUR.happyhour
 		if L_ZCollide(trig,mo)
-			return true
+			return --true
 		end
 		return
 	end
 	
 	if not trig.health
 		if L_ZCollide(trig,mo)
-			return true
+			return --true
 		end
 		return
 	end
@@ -335,12 +341,12 @@ addHook("MobjCollide",function(trig,mo)
 		local myz = trig.z+trig.height
 		if not (mo.z <= myz+trig.scale and mo.z >= myz-trig.scale)
 			if L_ZCollide(trig,mo)
-				return true
+				return --true
 			end
 		return
 		end
 		if (mo.momz)
-			return true
+			return --true
 		end
 		
 		local tl = tonumber(mapheaderinfo[gamemap].takis_hh_timelimit or 0)*TR or 3*60*TR
@@ -354,7 +360,7 @@ addHook("MobjCollide",function(trig,mo)
 		takis.bonuses["happyhour"].tics = 3*TR+18
 		takis.bonuses["happyhour"].score = 5000
 		takis.HUD.flyingscore.scorenum = $+5000
-		return true
+		return --true
 		
 	end
 	
@@ -502,7 +508,7 @@ addHook("MobjThinker",function(door)
 	end
 	
 	if (hh.gameover)
-		if (P_RandomChance(FU/(max(2,100-(hh.gameovertics/2)))))
+		if (P_RandomChance(FU/(max(2,50-(hh.gameovertics/2)))))
 			local fa = FixedAngle(P_RandomRange(0,360)*FU)
 			local x,y = ReturnTrigAngles(fa)
 			local range = 300

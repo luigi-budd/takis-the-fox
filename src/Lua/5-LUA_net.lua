@@ -54,29 +54,30 @@ end
 local function livesCount()
 	if (gametyperules & GTR_TAG)
 		return
-	elseif (G_GametypeHasTeams())
+	end
+	if (G_GametypeHasTeams())
 		return
-	else
-		if (G_GametypeUsesLives())
-			if ((netgame or multiplayer) and G_GametypeUsesCoopLives() and (CV_FindVar("cooplives").value == 3))
-				local lives = 0
-				
-				for p in players.iterate
-					if p.lives < 1
-						continue
-					end
-					
-					if (p.lives == INFLIVES)
-						lives = INFLIVES
-						break
-					elseif lives < 99
-						lives = $+p.lives
-					end
-					
+	end
+	
+	if (G_GametypeUsesLives())
+		if ((netgame or multiplayer) and G_GametypeUsesCoopLives() and (CV_FindVar("cooplives").value == 3))
+			local lives = 0
+			
+			for p in players.iterate
+				if p.lives < 1
+					continue
 				end
 				
-				t.livescount = lives
+				if (p.lives == INFLIVES)
+					lives = INFLIVES
+					break
+				elseif lives < 99
+					lives = $+p.lives
+				end
+				
 			end
+			
+			t.livescount = lives
 		end
 	end
 end
@@ -92,9 +93,10 @@ addHook("MapChange", function(mapid)
 		TakisChangeHeartCards(1)
 	end
 	
+	mapmusname = mapheaderinfo[mapid].musname
+	
 	t.ideyadrones = {}
 	HH_Reset()
-	mapmusname = mapheaderinfo[mapid].musname
 end)
 --should these 2 HH_Resets be here?
 addHook("MapLoad", function(mapid)
@@ -106,8 +108,6 @@ addHook("MapLoad", function(mapid)
 	
 	t.inspecialstage = G_IsSpecialStage(mapid)
 	t.isretro = (maptol & TOL_MARIO)
-	
-	t.livescount = 0
 	
 	for mt in mapthings.iterate
 		
@@ -191,6 +191,7 @@ addHook("ThinkFrame", do
 	t.takiscount = takisCount
 	
 	--PLEASE... I WANT MY EARS
+	/*
 	if not (leveltime % 3*TR)
 	and ((multiplayer) and not splitscreen)
 	and not (t.noachs)
@@ -204,6 +205,7 @@ addHook("ThinkFrame", do
 			
 		end
 	end
+	*/
 	
 	if (ultimatemode)
 		if TAKIS_MAX_HEARTCARDS ~= 1

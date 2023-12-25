@@ -565,7 +565,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			color = takiscolor,
 			text = "I will get a new moveset, completely different from what you're used to! "
 			.."Clutching and whatnot cannot be used with the shotgun!",
-			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
+			sound = takisvox,
 			soundchance = takischance,
 			delay = 2*TICRATE,
 			script = function() end,
@@ -577,9 +577,10 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			color = takiscolor,
 			text = "Press |esc\x82[SPIN]|esc\x80 to shoot the shotgun. The bullets can launch badniks and break spikes! "
 			.."Press |esc\x82[CUSTOM2]|esc\x80 midair to shoot the ground, and start stomping!",
-			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
+			sound = takisvox,
 			soundchance = takischance,
 			delay = 3*TICRATE,
+			script = function() end,
 			next = 4
 		},
 		[4] = { 
@@ -589,9 +590,10 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			text = "I can still slide (|esc\x82[CUSTOM2]|esc\x80) with the shotgun. "
 			.."The slide is not great for gaining speed on flat ground, so I can |esc\x83"
 			.."Shoulder Bash|esc\x80 with |esc\x82[CUSTOM1]|esc\x80 to get speed!",
-			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
+			sound = takisvox,
 			soundchance = takischance,
 			delay = 4*TICRATE,
+			script = function() end,
 			next = 5
 		},
 		[5] = { 
@@ -599,9 +601,10 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			portrait = takisport,
 			color = takiscolor,
 			text = "That is about it! There is nothing else for me to teach you. Get blastin'!",
-			sound = {sfx_antow1,sfx_antow2,sfx_antow3},
+			sound = takisvox,
 			soundchance = takischance,
 			delay = 2*TICRATE,
+			script = function() end,
 			next = 0
 		},
 	},
