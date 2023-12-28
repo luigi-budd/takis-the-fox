@@ -102,7 +102,7 @@
 	-[scrapped]bat taunt keeps colorization if interuppted
 	-[scapped]textspectator hud stuff
 	-[pretty much done]shields are squished with pancake
-	-wtf is resynching & crashing servers!?? DEBUG!!!!
+	-[done?]wtf is resynching & crashing servers!?? DEBUG!!!!
 	-[done?]death slam not activating sometimes
 	-[done]remove fc stuf
 	-fling solids kill stuff
@@ -122,6 +122,7 @@
 	-[done]Takis_HH_NoMusic - disable happyhour mus
 	-[done]Takis_HH_NoEndMusic - disable happyhour end mus
 	-[done]Takis_HH_Timelimit - timelimit (in tics)
+	-[done]Takis_HH_NoInter - disable the intermission screen
 	
 	
 */
@@ -278,7 +279,12 @@ addHook("PlayerThink", function(p)
 			and not ((p.pflags & (PF_SPINNING|PF_STASIS))
 			or (p.powers[pw_nocontrol]))
 			and not (p.powers[pw_carry] == CR_NIGHTSMODE)
+			and not (takis.dived and me.state == S_PLAY_GLIDE)
 				p.drawangle = me.angle
+			end
+			
+			if (takis.dived and me.state == S_PLAY_GLIDE)
+				p.drawangle = R_PointToAngle2(0,0,me.momx,me.momy)
 			end
 			
 			if (takis.bashtime)
@@ -667,7 +673,13 @@ addHook("PlayerThink", function(p)
 						takis.thokked = true
 						
 						me.state = S_PLAY_GLIDE
-						P_SetObjectMomZ(me,7*FU)
+						if (me.momz*takis.gravflip) > 0
+							local momz = FixedDiv(me.momz,me.scale)*takis.gravflip
+							local thrust = min((momz/2)+7*FU,18*FU)
+							P_SetObjectMomZ(me,thrust)
+						else
+							P_SetObjectMomZ(me,7*FU)
+						end
 					end
 				else
 				
@@ -941,7 +953,7 @@ addHook("PlayerThink", function(p)
 		--		and (p.realtime > 0)
 				and me.health
 				and not ((takis.tauntmenu.open) and (takis.tossflag))
-				and not (takis.inwaterslide)
+				and not (takis.inwaterslide or takis.resettingtoslide)
 				and not (takis.noability & NOABIL_SLIDE)
 					S_StartSound(me,sfx_eeugh)
 					S_StartSound(me,sfx_taksld)
@@ -1409,6 +1421,7 @@ addHook("PlayerThink", function(p)
 						if takis.jump > 0
 						and me.health
 						and not ((takis.inPain) or (takis.inFakePain))
+						and not (takis.noability & NOABIL_THOK)
 							local time = min(takis.hammerblastdown,TR*3/2)
 							takis.hammerblastjumped = 1
 							P_DoJump(p,false)
@@ -1416,11 +1429,13 @@ addHook("PlayerThink", function(p)
 							me.momz = 20*takis.gravflip*me.scale+(time*takis.gravflip*me.scale/8)
 							S_StartSoundAtVolume(me,sfx_kc52,180)
 							p.pflags = $|PF_JUMPED &~PF_THOKKED
+							takis.thokked = false
 							shouldntcontinueslide = true
 							
 						--holding spin while landing? boost us forward!
 						elseif (takis.use > 0)
 						and me.health
+						and not (takis.noability & NOABIL_CLUTCH)
 							if not takis.dropdashstale
 								S_StartSound(me,sfx_cltch2)
 							else
@@ -1537,6 +1552,7 @@ addHook("PlayerThink", function(p)
 				
 				--p.charflags = $|SF_CANBUSTWALLS
 				
+				p.powers[pw_strong] = $|STR_WALL
 				if (takis.accspeed >= skins[TAKIS_SKIN].normalspeed*2)
 					p.charflags = $|SF_RUNONWATER|SF_CANBUSTWALLS
 				else
@@ -1557,6 +1573,7 @@ addHook("PlayerThink", function(p)
 				
 			else
 				p.charflags = $ &~(SF_CANBUSTWALLS|SF_RUNONWATER)
+				p.powers[pw_strong] = $ &~STR_WALL
 				p.runspeed = skins[TAKIS_SKIN].runspeed
 				takis.afterimagecolor = 1
 			end
@@ -1774,7 +1791,7 @@ addHook("PlayerThink", function(p)
 				end
 				
 				if ((takis.body) and (takis.body.valid))
-					sP_MoveOrigin(takis.body,me.x,me.y,me.z)
+					P_MoveOrigin(takis.body,me.x,me.y,me.z)
 					takis.body.rollangle = me.rollangle
 				end
 				
@@ -1938,6 +1955,7 @@ addHook("PlayerThink", function(p)
 							if ((takis.shotgun) and (takis.shotgun.valid))
 								P_KillMobj(takis.shotgun,me)
 							end
+							takis.transfo = $ &~TRANSFO_SHOTGUN
 							takis.shotgun = 0
 							takis.shotgunned = false
 							P_AddPlayerScore(p,80000)
@@ -2218,6 +2236,19 @@ addHook("PlayerSpawn", function(p)
 	P_RestoreMusic(p)
 	
 	if (skins[p.skin].name == TAKIS_SKIN)
+		if (mapheaderinfo[gamemap].lvlttl == "Tutorial")
+			if (mapheaderinfo[gamemap].takis_hh_timelimit == nil)
+				CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.tutexit)
+			else
+				if p.takis_noabil ~= NOABIL_ALL|NOABIL_THOK
+					p.takis_noabil = NOABIL_ALL|NOABIL_THOK
+				end
+			end
+			
+		else
+			p.takis_noabil = nil
+		end
+		
 		if (maptol & TOL_NIGHTS)
 			p.jumpfactor = FixedMul(skins[TAKIS_SKIN].jumpfactor,6*FU/10)
 		else
@@ -2510,7 +2541,6 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 			return true
 		end
 		TakisHurtMsg(p,inf,sor,dmgt)
-		print("4")
 		
 		P_DoPlayerPain(p,sor,inf)
 		--p.powers[pw_flashing] = TR
@@ -2820,7 +2850,6 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 				S_StartSound(mo,sfx_smack)
 				S_StartAntonOw(mo)
 				TakisHurtMsg(p,inf,sor,DMG_DEATHPIT)
-				print("5")
 			end
 			
 			takis.timesdeathpitted = $+1
@@ -3265,6 +3294,7 @@ addHook("AbilitySpecial", function(p)
 	if p.mo.skin ~= TAKIS_SKIN then return end
 	
 	if p.takistable.thokked
+	or (p.takistable.noability & NOABIL_THOK)
 		return true
 	end
 	if ((p.takistable.inPain) or (p.takistable.inFakePain))
@@ -3432,7 +3462,7 @@ addHook("MobjMoveCollide",function(tm,t)
 			if t.health
 			and ((p.powers[pw_strong] & STR_SPIKE) 
 			or (takis.afterimaging)
-			or (takis.transfo & TRANSFO_TORNADO|TRANSFO_BALL))
+			or (takis.transfo & (TRANSFO_TORNADO|TRANSFO_BALL)))
 				P_KillMobj(t,tm,tm)
 				if takis.transfo & TRANSFO_BALL
 					S_StartSound(t,sfx_bowl)

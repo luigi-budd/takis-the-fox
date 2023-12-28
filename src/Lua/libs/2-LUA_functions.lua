@@ -1348,6 +1348,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 					takis.sethappyend = true
 				end
 				DoQuake(p,(time*FU)/50,1,0)
+				DoQuake(p,(time*FU)/50,1,0)
 			end
 			
 		else
@@ -1623,6 +1624,10 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 			me.state = S_PLAY_FALL
 		end
 		
+	end
+	
+	if (p.takis_noabil ~= nil)
+		takis.noability = $|p.takis_noabil
 	end
 	
 	p.alreadyhascombometer = 2
@@ -2280,6 +2285,10 @@ local getcomnum = {
 	[12] = sfx_tcmupc
 }
 rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
+	if (p.takis_noabil ~= nil)
+		return
+	end
+	
 	if (p.powers[pw_carry] == CR_NIGHTSMODE)
 	or not (gametyperules & GTR_FRIENDLY)
 	or (maptol & TOL_NIGHTS)
@@ -3550,6 +3559,7 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang)
 		gib.angle = angrng and ang or ang-ANGLE_180
 		gib.rollangle = FixedAngle(P_RandomRange(0,359)*FU+P_RandomFixed())
 		gib.angleroll = FixedAngle(P_RandomRange(1,15)*FU+P_RandomFixed())*(angrng or -1)
+		gib.fuse = 3*TR
 		P_SetObjectMomZ(gib,P_RandomRange(6,20)*gib.scale+P_RandomFixed())
 		if (t and t.valid)
 			P_Thrust(gib,
@@ -3562,7 +3572,6 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang)
 end)
 
 rawset(_G,"CanFlingThing",function(en,flags)
-	if en.type == MT_EGGMAN_BOX then return false end
 	local flingable = false
 	flags = $ or MF_ENEMY|MF_BOSS|MF_MONITOR
 	
@@ -3578,6 +3587,7 @@ rawset(_G,"CanFlingThing",function(en,flags)
 		end
 	end
 	
+	if en.type == MT_EGGMAN_BOX then flingable = false end
 	return flingable
 	
 end)

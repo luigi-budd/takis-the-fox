@@ -770,7 +770,7 @@ addHook("MobjMoveCollide",function(shot,mo)
 	end
 	
 	if CanFlingThing(mo)
-		SpawnEnemyGibs(mo,shot)
+		SpawnEnemyGibs(shot,mo)
 		SpawnRagThing(mo,shot,shot.tracer)
 		return true
 	end
@@ -1675,12 +1675,19 @@ addHook("MobjThinker",function(gib)
 	grav = $*3/5
 	gib.momz = $+(grav*P_MobjFlip(gib))
 	gib.rollangle = $+gib.angleroll
+	gib.speed = FixedHypot(gib.momx,gib.momy)
 	if (P_IsObjectOnGround(gib)
 	and not gib.bounced)
-		gib.flags = $|MF_NOCLIPHEIGHT
+		gib.flags = $|MF_NOCLIPHEIGHT|MF_NOCLIP
 		P_SetObjectMomZ(gib,P_RandomRange(4,9)*FU+P_RandomFixed())
 		gib.bounced = true
 	end
 end,MT_TAKIS_GIB)
 
+addHook("MobjMoveBlocked",function(gib)
+	if gib.flags & MF_NOCLIP then return end
+	if gib.bounced then return end
+	P_BounceMove(gib)
+	gib.angle = FixedAngle(AngleFixed($)+180*FU)
+end,MT_TAKIS_GIB)
 filesdone = $+1

@@ -143,6 +143,7 @@ local noabflags = {
 	"WAVEDASH",
 	"SHOTGUN",		--generally for anything shotgunned
 	"SHIELD",
+	"THOK",
 }
 for k,v in ipairs(noabflags)
 	rawset(_G,"NOABIL_"..v,1<<(k-1))
@@ -150,6 +151,7 @@ for k,v in ipairs(noabflags)
 end
 --anything that uses spin
 rawset(_G,"NOABIL_SPIN",NOABIL_CLUTCH|NOABIL_HAMMER|NOABIL_SHOTGUN|NOABIL_WAVEDASH)
+--i dont *think* i should put thok in here, but that might change
 rawset(_G,"NOABIL_ALL",NOABIL_SPIN|NOABIL_SLIDE|NOABIL_SHIELD|NOABIL_DIVE)
 
 local transfoenum = {
@@ -224,10 +226,6 @@ rawset(_G, "TAKIS_NET", {
 	},
 	
 })
-local netsynchlist = {}
-for k,v in ipairs(TAKIS_NET)
-	netsynchlist[k] = v
-end
 
 rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
 
@@ -571,8 +569,8 @@ rawset(_G, "TakisInitTable", function(p)
 				add = 0,
 			},
 			rings = {
-				FIXED = { 90*FU-(13*FU*6)+(7*FU), 62*FU-(6*FU) },
-				int = {90-(13*6)+75+15+15, 49-6}
+				FIXED = {19*FU, 56*FU},
+				int = {117, 43}
 			},
 			--timer has 2 different sets for spectator and when finished
 			timer = {
@@ -1394,12 +1392,12 @@ freeslot("MT_TAKIS_GIB")
 states[S_TAKIS_GIB] = {
 	sprite = SPR_TGIB,
 	frame = A,
-	tics = 5*TR,
+	tics = 3*TR,
 }
 mobjinfo[MT_TAKIS_GIB] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_GIB,
-	flags = MF_NOCLIP|MF_NOCLIPTHING,
+	flags = MF_SLIDEME|MF_NOCLIPTHING,
 	height = 4*FRACUNIT,
 	radius = 4*FRACUNIT,
 }

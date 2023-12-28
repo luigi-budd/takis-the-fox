@@ -101,7 +101,8 @@ function TB:CloseBox(player)
 		player.textBoxClose = {
 			xscale = 0,
 			xtween = 0,
-			tics = 17
+			tics = 17,
+			flag = (player.textBox.move) and V_50TRANS or 0
 		}
 		player.textBox = {}
     else
@@ -111,15 +112,27 @@ end
 
 -- Advance.
 function TB.AdvanceBox(player)
-    if player.textBox.choice then player.textBox.current = player.textBox.tree[player.textBox.current].choices[player.textBox.choice].box
+	local lasttree = player.textBox.current
+    if player.textBox.choice then 
+		player.textBox.current = player.textBox.tree[player.textBox.current].choices[player.textBox.choice].box
         player.textBox.choice = 0
-    else player.textBox.current = player.textBox.tree[$].next end
+    else 
+		if player.textBox.tree
+			player.textBox.current = player.textBox.tree[$].next
+		end
+	end
     
 	S_StartSound(nil,sfx_tb_cls,player)
     if player.textBox.current != 0
-	and player.textBox.tree[player.textBox.current].script then 
-		player.textBox.tree[player.textBox.current].script(player)
+		if lasttree
+			if player.textBox.tree[lasttree].advancescript then
+				player.textBox.tree[lasttree].advancescript(player)
+			end
+		end
 	else
+		if player.textBox.tree[lasttree].closescript then 
+			player.textBox.tree[lasttree].closescript(player)
+		end
 		TB:CloseBox(player)
 		return
 	end
@@ -189,6 +202,12 @@ addHook("PlayerThink", function(player)
 		end
 	end
 	
+	if (player.cmd.buttons & BT_USE)
+		player.textboxuse = $+1
+	else
+		player.textboxuse = 0
+	end
+	
     player.textBox = $ or {}
 	player.textBoxInAction = $ or false
     if not player.textBox.tree then
@@ -201,7 +220,10 @@ addHook("PlayerThink", function(player)
     if player.textBox.global and not TB.globalBox.tree then player.textBox = {}; return end
     
     if not player.textBox.move then player.pflags = $|PF_FULLSTASIS; player.powers[pw_flashing] = 1 end
-    
+ 	if player.textBox.tree[player.textBox.current].script then 
+		player.textBox.tree[player.textBox.current].script(player)
+	end
+   
     local box = player.textBox
     local tree = box.tree
     local curbox = tree[player.textBox.current]
@@ -364,7 +386,7 @@ addHook("PlayerThink", function(player)
         player.boxadvance = true
     else if player.boxadvance and box.settings.prev then box.settings.atonce = box.settings.prev; box.settings.prev = nil end; player.boxadvance = false end
     
-    if player.cmd.buttons & BT_SPIN and not player.textBox.move then
+	if (player.textboxuse == 1) and not player.textBox.move then
         if box.txfilter and box.render != box.txfilter then
             if not player.boxskip then box.settings.prev = box.settings.atonce end
             box.settings.atonce = string.len(box.txfilter); box.settings.curt = 1
@@ -446,7 +468,7 @@ hud.add(function(v, player)
 		
 		v.drawStretched(0+xt,146*FU,
 			FU-xs, FU,
-			v.cachePatch("TA_SPCHBOX"), V_SNAPTOBOTTOM
+			v.cachePatch("TA_SPCHBOX"), V_SNAPTOBOTTOM|box.flag
 		)
 		    
 	end
@@ -461,10 +483,14 @@ hud.add(function(v, player)
 		xs = tb.settings.xscale
 	end
 	
+	local colormap = box.color
+	if box.color == "playercolor"
+		colormap = player.skincolor
+	end
     -- Portrait
     if box.portrait then
         local spr, flip = v.getSprite2Patch(box.portrait[1], box.portrait[2], false, box.portrait[3], box.portrait[4])
-        local colr = v.getColormap(box.portrait[1], box.color)
+        local colr = v.getColormap(box.portrait[1], colormap)
 		local hires = skins[box.portrait[1]].highresscale or FU
         v.drawScaled(32*FRACUNIT+xt,
 			146*FRACUNIT + (spr.topoffset*hires/3),
@@ -476,15 +502,32 @@ hud.add(function(v, player)
     end
     
     -- Box
+	local bflag = (player.textBox.move) and V_50TRANS or 0
     v.drawStretched(0+xt,146*FU,
 		FU-xs, FU,
-		v.cachePatch("TA_SPCHBOX"), V_SNAPTOBOTTOM
+		v.cachePatch("TA_SPCHBOX"), V_SNAPTOBOTTOM|bflag
 	)
 	
     if box.name then 
+		local name = box.name
+		local map = V_YELLOWMAP
+		if box.name == "takisname"
+			map = 0
+			if colormap == SKINCOLOR_GREEN
+				name = "\x83Taykis"
+			elseif colormap == SKINCOLOR_RED
+			and not ((colormap == skincolor_redteam) and G_GametypeHasTeams())
+				name = "\x85Yakis"
+			elseif colormap == SKINCOLOR_SALMON
+				name = "\x85Rakis"
+			else
+				name = "\x83Takis"
+			end
+		end
+		
 		v.drawString(48*FU+xt, 138*FU,
-			box.name,
-			V_YELLOWMAP|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE,
+			name,
+			map|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE,
 			"fixed"
 		)
 	end
@@ -510,7 +553,12 @@ hud.add(function(v, player)
             if a == "thin-left" then a = "thin" end
             
             local spr = v.getSprite2Patch(j.portrait[1], SPR2_TBXM, false, j.portrait[2], 1)
-            local col = v.getColormap(j.portrait[1], j.color)
+            local colormap = j.color
+			if j.color == "playercolor"
+				colormap = player.skincolor
+			end
+			
+			local col = v.getColormap(j.portrait[1], colormap)
             
             if tb.settings.wait < 2+i and tb.settings.wait > i then
                 if a == "thin" then
@@ -541,17 +589,16 @@ end)
 
 
 local takisport = {TAKIS_SKIN, SPR2_STND, A, 8}
-local takisname = "\x83Takis"
+local takisname = "takisname"
 local takisvox = {sfx_s_tak1,sfx_s_tak2,sfx_s_tak3}
 local takischance = FU/3
-local takiscolor = SKINCOLOR_FOREST
 
 rawset(_G,"TAKIS_TEXTBOXES",{
 	shotgun = {
 		[1] = { 
 			name = takisname,
 			portrait = takisport,
-			color = takiscolor,
+			color = "playercolor",
 			text = "This is the shotgun tutorial! Handling a shotgun is not very hard, and this tutorial won't be either!",
 			sound = takisvox,
 			soundchance = takischance,
@@ -562,7 +609,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		[2] = { 
 			name = takisname,
 			portrait = takisport,
-			color = takiscolor,
+			color = "playercolor",
 			text = "I will get a new moveset, completely different from what you're used to! "
 			.."Clutching and whatnot cannot be used with the shotgun!",
 			sound = takisvox,
@@ -574,7 +621,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		[3] = { 
 			name = takisname,
 			portrait = takisport,
-			color = takiscolor,
+			color = "playercolor",
 			text = "Press |esc\x82[SPIN]|esc\x80 to shoot the shotgun. The bullets can launch badniks and break spikes! "
 			.."Press |esc\x82[CUSTOM2]|esc\x80 midair to shoot the ground, and start stomping!",
 			sound = takisvox,
@@ -586,7 +633,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		[4] = { 
 			name = takisname,
 			portrait = takisport,
-			color = takiscolor,
+			color = "playercolor",
 			text = "I can still slide (|esc\x82[CUSTOM2]|esc\x80) with the shotgun. "
 			.."The slide is not great for gaining speed on flat ground, so I can |esc\x83"
 			.."Shoulder Bash|esc\x80 with |esc\x82[CUSTOM1]|esc\x80 to get speed!",
@@ -599,7 +646,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		[5] = { 
 			name = takisname,
 			portrait = takisport,
-			color = takiscolor,
+			color = "playercolor",
 			text = "That is about it! There is nothing else for me to teach you. Get blastin'!",
 			sound = takisvox,
 			soundchance = takischance,
@@ -612,7 +659,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		[1] = { 
 			name = takisname,
 			portrait = takisport,
-			color = takiscolor,
+			color = "playercolor",
 			text = "In |esc\x89Ultimate Mode|esc\x80, a Shotgun Monitor will spawn besides me.",
 			sound = takisvox,
 			soundchance = takischance,
@@ -623,7 +670,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		[2] = { 
 			name = takisname,
 			portrait = takisport,
-			color = takiscolor,
+			color = "playercolor",
 			text = "Finishing a level with the Shotgun will award |esc\x82".."80000|esc\x80 bonus points.",
 			sound = takisvox,
 			soundchance = takischance,
@@ -634,12 +681,28 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 		[3] = { 
 			name = takisname,
 			portrait = takisport,
-			color = takiscolor,
+			color = "playercolor",
 			text = "The shotgun doesn't provide an extra hit! Try not to be careless, or else I will face the consequences!",
 			sound = takisvox,
 			soundchance = takischance,
 			delay = 2*TICRATE,
 			script = function() end,
+			next = 0
+		},
+	},
+	tutexit = {
+		[1] = { 
+			name = takisname,
+			portrait = takisport,
+			color = "playercolor",
+			text = "You don't need this tutorial, why are you here?",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = 2*TICRATE,
+			closescript = function()
+				G_SetCustomExitVars(1,2)
+				G_ExitLevel()
+			end,
 			next = 0
 		},
 	},
@@ -656,7 +719,8 @@ addHook("LinedefExecute",function(line,mo,sec)
 	if TAKIS_TEXTBOXES["gmap"..gamemap] ~= nil
 		if TAKIS_TEXTBOXES["gmap"..gamemap][sec.tag] ~= nil
 			CFTextBoxes:DisplayBox(mo.player,
-				TAKIS_TEXTBOXES["gmap"..gamemap][sec.tag]
+				TAKIS_TEXTBOXES["gmap"..gamemap][sec.tag],
+				TAKIS_TEXTBOXES["gmap"..gamemap][sec.tag][1].move
 			)
 		end
 	end
@@ -697,5 +761,236 @@ end,"TAK_TBOX")
 		end
 	end)
 */
+
+--TUORIAL ZONE
+TAKIS_TEXTBOXES.gmap1000 = {
+	[100] = {							
+		[1] = { 
+			text = "Welcome to the tutorial. You will all you need to know about Takis' moveset. Press |esc\x82[JUMP]|esc\x80 to advance.",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			next = 2,
+		},
+		[2] = { 
+			text = "The |esc\x82".."Clutch Boost|esc\x80 can be activated with |esc\x82[SPIN]|esc\x80. It'll give you a boost forward. Time each press so the meter is in the green, the speed boosts will increase with the chain.",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			next = 3,
+		},
+		[3] = { 
+			text = "The |esc\x82".."Clutch Boost|esc\x80 can also break bustables, like walls. Try breaking the purple wall up ahead.",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			next = 0,
+			closescript = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $ &~NOABIL_CLUTCH
+				end
+			end,
+		},
+	},
+	[34] = {							
+		[1] = { 
+			text = "Nice job on breaking the wall. The |esc\x82".."Clutch Boost|esc\x80 is your main form of attack, capable of launching enemies far away, and even into other enemies.",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			next = 2,
+		},
+		[2] = { 
+			text = "Clutch into the wall of spikes ahead, trust me.",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			next = 0,
+		},
+	},
+	[33] = {							
+		[1] = { 
+			text = "Check that out! The Clutch can destroy spikes as well.",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			next = 2,
+		},
+		[2] = { 
+			text = "Now double jump to cross this wall.",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			closescript = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $ &~NOABIL_THOK
+				end			
+			end,
+			next = 0,
+		},
+	},
+	[2] = {							
+		[1] = { 
+			text = "The next move you'll need to learn is the |esc\x82Hammer Blast|esc\x80. "..
+			"Activate it by holding |esc\x82[SPIN]|esc\x80 midair for a bit.",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			next = 2,
+		},
+		[2] = { 
+			text = "The |esc\x82Hammer Blast|esc\x80 can also break bustables. Try it on the purple floor ahead.",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			closescript = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $|(NOABIL_THOK|NOABIL_CLUTCH) &~NOABIL_HAMMER
+				end			
+			end,
+			next = 0,
+		},
+	},
+	[36] = {							
+		[1] = {
+			text = "Keep in mind the Hammer Blast can destroy any bustable, even walls and strong ones!",
+			soundchance = 0,
+			delay = 2*TICRATE*3/2,
+			move = true,
+			next = 0,
+		},
+	},
+	[37] = {							
+		[1] = {
+			text = "Use these springs to advance.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			move = true,
+			next = 2,
+		},
+		[2] = {
+			text = "Can't get enough height? Use the Hammer Blast to power up the springs and go higher.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			move = true,
+			next = 0,
+		},
+	},
+	[4] = {							
+		[1] = {
+			text = "Great work. You'll be using one of the Hammer Blast's actions to progress.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			move = true,
+			advancescript = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $ &~NOABIL_THOK
+				end			
+			end,
+			next = 2,
+		},
+		[2] = {
+			text = "Start a Hammer Blast and hold |esc\x82[JUMP]|esc\x80 before landing. It will bounce you up the longer you fall. Try using it to scale this wall.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			next = 3,
+		},
+		[3] = {
+			text = "Note that you can double jump to try and gain more height. You can also double jump after bouncing.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			next = 0,
+		},
+	},
+	[39] = {							
+		[1] = {
+			text = "Awesome! Let's try out the other action, called the Hammer Blast. Holding |esc\x82[SPIN]|esc\x80 before landing will launch you forward. Don't rely on it too much, as it will stale and take away your speed. Use it sparingly.",
+			soundchance = 0,
+			delay = 4*TICRATE,
+			script = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $|NOABIL_THOK
+				end
+			end,
+			advancescript = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $ &~NOABIL_CLUTCH
+				end			
+			end,
+			next = 2,
+		},
+		[2] = {
+			text = "You can break this bustable wall with a Clutch, the Hammer Blast, or a Hammer Boost (spin).",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			next = 0,
+		},
+	},
+	[46] = {							
+		[1] = {
+			text = "Ok, look at this. There's a spin gap in our way, and we don't know how to cross it. Takis can't spin, but he can slide with |esc\x82[CUSTOM2]|esc\x80.",
+			soundchance = 0,
+			delay = 3*TICRATE,
+			next = 2,
+		},
+		[2] = {
+			name = takisname,
+			portrait = takisport,
+			color = "playercolor",
+			text = "Hey, I can spin!",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = TICRATE*2,
+			next = 3,
+		},
+		[3] = {
+			text = "Yeah but that's only on slopes, so whatever.",
+			soundchance = 0,
+			delay = TICRATE*3/2,
+			next = 0,
+			closescript = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $|NOABIL_HAMMER|NOABIL_CLUTCH &~NOABIL_SLIDE
+				end
+			end
+		},
+	},
+	[10] = {							
+		[1] = {
+			text = "Look at these big gaps. Takis can jump pretty far, but not far enough for these gaps.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			next = 2,
+		},
+		[2] = {
+			text = "Extend your jumps by Clutching right before jumping.",
+			soundchance = 0,
+			delay = TICRATE*3/2,
+			next = 0,
+			closescript = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $|NOABIL_SLIDE &~(NOABIL_CLUTCH)
+				end
+			end
+		},
+	},
+	[47] = {							
+		[1] = {
+			text = "This one's a bit tricky. Even Clutch jumping can't get you through this one.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			next = 2,
+		},
+		[2] = {
+			text = "This is where the Dive comes in handy. Pressing |esc\x82[CUSTOM1]|esc\x80 midair will thrust you forward a bit in the direction of your inputs and remove your downwards momentum.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			next = 2,
+		},
+		[2] = {
+			text = "Extend your jumps by Clutching right before jumping.",
+			soundchance = 0,
+			delay = TICRATE*3/2,
+			next = 0,
+			closescript = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $|NOABIL_SLIDE &~(NOABIL_CLUTCH)
+				end
+			end
+		},
+	},
+}
+
 
 filesdone = $+1

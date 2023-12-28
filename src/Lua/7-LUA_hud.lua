@@ -9,6 +9,10 @@ local function drawheartcards(v,p)
 
 	if (customhud.CheckType("takis_heartcards") != modname) return end
 	
+	if p.takis_noabil ~= nil
+		return
+	end
+	
 	local amiinsrbz = false
 	
 	if (gametype == GT_SRBZ)
@@ -246,7 +250,9 @@ end
 local function drawface(v,p)
 
 	if (customhud.CheckType("takis_statusface") != modname) return end
-
+	
+	if (p.takis_noabil ~= nil) then return end
+	
 	local amiinsrbz = false
 	
 	if (gametype == GT_SRBZ)
@@ -334,6 +340,7 @@ local function drawrings(v,p)
 	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
 	or p.takistable.hhexiting
+	or (p.takis_noabil ~= nil and p.rings == 0)
 		return
 	end
 
@@ -352,7 +359,12 @@ local function drawrings(v,p)
 	local ringFx,ringFy = unpack(takis.HUD.rings.FIXED)
 	local ringx,ringy = unpack(takis.HUD.rings.int)
 	flash = (flash and ((leveltime%(2*TR)) < 30*TR) and (leveltime/5 & 1))
-
+	
+	if (p.takis_noabil ~= nil)
+		ringFy = 28*FU
+		ringy = 15
+	end
+	
 	if flash
 		ringpatch = "TRNG"
 	end
@@ -517,6 +529,7 @@ local function drawscore(v,p)
 	if p.takistable.inNIGHTSMode
 	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
+	or (p.takis_noabil ~= nil)
 		return
 	end
 	
@@ -629,8 +642,9 @@ local function drawlivesarea(v,p)
 	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
 	or (p.textBoxInAction)
-	or (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
+	or (TAKIS_DEBUGFLAG & (DEBUG_SPEEDOMETER|DEBUG_BUTTONS))
 	or p.takistable.hhexiting
+	or (p.takis_noabil ~= nil)
 		return
 	end
 	
@@ -2401,6 +2415,116 @@ local function drawcrosshair(v,p)
 	v.drawScaled(160*FU,100*FU,scale,v.cachePatch("SHGNCRSH"),trans)
 end
 
+local function drawtutbuttons(v,p)
+	if (customhud.CheckType("takis_tutbuttons") != modname) return end
+	
+	if (skins[p.skin].name ~= TAKIS_SKIN)
+		return
+	end
+	
+	if (p.takis_noabil == nil) then return end
+	if (p.textBoxInAction) then return end
+	
+	local takis = p.takistable
+	local me = p.mo
+	
+	local disp = 0
+	
+	if not (p.takis_noabil & NOABIL_DIVE)
+		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
+			(hudinfo[HUD_LIVES].y+disp)*FU,
+			(FU/2)+(FU/12),
+			v.cachePatch("TB_C1"),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS
+		)
+		v.drawString(hudinfo[HUD_LIVES].x+20,
+			hudinfo[HUD_LIVES].y+(disp+5),
+			"Dive",
+			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
+			"thin"
+		)	
+		disp = $-20
+	end
+	
+	if not (p.takis_noabil & NOABIL_SLIDE)
+		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
+			(hudinfo[HUD_LIVES].y+disp)*FU,
+			(FU/2)+(FU/12),
+			v.cachePatch("TB_C2"),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS
+		)
+		v.drawString(hudinfo[HUD_LIVES].x+20,
+			hudinfo[HUD_LIVES].y+(disp+5),
+			"Spin (hold on slope)",
+			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
+			"thin"
+		)
+		disp = $-20
+		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
+			(hudinfo[HUD_LIVES].y+disp)*FU,
+			(FU/2)+(FU/12),
+			v.cachePatch("TB_C2"),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS
+		)
+		v.drawString(hudinfo[HUD_LIVES].x+20,
+			hudinfo[HUD_LIVES].y+(disp+5),
+			"Slide",
+			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
+			"thin"
+		)	
+		disp = $-20
+	end
+	
+	if not (p.takis_noabil & NOABIL_HAMMER)
+		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
+			(hudinfo[HUD_LIVES].y+disp)*FU,
+			(FU/2)+(FU/12),
+			v.cachePatch("TB_SPIN"),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS
+		)
+		v.drawString(hudinfo[HUD_LIVES].x+20,
+			hudinfo[HUD_LIVES].y+(disp+5),
+			"Hammer Blast (hold)",
+			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
+			"thin"
+		)	
+		disp = $-20
+	end
+	
+	if not (p.takis_noabil & NOABIL_THOK)
+		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
+			(hudinfo[HUD_LIVES].y+disp)*FU,
+			(FU/2)+(FU/12),
+			v.cachePatch("TB_JUMP"),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS
+		)
+		v.drawString(hudinfo[HUD_LIVES].x+20,
+			hudinfo[HUD_LIVES].y+(disp+5),
+			"x2 Double Jump",
+			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
+			"thin"
+		)	
+		disp = $-20
+	end
+	
+	if not (p.takis_noabil & NOABIL_CLUTCH)
+		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
+			(hudinfo[HUD_LIVES].y+disp)*FU,
+			(FU/2)+(FU/12),
+			v.cachePatch("TB_SPIN"),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS
+		)
+		v.drawString(hudinfo[HUD_LIVES].x+20,
+			hudinfo[HUD_LIVES].y+(disp+5),
+			"Clutch Boost",
+			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
+			"thin"
+		)	
+		disp = $-20
+	end	
+
+end
+
 /*
 local function drawbubbles(v,p,cam)
 	--chrispy chars
@@ -2603,6 +2727,7 @@ local function drawdebug(v,p)
 		drawflag(v,x+60,y-50,"WD",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_WAVEDASH))
 		drawflag(v,x+75,y-50,"SG",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHOTGUN))
 		drawflag(v,x+90,y-50,"SH",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHIELD))
+		drawflag(v,x+105,y-50,"TH",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_THOK))
 		
 		v.drawString(x,y-38,"FSTASIS",flags|V_GREENMAP,"thin")
 		v.drawString(x,y-30,takis.stasistic,flags,"thin")
@@ -2956,6 +3081,7 @@ customhud.SetupItem("takis_crosshair", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_happyhourtime", 	modname/*,	,	"game",	10*/)
 customhud.SetupItem("textspectator", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_nadocount",	 	modname/*,	,	"game",	10*/)
+customhud.SetupItem("takis_tutbuttons",	 	modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
 
 addHook("HUD", function(v,p,cam)
@@ -3001,6 +3127,7 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("takis_happyhourtime", 	modname)
 			customhud.SetupItem("textspectator", 		modname)
 			customhud.SetupItem("takis_nadocount", 		modname)
+			customhud.SetupItem("takis_tutbuttons", 	modname)
 		
 			if takis.io.nohappyhour == 0
 				customhud.SetupItem("PTSR_itspizzatime",modname)
@@ -3076,6 +3203,7 @@ addHook("HUD", function(v,p,cam)
 				
 			end
 			drawcfgnotifs(v,p)
+			drawtutbuttons(v,p)
 			drawhappyhour(v,p)
 			
 			
@@ -3282,4 +3410,5 @@ addHook("HUD", function(v)
 		end
 	end
 end,"scores")
+
 filesdone = $+1

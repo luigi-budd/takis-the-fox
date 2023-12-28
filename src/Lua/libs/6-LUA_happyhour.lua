@@ -69,10 +69,18 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 		end
 		
 		if (hh.exit and hh.exit.valid)
-		and hh.exit.type == MT_HHEXIT
-			if (hh.exit.type == MT_HHEXIT)
-				hh.exit.state = S_HHEXIT_OPEN
-			end		
+			if hh.exit.type == MT_HHEXIT
+				if (hh.exit.type == MT_HHEXIT)
+					hh.exit.state = S_HHEXIT_OPEN
+				end
+			end
+		else
+			for mobj in mobjs.iterate()
+				if mobj.type == MT_HHEXIT
+					mobj.state = S_HHEXIT_OPEN
+					hh.exit = mobj
+				end
+			end
 		end
 		
 		hh.trigger = actor
@@ -88,6 +96,12 @@ rawset(_G,"HH_Reset",function()
 	hh.exit = 0
 	hh.gameover = false
 	hh.gameovertics = 0
+	
+	if (gamestate == GS_LEVEL)
+		if (mapheaderinfo[gamemap].takis_hh_nointer)
+			G_SetCustomExitVars(mapheaderinfo[gamemap].nextlevel,1)
+		end
+	end
 end)
 
 addHook("ThinkFrame",do
@@ -336,7 +350,7 @@ addHook("MobjCollide",function(trig,mo)
 		return
 	end
 	
-	
+	--TODO: flipped grav
 	if P_MobjFlip(trig) == 1
 		local myz = trig.z+trig.height
 		if not (mo.z <= myz+trig.scale and mo.z >= myz-trig.scale)
@@ -349,13 +363,21 @@ addHook("MobjCollide",function(trig,mo)
 			return --true
 		end
 		
-		local tl = tonumber(mapheaderinfo[gamemap].takis_hh_timelimit or 0)*TR or 3*60*TR
+		local tl = tonumber(mapheaderinfo[gamemap].takis_hh_timelimit or 3*60)*TR
+		if mapheaderinfo[gamemap].takis_hh_timelimit ~= nil
+		and string.lower(tostring(mapheaderinfo[gamemap].takis_hh_timelimit)) == "none"
+			tl = 0
+		end
 		HH_Trigger(trig,tl)
+		
 		S_StartSound(trig,trig.info.deathsound)
 		trig.state = trig.info.deathstate
+		
 		trig.spritexscaleadd = 2*FU
 		trig.spriteyscaleadd = -FU*3/2
+		
 		P_AddPlayerScore(mo.player,5000)
+		
 		local takis = mo.player.takistable
 		takis.bonuses["happyhour"].tics = 3*TR+18
 		takis.bonuses["happyhour"].score = 5000
@@ -412,8 +434,9 @@ states[S_HHEXIT_CLOSE4] = {
 	sprite = SPR_HHF_,
 	frame = A,
 	tics = -1
-} 
-sfxinfo[freeslot("sfx_elebel")] = {
+}
+freeslot("sfx_elebel")
+sfxinfo[sfx_elebel] = {
 	flags = SF_X2AWAYSOUND,
 	caption = "Elevator bell"
 }
@@ -432,13 +455,16 @@ mobjinfo[MT_HHEXIT] = {
 	flags = MF_SPECIAL,
 }
 
+--might need a mapthingspawn for this?
 addHook("MobjSpawn",function(mo)
 	--mo.shadowscale = mo.scale*9/10
 	local scale = FU*2
 	mo.spritexscale,mo.spriteyscale = scale,scale
 	mo.boltrate = 10
 	hh.exit = mo
+	mo.init = true
 end,MT_HHEXIT)
+
 addHook("TouchSpecial",function(door,mo)
 	if not (mo and mo.valid) then return true end
 	if not (door and door.valid) then return true end
@@ -463,6 +489,12 @@ addHook("TouchSpecial",function(door,mo)
 end,MT_HHEXIT)
 addHook("MobjThinker",function(door)
 	if not (door and door.valid) then return end
+	
+	if not (hh.happyhour)
+	and (door.spritexscale ~= 2*FU and door.spriteyscale ~= 2*FU)
+		local scale = FU*2
+		door.spritexscale,door.spriteyscale = scale,scale
+	end
 	
 	if door.state == S_HHEXIT_OPEN
 		door.frame = 1+((hh.time)%14)
