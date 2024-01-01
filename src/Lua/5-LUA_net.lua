@@ -95,6 +95,23 @@ addHook("MapChange", function(mapid)
 	
 	mapmusname = mapheaderinfo[mapid].musname
 	
+	for p in players.iterate
+		p.takistable.HUD.bosscards = {
+			maxcards = 0,
+			dontdrawcards = false,
+			cards = 0,
+			cardshake = 0,
+			mo = 0,
+			name = '',
+			statusface = {
+				priority = 0,
+				state = "IDLE",
+				frame = 0,
+			},
+		}
+		p.takistable.HUD.bosstitle.tic = 0
+	end
+	
 	t.ideyadrones = {}
 	HH_Reset()
 end)
@@ -123,9 +140,8 @@ addHook("MapLoad", function(mapid)
 				continue
 			end
 			
-			if (mobj.flags & (MF_ENEMY|MF_MONITOR))
+			if (CanFlingThing(mobj))
 			or (SPIKE_LIST[mobj.type] == true)
-			or (mobj.takis_flingsme ~= false)
 				t.numdestroyables = $+1
 			end
 		else

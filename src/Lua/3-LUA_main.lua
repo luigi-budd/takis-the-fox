@@ -109,6 +109,7 @@
 	-[done]thoks respawn flung solids
 	-[done]switch all the takismusic funcs back to normal S_Sound stuff
 	-[done]happy hour quakes not working
+	-bubbles reset state and stuff
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -347,7 +348,8 @@ addHook("PlayerThink", function(p)
 						--fancy explosions for HH
 						if takis.nightsexplode
 							
-							if (P_RandomChance(FU/(max(2,95-p.exiting))))
+							print(p.exiting)
+							if (P_RandomChance(FU/(max(2,p.exiting/3))))
 								local fa = FixedAngle(P_RandomRange(0,360)*FU)
 								local x,y = ReturnTrigAngles(fa)
 								local range = 300
@@ -1172,6 +1174,7 @@ addHook("PlayerThink", function(p)
 					if me.state ~= S_PLAY_MELEE
 						me.state = S_PLAY_MELEE
 					end
+					
 				end
 				
 				takis.hammerblastjumped = 0
@@ -1241,6 +1244,18 @@ addHook("PlayerThink", function(p)
 					end
 					
 					takis.hammerblastwentdown = true
+					
+					if not (takis.shotgunned)
+						if not S_SoundPlaying(me,sfx_takhmb)
+							S_StartSound(me,sfx_takhmb)
+						end
+						
+						if takis.hammerblastdown
+						and (takis.hammerblastdown % 5 == 0)
+						and (me.momz*takis.gravflip <= 16*me.scale)
+							P_SpawnGhostMobj(me)
+						end
+					end
 					
 				end
 				
@@ -1498,6 +1513,7 @@ addHook("PlayerThink", function(p)
 					takis.hammerblasthitbox = nil
 				end
 				S_StopSoundByID(me,sfx_fastfl)
+				S_StopSoundByID(me,sfx_takhmb)
 			end
 			
 			if takis.hammerblastjumped
@@ -1844,6 +1860,7 @@ addHook("PlayerThink", function(p)
 				or (p.powers[pw_nocontrol])
 				or (takis.nocontrol)
 				or (me.pizza_in or me.pizza_out)
+				or (takis.inWaterSlide)
 					takis.combo.frozen = true
 					if ((p.exiting) and not (p.pflags & PF_FINISHED))
 						takis.combo.cashable = true
@@ -2234,17 +2251,33 @@ addHook("PlayerSpawn", function(p)
 	--	P_SpawnMobjFromMobj(p.mo,100*x,100*y,0,MT_HHEXIT)
 	
 	P_RestoreMusic(p)
+	local takis = p.takistable
+	p.happydeath = false
 	
 	if (skins[p.skin].name == TAKIS_SKIN)
-		if (mapheaderinfo[gamemap].lvlttl == "Tutorial")
-			if (mapheaderinfo[gamemap].takis_hh_timelimit == nil)
-				CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.tutexit)
-			else
-				if p.takis_noabil ~= NOABIL_ALL|NOABIL_THOK
-					p.takis_noabil = NOABIL_ALL|NOABIL_THOK
+		if (mapheaderinfo[gamemap].bonustype == 1)
+			if (leveltime < 5)
+			or (p.jointime < 5)
+				if takis
+					local title = takis.HUD.bosstitle
+					title.takis[1],title.takis[2] = unpack(title.basetakis)
+					title.egg[1],title.egg[2] = unpack(title.baseegg)
+					title.vs[1],title.vs[2] = unpack(title.basevs)
+					title.mom = 1980
+					title.tic = 3*TR
+ 				else
+					p.takis_dotitle = true
 				end
 			end
-			
+		end
+		
+		if (mapheaderinfo[gamemap].lvlttl == "Tutorial")
+			CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.tutexit)
+		elseif (mapheaderinfo[gamemap].lvlttl == "Red Room")
+			if p.takis_noabil ~= NOABIL_ALL|NOABIL_THOK
+				p.takis_noabil = NOABIL_ALL|NOABIL_THOK
+			end
+			CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"][1])
 		else
 			p.takis_noabil = nil
 		end
@@ -2263,8 +2296,7 @@ addHook("PlayerSpawn", function(p)
 	
 	end
 	
-	if p.takistable
-		local takis = p.takistable
+	if takis
 		local me = p.realmo
 		
 		TakisResetHammerTime(p)
@@ -2311,6 +2343,8 @@ addHook("PlayerSpawn", function(p)
 		
 		takis.fakeflashing = 0
 		takis.stasistic = 0
+		
+		takis.timeshit = p.timeshit
 		
 		TakisResetTauntStuff(takis,true)
 		
@@ -2514,6 +2548,25 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	end
 	
 	if takis.heartcards > 0
+		
+		if (p.takis_noabil ~= nil)
+			if (takis.heartcards ~= 1)
+				if (takis.timeshit == 0)
+					CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"].timeshit)
+				end
+			else
+				S_StartSound(mo,sfx_cdfm46)
+				P_InstaThrust(mo,mo.angle,-5*mo.scale)
+				P_SetObjectMomZ(mo,8*mo.scale)
+				mo.state = S_PLAY_ROLL
+				p.pflags = $ &~(PF_THOKKED|PF_JUMPED)
+				CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"].kys,true)
+				takis.fakeflashing = flashingtics*2
+				return true
+			end
+			
+		end
+		
 		SpawnEnemyGibs(inf or mo,mo)
 		TakisResetHammerTime(p)
 		--DIE
@@ -2565,6 +2618,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 			P_RemoveShield(p)
 		end
 		p.timeshit = $+1
+		takis.timeshit = $+1
 		
 		if inf
 		and inf.valid
@@ -2921,8 +2975,9 @@ addHook("PlayerCanEnterSpinGaps",function(p)
 			if takis.crushtime
 				phigh = FixedMul(P_GetPlayerHeight(p),FixedDiv(me.spriteyscale,FU))
 			end
-			if (takis.transfo & TRANSFO_TORNADO)
-			and not (takis.nadocrash)
+			if ((takis.transfo & TRANSFO_TORNADO)
+			and not (takis.nadocrash))
+			or (me.state == S_PLAY_TAKIS_SLIDE)
 				phigh = P_GetPlayerSpinHeight(p)
 			end
 			
@@ -3234,6 +3289,7 @@ addHook("MobjDeath", function(mo,i,s,dmgt)
 	
 	if (s and s.valid)
 	and (s.skin == TAKIS_SKIN)
+	and (s.player and s.player.valid)
 	and (s.player.takistable.heartcards ~= TAKIS_MAX_HEARTCARDS)
 	and (not (gametyperules & GTR_FRIENDLY))
 		TakisHealPlayer(s.player,s,s.player.takistable,1,1)
@@ -3417,9 +3473,14 @@ addHook("MobjMoveCollide",function(tm,t)
 				S_StartSound(t,mobjinfo[t.type].painsound)
 				t.state = mobjinfo[t.type].raisestate
 				
-				--tornado transfo
-				/*
 				if (mobjinfo[t.type].painsound == sfx_cdfm62)
+					if (t.flags2 & MF2_AMBUSH)
+						S_StartSound(tm,sfx_trnsfo)
+						tm.state = S_PLAY_ROLL
+						takis.transfo = $|TRANSFO_BALL
+					end
+					
+					/*
 					takis.nadocount = 3
 					if not (takis.transfo & TRANSFO_TORNADO)
 						takis.transfo = $|TRANSFO_TORNADO
@@ -3429,8 +3490,8 @@ addHook("MobjMoveCollide",function(tm,t)
 					end
 					
 					TakisAwardAchievement(p,ACHIEVEMENT_TORNADO)
+					*/
 				end
-				*/
 				
 				return false
 			end
@@ -3465,7 +3526,9 @@ addHook("MobjMoveCollide",function(tm,t)
 			or (takis.transfo & (TRANSFO_TORNADO|TRANSFO_BALL)))
 				P_KillMobj(t,tm,tm)
 				if takis.transfo & TRANSFO_BALL
-					S_StartSound(t,sfx_bowl)
+					local sfx = P_SpawnGhostMobj(tm)
+					sfx.flags2 = $|MF2_DONTDRAW
+					S_StartSound(sfx,sfx_bowl)
 				end
 				return false
 			end

@@ -10,7 +10,9 @@ local function drawheartcards(v,p)
 	if (customhud.CheckType("takis_heartcards") != modname) return end
 	
 	if p.takis_noabil ~= nil
-		return
+		if p.takistable.heartcards == TAKIS_MAX_HEARTCARDS
+			return
+		end
 	end
 	
 	local amiinsrbz = false
@@ -32,6 +34,10 @@ local function drawheartcards(v,p)
 	local xoff = 15*FU
 	local takis = p.takistable
 	local me = p.mo
+	
+	if p.takis_noabil ~= nil
+		xoff = 0
+	end
 	
 	--space allocated for all the cards
 	local maxspace = 90*FU
@@ -115,6 +121,91 @@ local function drawheartcards(v,p)
 	
 end
 
+local function drawbosscards(v,p)
+
+	if (customhud.CheckType("takis_bosscards") != modname) return end
+	
+	local xoff = -5*FU
+	local takis = p.takistable
+	local me = p.mo
+	local bosscards = takis.HUD.bosscards
+	
+	if (bosscards == nil) then return end
+	if not (bosscards.mo and bosscards.mo.valid) then return end
+	if (bosscards.nocards) then return end
+	
+	--space allocated for all the cards
+	local maxspace = 110*FU
+	
+	--position of the first card
+	local maxx = maxspace
+	
+	if TAKIS_NET.bossprefix[bosscards.mo.type] ~= nil then xoff = 15*FU end
+	
+	--boss cards
+	for i = 1, bosscards.maxcards do
+		
+		local j = i
+		
+		local eflag = V_HUDTRANS
+		
+		--patch
+		local patch = v.cachePatch("HEARTCARD3")
+		
+		if bosscards.maxcards-i > bosscards.cards-1
+			patch = v.cachePatch("HEARTCARD2")
+		end			
+		--
+		
+		--always make the first card (onscreen) go up
+		local add = -3*FU
+		local iseven = bosscards.maxcards%2 == 0
+		if (i%2 and iseven)
+		or (not (i%2) and not iseven)
+			add = 3*FU
+		end
+		
+		if bosscards.maxcards == 1
+			add = 0
+		end
+			
+		local shakex,shakey = 0,0
+		if bosscards.cardshake
+		and not (paused)
+		and not (menuactive and (not multiplayer or splitscreen))
+			
+			local s = bosscards.cardshake
+			shakex,shakey = v.RandomFixed()/2,v.RandomFixed()/2
+			
+			local d1 = v.RandomRange(-1,1)
+			local d2 = v.RandomRange(-1,1)
+			if d1 == 0
+				d1 = v.RandomRange(-1,1)
+			end
+			if d2 == 0
+				d2 = v.RandomRange(-1,1)
+			end
+		
+			shakex = $*s*d1
+			shakey = $*s*d2
+		end
+		
+		local incre = (FixedMul(
+				FixedDiv(maxspace,bosscards.maxcards*FU)*j,
+				FU*4/5
+			)
+		)
+		
+		--draw from last to first
+		local flags = V_SNAPTORIGHT|V_SNAPTOTOP|eflag|V_FLIP
+		v.drawScaled(300*FU-(maxx-(incre)+xoff)+shakex,
+			15*FU+add+shakey,
+			4*FU/5, patch, flags
+		)
+	end
+	
+end
+
 --      ----------
 
 --FACE  ----------
@@ -152,7 +243,7 @@ local function calcstatusface(p,takis)
 		takis.HUD.statusface.priority = 0		
 	end
 	
-	if (takis.heartcards <= (TAKIS_MAX_HEARTCARDS/6 or 1))
+	if (takis.heartcards <= (TAKIS_MAX_HEARTCARDS/TAKIS_MAX_HEARTCARDS or 1))
 	and not (takis.fakeexiting)
 		takis.HUD.statusface.state = "PTIM"
 		takis.HUD.statusface.frame = (2*leveltime/3)%2
@@ -328,6 +419,95 @@ local function drawface(v,p)
 
 end
 
+local function calcbossface(bosscards,me)
+	local status = bosscards.statusface
+	
+	--idle
+	status.state = "IDLE"
+	status.frame = (leveltime/3)%2
+	status.priority = 0
+		
+	if (bosscards.maxcards > 0)
+	and (bosscards.cards <= (bosscards.maxcards/bosscards.maxcards or 1))
+		status.state = "LWHP"
+		status.frame = (2*leveltime/3)%2
+		status.priority = 0	
+	end
+	
+	if status.priority < 10
+		
+		--dead
+		if (not me.health)
+		or (bosscards.cards == 0)
+			status.state = "DEAD"
+			status.frame = 0
+			status.priority = 9
+		end
+	end
+	
+	if status.priority < 9
+		
+		--pain
+		if (me.flags2 & MF2_FRET)
+		or (me.state == me.info.painstate)
+			status.state = "PAIN"
+			status.frame = (leveltime%4)/2
+			status.priority = 8
+		end
+		
+	end
+	
+	
+	if status.priority < 8
+		
+		--evil grin when killing someone
+		--or a boss
+		if (me.target and me.target.valid)
+		and (me.target.health == 0)
+			status.state = "EVL_"
+			status.frame = (leveltime/4)%2
+			status.priority = 7
+		end
+		
+	end
+	
+	return status.state, status.frame
+end
+
+local function drawbossface(v,p)
+
+	if (customhud.CheckType("takis_statusface") != modname) return end
+	
+
+	local takis = p.takistable
+	local me = p.mo
+	local bosscards = takis.HUD.bosscards
+	
+	if not (bosscards.mo and bosscards.mo.valid) then return end
+	if not (bosscards.name) then return end
+	if (bosscards.dontdrawcards) then return end
+	
+	local eflags = V_HUDTRANS
+	
+	local pre = TAKIS_NET.bossprefix[bosscards.mo.type]
+	local scale = 2*FU/5
+	
+	if pre == nil then return end
+	
+	local healthstate,healthframe = calcbossface(bosscards,bosscards.mo)	
+	local headpatch
+	headpatch = v.cachePatch(pre..healthstate..tostring(healthframe))
+	--print(pre..healthstate..tostring(healthframe))
+	
+	v.drawScaled((300-20)*FU,
+		27*FU,
+		scale,
+		headpatch,
+		V_SNAPTORIGHT|V_SNAPTOTOP|eflags
+	)
+
+end
+
 --      ----------
 
 --RINGS ----------
@@ -361,6 +541,7 @@ local function drawrings(v,p)
 	flash = (flash and ((leveltime%(2*TR)) < 30*TR) and (leveltime/5 & 1))
 	
 	if (p.takis_noabil ~= nil)
+	and (takis.heartcards == TAKIS_MAX_HEARTCARDS)
 		ringFy = 28*FU
 		ringy = 15
 	end
@@ -563,6 +744,11 @@ local function drawscore(v,p)
 	
 	--alignment stuff
 	local x,y = 300-15,15
+	
+	if takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid
+	and not (takis.HUD.bosscards.nocards)
+		y = $+30
+	end
 	
 	local snap = V_SNAPTORIGHT|V_SNAPTOTOP
 	if takis.inChaos
@@ -1501,7 +1687,7 @@ local function drawhappyhour(v,p)
 		
 		local pa = v.cachePatch
 		
-		if tics > 1
+		if tics > 2
 			local shakex,shakey = happyshakelol(v)
 			v.drawScaled(h.its.x+shakex, y+h.its.yadd+shakey, h.its.scale,
 				pa(h.its.patch..h.its.frame),
@@ -1576,6 +1762,53 @@ local function getlaptext(p)
 		num = p.lapsdid
 		return text,num
 	end
+
+end
+
+local function drawtelebar(v,p)
+
+	
+	local takis = p.takistable
+	local me = p.mo
+	local h = takis.HUD.ptsr
+	
+	local charge = p.pizzacharge or 0
+	
+		local maxammo = TR*7/5
+		local curammo = charge*7/5
+		local x = 153
+		local y = 168
+		local barx = x+(h.xoffset)
+		local bary = y+(h.yoffset/FU)
+		local patch1 = v.cachePatch("TAKISEG1") --blue
+		local patch3 = v.cachePatch("TAKISEG2") --black
+		local color = p.skincolor
+		
+			--Ammo bar
+			local pos = 0 
+			while (pos < maxammo)
+				local patch = patch3
+				pos = $ + 1
+				
+				
+					if pos <= curammo
+						v.draw(barx + pos - 1, bary, patch3, V_SNAPTOBOTTOM|V_HUDTRANS)
+						if pos > curammo - 1
+							if (curammo <= 1)
+								--first
+								patch = patch1
+							else
+								--fill
+								patch = patch1
+							end
+						else
+							patch = patch1
+						end
+					end
+					
+				v.draw(barx + pos - 1, bary, patch, V_SNAPTOBOTTOM|V_HUDTRANS,v.getColormap(nil,color))
+			end
+			
 
 end
 
@@ -1677,7 +1910,7 @@ local function hhtimerbase(v,p)
 		return
 	end
 	
-	if HAPPY_HOUR.time == 1
+	if HAPPY_HOUR.time < 2
 		return
 	end
 	
@@ -1779,53 +2012,6 @@ local function drawhappytime(v,p)
 	end
 	
 	hhtimerbase(v,p)
-end
-
-local function drawtelebar(v,p)
-
-	
-	local takis = p.takistable
-	local me = p.mo
-	local h = takis.HUD.ptsr
-	
-	local charge = p.pizzacharge or 0
-	
-		local maxammo = TR*7/5
-		local curammo = charge*7/5
-		local x = 153
-		local y = 168
-		local barx = x+(h.xoffset)
-		local bary = y+(h.yoffset/FU)
-		local patch1 = v.cachePatch("TAKISEG1") --blue
-		local patch3 = v.cachePatch("TAKISEG2") --black
-		local color = p.skincolor
-		
-			--Ammo bar
-			local pos = 0 
-			while (pos < maxammo)
-				local patch = patch3
-				pos = $ + 1
-				
-				
-					if pos <= curammo
-						v.draw(barx + pos - 1, bary, patch3, V_SNAPTOBOTTOM|V_HUDTRANS)
-						if pos > curammo - 1
-							if (curammo <= 1)
-								--first
-								patch = patch1
-							else
-								--fill
-								patch = patch1
-							end
-						else
-							patch = patch1
-						end
-					end
-					
-				v.draw(barx + pos - 1, bary, patch, V_SNAPTOBOTTOM|V_HUDTRANS,v.getColormap(nil,color))
-			end
-			
-
 end
 
 --before i learned about patch_t...
@@ -2525,6 +2711,103 @@ local function drawtutbuttons(v,p)
 
 end
 
+local function drawbosstitles(v,p)
+	
+	if (skins[p.skin].name ~= TAKIS_SKIN)
+		return
+	end
+	
+	local takis = p.takistable
+	local me = p.mo
+	local bosscards = takis.HUD.bosscards
+	local title = takis.HUD.bosstitle
+	
+	/*
+	local patch = v.cachePatch("TA_MENUBG")
+	local width = patch.width
+	local height = patch.height
+	local total_width = (v.width() / v.dupx()) + 1
+	local total_height = (v.height() / v.dupy()) + 1
+	local hscale = FixedDiv(total_width * FU, width * FU)
+	local vscale = FixedDiv(total_height * FU, height * FU)
+	v.drawStretched(0, 0, hscale, vscale, patch, V_SNAPTOTOP|V_SNAPTOLEFT)
+	*/
+	
+	if not title.tic then return end
+	
+	if not (bosscards.mo and bosscards.mo.valid) then return end
+	
+	if (bosscards.name)
+		
+		local ticker = title.tic-TR
+		
+		if 2*TR-ticker < 16
+			--we probably just loaded the level
+			if (leveltime <= 2*TR)
+			or (p.jointime <= 2*TR)
+				v.fadeScreen(0xFF00,32-(2*TR-ticker))
+			else
+				v.fadeScreen(0xFF00,(2*TR-ticker))
+			end
+		else
+			if (ticker > 0)
+				if (ticker < 16)
+					v.fadeScreen(0xFF00,ticker)
+				else
+					v.fadeScreen(0xFF00,16)
+				end
+			end
+		end
+		
+		if (3*TR-title.tic > 3)
+			local tx,ty = unpack(title.takis)
+			local x,y = unpack(title.egg)
+			local vx1,vx2 = unpack(title.vs)
+			local bosswidth = v.levelTitleWidth(bosscards.name)
+			local sx,sy
+			
+			--6 41
+			v.drawScaled((tx-94)*FU,(ty-19)*FU,FU,v.cachePatch("BTP_TAKIS"..(title.tic/3%2)),0,v.getColormap(nil,p.skincolor))
+			sx,sy = v.RandomRange(-1,1),v.RandomRange(-1,1)
+			v.drawLevelTitle(tx+sx,ty+sy,takis.HUD.hudname or "Takis",0)
+			
+			sx,sy = happyshakelol(v)
+			v.drawScaledNameTag(vx1*FU+sx,
+				100*FU+sy,"V",0,FU,
+				SKINCOLOR_KETCHUP,SKINCOLOR_WHITE
+			)
+			sx,sy = happyshakelol(v)
+			v.drawScaledNameTag(vx2*FU+sx,
+				100*FU+sy,"S",0,FU,
+				SKINCOLOR_KETCHUP,SKINCOLOR_WHITE
+			)
+			
+			--294 121
+			--v.drawScaled((x+94)*FU,(y-19)*FU,FU,v.cachePatch("BTP_"..bosscards.name..(title.tic/3%2)),0)
+			local bosspatch = v.cachePatch("BTP_BOSSBLANK")
+			local pstring = "BTP_"..bosscards.name..(title.tic/3%2)
+			bosspatch = v.cachePatch(pstring)
+			if not v.patchExists(pstring)
+				bosspatch = v.cachePatch("BTP_BOSSDEFAULT"..(title.tic/3%2))
+			end
+			
+			v.drawScaled((x+94)*FU,(y-19)*FU,FU,bosspatch,0)
+			sx,sy = v.RandomRange(-1,1),v.RandomRange(-1,1)
+			v.drawLevelTitle(x-bosswidth+sx,y+sy,bosscards.name,0)
+		end
+		
+		local trans = 0
+		if title.tic >= 3*TR-9
+			trans = (title.tic-(3*TR-9))<<V_ALPHASHIFT
+		elseif title.tic < 10
+			trans = (10-title.tic)<<V_ALPHASHIFT
+		end
+		v.drawString(160,190,G_BuildMapTitle(gamemap),V_YELLOWMAP|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE|trans,"thin-center")
+	end
+	
+end
+
+
 /*
 local function drawbubbles(v,p,cam)
 	--chrispy chars
@@ -3067,6 +3350,7 @@ customhud.SetupItem("lives", 				modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_combometer", 	modname/*,	,	"game",	27*/) 
 customhud.SetupItem("score", 				modname/*,	,	"game",	26*/) 
 customhud.SetupItem("takis_heartcards", 	modname/*,	,	"game",	30*/) --
+customhud.SetupItem("takis_bosscards", 		modname)
 customhud.SetupItem("takis_statusface", 	modname/*,	,	"game",	31*/) --
 customhud.SetupItem("takis_c3jumpscare", 	modname/*,	,	"game",	31*/) --
 customhud.SetupItem("takis_tauntmenu", 		modname/*,	,	"game",	31*/) --
@@ -3118,6 +3402,7 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("lives", 				modname)
 			customhud.SetupItem("takis_combometer", 	modname) 
 			customhud.SetupItem("takis_heartcards", 	modname)
+			customhud.SetupItem("takis_bosscards", 		modname)
 			customhud.SetupItem("takis_statusface", 	modname)
 			customhud.SetupItem("takis_c3jumpscare", 	modname)
 			customhud.SetupItem("takis_tauntmenu", 		modname)
@@ -3128,7 +3413,8 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("textspectator", 		modname)
 			customhud.SetupItem("takis_nadocount", 		modname)
 			customhud.SetupItem("takis_tutbuttons", 	modname)
-		
+			customhud.SetupItem("bossmeter",			modname)
+
 			if takis.io.nohappyhour == 0
 				customhud.SetupItem("PTSR_itspizzatime",modname)
 				customhud.SetupItem("PTSR_bar",modname)
@@ -3175,8 +3461,10 @@ addHook("HUD", function(v,p,cam)
 			drawcombostuff(v,p)
 			drawbonuses(v,p)
 			drawheartcards(v,p)
+			drawbosscards(v,p)
 			drawscore(v,p)
 			drawface(v,p)
+			drawbossface(v,p)
 			drawtauntmenu(v,p)
 			drawpizzatips(v,p)
 			drawpizzatimer(v,p)
@@ -3204,6 +3492,7 @@ addHook("HUD", function(v,p,cam)
 			end
 			drawcfgnotifs(v,p)
 			drawtutbuttons(v,p)
+			drawbosstitles(v,p)
 			drawhappyhour(v,p)
 			
 			
@@ -3251,6 +3540,7 @@ addHook("HUD", function(v,p,cam)
 			--customhud.SetupItem("rank", "pizzatime2.0")
 			
 			--elfilin stuff
+			/*
 			if ((me) and (me.valid))
 			and (me.skin == "elfilin")
 			and (p.elfilin)
@@ -3303,6 +3593,7 @@ addHook("HUD", function(v,p,cam)
 				end
 				
 			end
+			*/
 			
 			if takis.cosmenu.menuinaction
 				drawcosmenu(v,p)
@@ -3398,6 +3689,7 @@ addHook("HUD", function(v)
 	and consoleplayer.takistable
 		local p = consoleplayer
 		local takis = p.takistable
+		drawjumpscarelol(v,p)
 		if takis.isTakis
 			local flash,timetic,extratext,extrafunc,type = howtotimer(p)
 			
@@ -3410,5 +3702,22 @@ addHook("HUD", function(v)
 		end
 	end
 end,"scores")
+
+addHook("HUD", function(v,p,tic,endtic)
+	if tic >= endtic then return end
+	
+	if not (hud.enabled("stagetitle"))
+		hud.enable("stagetitle")
+	end
+	
+	if (mapheaderinfo[gamemap].bonustype ~= 1)
+		return 
+	end
+	if (skins[p.skin].name ~= TAKIS_SKIN) then return end	
+	if not (p.takistable) then return end
+	if not (p.takistable.HUD.bosscards.name) then return end
+	
+	hud.disable("stagetitle")
+end,"titlecard")
 
 filesdone = $+1

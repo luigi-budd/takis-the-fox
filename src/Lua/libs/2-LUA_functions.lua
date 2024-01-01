@@ -193,9 +193,10 @@ rawset(_G, "TakisAnimateHappyHour", function(p)
 		hud.happyhour.doingit = false
 		hud.happyhour.scale = FU/20
 		hud.happyhour.falldown = false
-		hud.happyhour.its.yadd = 0
-		hud.happyhour.happy.yadd = 0
-		hud.happyhour.hour.yadd = 0
+		hud.happyhour.its.yadd = -200*FU
+		hud.happyhour.happy.yadd = -100*FU
+		hud.happyhour.hour.yadd = -100*FU
+		hud.happyhour.face.yadd = -200*FU
 	
 	end
 	
@@ -336,6 +337,8 @@ rawset(_G, "TakisHUDStuff", function(p)
 				end
 			end
 		end
+	else
+		hud.ptsr.yoffset = 200*FU
 	end
 	
 	if (PTSR)
@@ -534,7 +537,39 @@ rawset(_G, "TakisHUDStuff", function(p)
 		hud.funny.y = $*4/5
 		hud.funny.tics = $-1
 	end
-
+	
+	if p.takis_dotitle
+		local title = hud.bosstitle
+		title.takis[1],title.takis[2] = unpack(title.basetakis)
+		title.egg[1],title.egg[2] = unpack(title.baseegg)
+		title.vs[1],title.vs[2] = unpack(title.basevs)
+		title.mom = 1980
+		title.tic = 3*TR
+		p.takis_dotitle = nil
+	end
+	
+	if hud.bosstitle.tic
+		local title = hud.bosstitle
+		
+		if title.mom ~= 0
+			if title.tic > 16
+				title.mom = $*5/6
+			else
+				title.mom = $*9/6
+			end
+			title.takis[1] = title.basetakis[1]-title.mom
+			title.egg[1] = title.baseegg[1]+title.mom
+			title.vs[1] = title.basevs[1]+title.mom
+			title.vs[2] = title.basevs[2]-title.mom
+		else
+			title.takis[1],title.takis[2] = unpack(title.basetakis)
+			title.egg[1],title.egg[2] = unpack(title.baseegg)		
+		end
+		
+		if title.tic == 16 then title.mom = -6 end
+		title.tic = $-1
+	end
+	
 --hud stuff end
 --hudstuff end
 
@@ -915,6 +950,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 	
 end)
 
+--checks to turn into a transfo
 rawset(_G, "TakisTransfo", function(p,me,takis)
 	
 	if (me.standingslope)
@@ -1086,8 +1122,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	local spd = 6*skins[me.skin].runspeed/5
 	if (p.powers[pw_carry] == CR_NIGHTSMODE)
 		spd = 23*FU
-		takis.accspeed = abs(FixedHypot(FixedHypot(me.momx,me.momy),me.momz))
 	end
+	takis.accspeed = abs(FixedHypot(FixedHypot(me.momx,me.momy),me.momz))
 	
 	--wind effect
 	for i = 1,10
@@ -1305,7 +1341,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		dontdo2 = takis.io.nohappyhour == 1
 	end
 	
-	if HAPPY_HOUR.time
+	if HAPPY_HOUR.happyhour
 	and not (dontdo2)
 	and not HAPPY_HOUR.gameover
 		local tics = HAPPY_HOUR.time
@@ -1556,6 +1592,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	and (HAPPY_HOUR.overtime)
 	and (HAPPY_HOUR.happyhour)
 		if (takis.heartcards > 1)
+		and (not p.exiting)
 			takis.heartcards = 1
 		end
 		p.powers[pw_sneakers] = 3

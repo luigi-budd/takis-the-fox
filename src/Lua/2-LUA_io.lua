@@ -16,8 +16,6 @@ COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12)
 		return
 	end
 
-	print("Loading "..p.name.."'s config...")
-
 	a1 = tonumber($) --Turn all of you to numbers!
 	a2 = tonumber($)
 	a4 = tonumber($)
@@ -62,7 +60,6 @@ COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12)
 	end
 
 	--1-7 pls
-	print("quick taunt1 : "..t1)
 	if t1 ~= nil
 	and (t1 < 8)
 		takis.tauntquick1 = t1
@@ -70,7 +67,6 @@ COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12)
 		CONS_Printf(p,"\x85"+"Error loading Quick Taunt slot 1! Defaulting to 0...")
 	end
 
-	print("quick taunt2 : "..t2)
 	--1-7 pls
 	if t2 ~= nil
 	and (t2 < 8)

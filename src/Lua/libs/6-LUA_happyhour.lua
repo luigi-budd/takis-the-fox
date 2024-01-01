@@ -34,7 +34,7 @@ rawset(_G,"HAPPY_HOUR",{
 
 local hh = HAPPY_HOUR
 
-rawset(_G,"HH_Trigger",function(actor,timelimit)
+rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 	if not hh.happyhour
 	
 		if timelimit == nil
@@ -43,6 +43,7 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 		--add 2 more seconds for the timer tween
 		if timelimit ~= 0
 			hh.timelimit = timelimit+2*TR
+			hh.timeleft = hh.timelimit
 		else
 			hh.timelimit = 0
 		end
@@ -57,15 +58,28 @@ rawset(_G,"HH_Trigger",function(actor,timelimit)
 				S_ChangeMusic(hh.song,p)
 				mapmusname = hh.song
 			end
+			if multiplayer
+				p.realmo.momx,p.realmo.momy,p.realmo.momz = 0,0,0
+				p.powers[pw_nocontrol] = 5
+				P_SetOrigin(p.realmo,
+					actor.x,
+					actor.y,
+					GetActorZ(actor,actor,2)
+				)
+			end
 		end
 		
 		if not (actor and actor.valid) then return end
 		
 		local tag = nil
+		local activator = actor
+		if player and player.valid
+			activator = player.realmo
+		end
 		if (mapheaderinfo[gamemap].takis_hh_tag ~= nil
 		and (tonumber(mapheaderinfo[gamemap].takis_hh_tag)))
 			tag = tonumber(mapheaderinfo[gamemap].takis_hh_tag)
-			P_LinedefExecute(tag,actor,nil)
+			P_LinedefExecute(tag,activator,nil)
 		end
 		
 		if (hh.exit and hh.exit.valid)
@@ -133,14 +147,11 @@ addHook("ThinkFrame",do
 			
 			if not hh.gameover
 				hh.time = $+1
+				if (hh.timeleft)
+					hh.timeleft = $-1
+				end
 			else
 				hh.gameovertics = $+1
-			end
-			
-			if (hh.timelimit and hh.timelimit ~= 0)
-				if hh.timeleft
-					hh.timeleft = $-1 --hh.timelimit-hh.time
-				end
 			end
 			
 			if (G_EnoughPlayersFinished())
@@ -180,18 +191,34 @@ addHook("ThinkFrame",do
 					if (takis.isTakis)
 						takis.goingfast = false
 						takis.wentfast = 0
+						takis.noability = $|NOABIL_ALL
 					end
 					
+					continue
+				end
+				
+				if (p.happydeath)
+					--DONT let them respawn....
+					if (multiplayer)
+						p.deadtimer = min(3,$)
+					end
+					if (p.playerstate ~= PST_DEAD)
+						p.happydeath = false
+					end
 					continue
 				end
 				
 				if not hh.gameover
 					if not (hh.time % TR)
 					and (hh.time)
-						if (p.score > 5)
-							p.score = $-5
-						else
-							p.score = 0
+						if not (maptol & TOL_NIGHTS)
+							if (p.score > 5)
+								p.score = $-5
+							else
+								p.score = 0
+							end
+						else	
+							P_AddPlayerScore(p,-5)
 						end
 					end
 				end
@@ -203,39 +230,33 @@ addHook("ThinkFrame",do
 					hh.timelimit = 3*60*TR
 				end
 				
-				hh.timeleft = hh.timelimit-hh.time
+				--hh.timeleft = hh.timelimit-hh.time
 				
 				if hh.timeleft == 0
-					if not hh.othergt
-						for p in players.iterate
-							if not (p and p.valid) then continue end
-							if not (p.mo and p.mo.valid) then continue end
-							if (p.exiting or p.pflags & PF_FINISHED) then continue end
-							
-							if not (p.happydeath)
-								P_KillMobj(p.mo)
-								p.happydeath = true
-								--too bad! sucks to suck!
-								if (p.score < 10000)
-									p.score = 0
-								else
-									p.score = $-10000
-								end
-								p.exiting = 99
-								--no time bonus
-								p.rings = 0
-								p.realtime = leveltime*99
-							--DONT let them respawn....
+					if hh.othergt then return end
+					if not hh.gameover then hh.gameover = true end
+					
+					for p in players.iterate
+						if not (p and p.valid) then continue end
+						if not (p.mo and p.mo.valid) then continue end
+						if (p.exiting or p.pflags & PF_FINISHED) then continue end
+						
+						if not (p.happydeath)
+							P_KillMobj(p.mo)
+							p.happydeath = true
+							--too bad! sucks to suck!
+							if (p.score < 10000)
+								p.score = 0
 							else
-								if (multiplayer)
-									p.deadtimer = min(3,$)
-								end
-								if (p.playerstate ~= PST_DEAD)
-									p.happydeath = false
-								end
+								p.score = $-10000
 							end
+							p.exiting = 99
+							--no time bonus
+							p.rings = 0
+							p.realtime = leveltime*99
 						end
 					end
+					
 				end
 			end
 			
@@ -368,7 +389,7 @@ addHook("MobjCollide",function(trig,mo)
 		and string.lower(tostring(mapheaderinfo[gamemap].takis_hh_timelimit)) == "none"
 			tl = 0
 		end
-		HH_Trigger(trig,tl)
+		HH_Trigger(trig,mo.player,tl)
 		
 		S_StartSound(trig,trig.info.deathsound)
 		trig.state = trig.info.deathstate
@@ -567,5 +588,85 @@ addHook("MobjThinker",function(door)
 end,MT_HHEXIT)
 
 ----
+
+--all happy hour
+addHook("MapLoad", function(mapid)
+	if (gametype ~= GT_COOP) then return end
+	if (G_IsSpecialStage(mapid)) then return end
+	if (maptol & TOL_NIGHTS) then return end
+	if (netgame) then return end
+	--probably boss map?
+	if (mapheaderinfo[gamemap].bonustype == 1) then return end
+	local hastakis = false
+	for p in players.iterate
+		if skins[p.skin].name == TAKIS_SKIN
+			hastakis = true
+		end
+	end
+	if (gamemap == titlemap) then return end
+	if (TAKIS_NET.inescapable[string.lower(G_BuildMapTitle(gamemap))] == true) then return end
+	
+	if not hastakis then return end
+	
+	local hasexit = false
+	local hassign = false
+	local hasdoor = false
+	
+	--spawn our hh things
+	--this seems REALLY bad, iterating all of this x3 on load
+	for mt in mapthings.iterate
+		--exit
+		if mt.type == MT_HHEXIT
+			hasdoor = true
+		end
+	end	
+	
+	for mt in mapthings.iterate
+		--exit
+		if mt.type == 1
+		and not hasdoor
+			--print("ASDSD")
+			--print(mt.angle,mt.angle*FU)
+			local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
+			local px,py,pz  = mt.x*FU,mt.y*FU,mt.z*FU
+			local door = P_SpawnMobj(px-(100*x),py-(100*y),pz*FU,MT_HHEXIT)
+			hasdoor = true
+		end
+	end
+	
+	for mt in mapthings.iterate
+		--trigger
+		if mt.type == 501
+		and hasdoor
+			local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
+			local trig = P_SpawnMobj(
+				mt.x*FU+(-10*x), 
+				mt.y*FU+(-10*y), 
+				mt.z*FU,
+				MT_HHTRIGGER
+			)
+			if mt.options & MTF_OBJECTFLIP then
+				trig.flags2 = $ | MF2_OBJECTFLIP
+			end
+			if (mt.mobj and mt.mobj.valid) then P_RemoveMobj(mt.mobj) end
+			hassign = true
+		end
+
+	end
+	
+	--remove exitsectors
+	local SSF_REALEXIT = 1<<7
+	if (hasdoor and hassign)
+		for sec in sectors.iterate
+			if (sec.specialflags & SSF_REALEXIT)
+			or (GetSecSpecial(sec.special, 4) == 2)
+				sec.specialflags = $ &~SSF_REALEXIT
+				hasexit = true
+			end
+		end
+	end
+	
+end)
+--
 
 filesdone = $+1

@@ -249,7 +249,7 @@ COM_AddCommand("panic", function(p,tics,flags)
 	end
 	
 	--erm,, whatevre, set it to the playher
-	HH_Trigger(p.realmo,tics)
+	HH_Trigger(p.realmo,p,tics)
 	
 end,COM_ADMIN)
 

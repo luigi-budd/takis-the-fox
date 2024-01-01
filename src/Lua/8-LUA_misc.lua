@@ -772,6 +772,7 @@ addHook("MobjMoveCollide",function(shot,mo)
 	if CanFlingThing(mo)
 		SpawnEnemyGibs(shot,mo)
 		SpawnRagThing(mo,shot,shot.tracer)
+		SpawnBam(mo)
 		return true
 	end
 	
@@ -1157,7 +1158,7 @@ end,MT_STARPOST)
 
 addHook("BossThinker", function(mo)
 	if (not TAKIS_NET.inbossmap)
-	and (mapheaderinfo[gamemap].muspostbossname)
+	and (mapheaderinfo[gamemap].bonustype == 1)
 		TAKIS_NET.inbossmap = true
 	end
 	
@@ -1232,7 +1233,7 @@ addHook("MobjThinker",function(drone)
 		if coolp.mare ~= #TAKIS_NET.ideyadrones-1
 			return
 		end
-		HH_Trigger(drone,coolp.nightstime)
+		HH_Trigger(drone,coolp,coolp.nightstime)
 		coolp.mo.angle = coolp.drawangle
 		NiGHTSFreeroam(coolp)
 	end
@@ -1690,4 +1691,192 @@ addHook("MobjMoveBlocked",function(gib)
 	P_BounceMove(gib)
 	gib.angle = FixedAngle(AngleFixed($)+180*FU)
 end,MT_TAKIS_GIB)
+
+--boss health stuff
+--this is so sa hud!!
+-- https://mb.srb2.org/threads/sonic-adventure-style-hud.27294/
+
+local bossnames = TAKIS_NET.bossnames
+local addonbosses = TAKIS_NET.addonbosses
+local nobosscards = TAKIS_NET.nobosscards
+local noaddonbosscards = TAKIS_NET.noaddonbosscards
+local bossprefix = TAKIS_NET.bossprefix
+local addonbossprefix = TAKIS_NET.addonbossprefix
+
+local function setBossMeter(p, boss)
+	local bosscards = p.takistable.HUD.bosscards
+	
+	if (bosscards != nil)
+	and (bosscards.mo == boss)
+		-- It's the same guy!
+		return;
+	end
+	
+	bosscards.mo = boss;
+	
+	local takis = p.takistable
+	local title = takis.HUD.bosstitle
+	title.takis[1],title.takis[2] = unpack(title.basetakis)
+	title.egg[1],title.egg[2] = unpack(title.baseegg)
+	title.vs[1],title.vs[2] = unpack(title.basevs)
+	title.mom = 1980
+	title.tic = 3*TR
+end
+
+local function bossThink(mo)
+	if (mo.health <= 0)
+		-- Don't add a boss that's dead!
+		return;
+	end
+
+	-- I suppose we can iterate everyone...
+	for p in players.iterate do
+		if not (p.mo and p.mo.valid)
+			continue;
+		end
+		local bosscards = p.takistable.HUD.bosscards
+		
+		if (bosscards != nil
+		and ((bosscards.mo and bosscards.mo.valid)
+		and bosscards.mo == mo))
+			-- It's already us! We can move on...
+			continue;
+		end
+		
+		if (P_CheckSight(mo, p.mo))
+			local updateboss = false;
+
+			if ((bosscards == nil)
+			or not (bosscards.mo and bosscards.mo.valid and bosscards.mo.health > 0))
+				-- Another boss doesn't exist, so we can add it!
+				updateboss = true;
+			else
+				-- Another boss exists already, so only assume that they're not fighting the boss when
+				updateboss = (not P_CheckSight(bosscards.mo, p.mo));
+			end
+
+			if (updateboss == true)
+				setBossMeter(p, mo);
+			end
+		end
+	end
+end
+
+local function bossHurt(mo, inf, src)
+	if not (mo.flags & MF_BOSS)
+		-- Only bosses!
+		return;
+	end
+
+	if (src and src.valid) and (src.player and src.player.valid)
+		setBossMeter(src.player, mo);
+		for p in players.iterate
+			if p.takistable.HUD.bosscards.mo == mo
+				p.takistable.HUD.bosscards.cardshake = TAKIS_HEARTCARDS_SHAKETIME
+			end
+		end
+	end
+end
+
+local function bossMeterThink(p)
+	if (p.takistable == nil) then return end
+	
+	if (p.takistable.HUD.bosscards == nil)
+		return;
+	end
+	
+	local takis = p.takistable
+	local bosscards = takis.HUD.bosscards
+	
+	--prtable("boss",bosscards)
+	if (bosscards.cards > 0)
+	and not (bosscards.mo and bosscards.mo.valid and bosscards.mo.health > 0)
+		bosscards.cards = 0
+	else
+		if bosscards.mo and bosscards.mo.valid
+			local maxhealth = bosscards.mo.info.spawnhealth;
+			bosscards.maxcards = maxhealth
+			local bosshp = bosscards.mo.health;
+			bosscards.cards = bosshp
+			
+			if bosscards.cardshake then bosscards.cardshake = $-1 end
+			
+			if bosscards.cards
+				if bosscards.cards <= (bosscards.maxcards/bosscards.maxcards)
+					if not (leveltime%TR)
+						bosscards.cardshake = $+TAKIS_HEARTCARDS_SHAKETIME/2
+					end
+				
+				elseif bosscards.cards <= (bosscards.maxcards/2)
+					if not (leveltime%(TR*2))
+						bosscards.cardshake = $+TAKIS_HEARTCARDS_SHAKETIME/3
+					end
+				end
+			end
+			
+			bosscards.name = nil
+			if bossnames[bosscards.mo.type] ~= nil
+				bosscards.name = bossnames[bosscards.mo.type] or bosscards.mo.info.name
+			end
+			bosscards.nocards = false
+			if nobosscards[bosscards.mo.type] ~= nil
+				bosscards.nocards = nobosscards[bosscards.mo.type]
+			end
+		else
+			local title = takis.HUD.bosstitle
+			title.takis[1],title.takis[2] = unpack(title.basetakis)
+			title.egg[1],title.egg[2] = unpack(title.baseegg)
+			title.vs[1],title.vs[2] = unpack(title.basevs)
+			title.mom = 1980
+		end
+	end
+
+end
+
+local function isMobjTypeValid(mt)
+	if (pcall(do return _G[mt] end))
+		return _G[mt];
+	else
+		return nil;
+	end
+end
+
+local function mapSet(mo)
+	-- Check for new addon bosses
+	for k,v in pairs(addonbosses) do
+		local mt = isMobjTypeValid(k);
+
+		if not (mt)
+			continue;
+		end
+
+		bossnames[mt] = v;
+	end
+	for k,v in pairs(noaddonbosscards) do
+		local mt = isMobjTypeValid(k);
+
+		if not (mt)
+			continue;
+		end
+
+		nobosscards[mt] = v;
+	end
+	for k,v in pairs(addonbossprefix) do
+		local mt = isMobjTypeValid(k);
+
+		if not (mt)
+			continue;
+		end
+
+		bossprefix[mt] = v;
+	end
+
+end
+
+addHook("MapChange", mapSet);
+addHook("BossThinker", bossThink);
+addHook("MobjDamage", bossHurt);
+addHook("MobjDeath", bossHurt);
+addHook("PlayerThink",bossMeterThink)
+
 filesdone = $+1

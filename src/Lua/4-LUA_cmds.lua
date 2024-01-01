@@ -119,7 +119,7 @@ COM_AddCommand("takis_dojumpscare", function(p,node)
 	local p2 = GetPlayer(p,node)
 	if p2
 		local takis = p2.takistable
-		if (skins[p2.skin].name == TAKIS_SKIN)
+		if not (TakisReadAchievements(p2) & ACHIEVEMENT_JUMPSCARE)
 			TakisAwardAchievement(p2,ACHIEVEMENT_JUMPSCARE)
 		end
 		S_StartSound(nil,sfx_jumpsc,p2)

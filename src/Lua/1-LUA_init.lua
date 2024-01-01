@@ -225,6 +225,121 @@ rawset(_G, "TAKIS_NET", {
 		["p_int"] = true,
 	},
 	
+	inescapable = {
+		["techno hill zone 1"] = true,
+		["egg rock zone 1"] = true,
+		["black core zone 1"] = true,
+	},
+	
+	heartcardmo = {},
+	
+	--titlecard stuff
+	bossnames = {
+		-- Vanilla SRB2
+		[MT_EGGMOBILE] = "Egg Mobile",
+		[MT_EGGMOBILE2] = "Egg Slimer",
+		[MT_EGGMOBILE3] = "Sea Egg",
+		[MT_EGGMOBILE4] = "Egg Coliseum",
+		[MT_FANG] = "Fang",
+		[MT_METALSONIC_BATTLE] = "Metal Sonic",
+		[MT_CYBRAKDEMON] = "Brak Eggman",
+		[MT_BLACKEGGMAN] = "Brak Eggman",
+	},
+	addonbosses = {
+		--mrce
+		MT_FBOSS = "Egg Fighter",
+		MT_FBOSS2 = "Egg Fighter",
+		MT_XBOSS2 = "Egg Mobile",
+		MT_EGGANIMUS = "Egg Animus",
+		MT_EGGANIMUS_EX = "Egg Animus",
+		MT_EGGBALLER = "Fireballer",
+		MT_EGGFREEZER = "Egg Freezer",
+		MT_EGGEBOMBER = "E-Bomber",
+		
+		--silverhorn
+		MT_FACCIOLO_BOSS = "Facciolo",
+		
+		--characters
+		MT_SONIC = "Sonic",
+		MT_TAILS = "Tails",
+		MT_KNUCKLES = "Knuckles",
+		MT_AMY = "Amy Rose",
+		MT_SHADOW = "Shadow",
+		MT_SILVER = "Silver",
+		
+		-- Misc levels
+		MT_EGGMOBILE7 = "Egg Boiler",
+		MT_BOSSRIDE = "Player", -- this one never gets used, included anyway to tell the game you have it loaded
+		
+		--true arena stuff
+		MT_GREENHILLBOSS = "Ball & Chain",
+		MT_EGGOFLAMER = "Egg Flambe",
+		MT_EGGOFLAMERB = "Beta Flambe",
+		MT_STRAYBOLTS_BOSS = "Stray-Bolts",
+		MT_THOKBOSS = "Thok",
+		MT_SANDSUB_326 = "Sand Sub",
+		MT_OLDK = "Ugly Knux",
+		MT_FROSTBURN = "Frostburn",
+		MT_EGGZAP = "Egg Zap",
+		MT_REKNUCKLES = "Knuckles",
+		MT_SUPERHOOD = "Robo-Hood",
+		MT_ANASTASIA = "Anastasia",
+		MT_INFINITE_318 = "Infinite",
+	},
+	
+	nobosscards = {},
+	noaddonbosscards = {
+		MT_FACCIOLO_BOSS = true,
+		
+		MT_GREENHILLBOSS = true,
+		MT_EGGOFLAMER = true,
+		MT_EGGOFLAMERB = true,
+		MT_STRAYBOLTS_BOSS = true,
+		MT_THOKBOSS = true,
+		MT_SANDSUB_326 = true,
+		MT_OLDK = true,
+		MT_FROSTBURN = true,
+		MT_EGGZAP = true,
+		MT_REKNUCKLES = true,
+		MT_ROBOHOOD_MINIBOSS = true,
+		MT_SUPERHOOD = true,
+		MT_ANASTASIA = true,
+		MT_INFINITE_318 = true,
+	},
+	
+	bossprefix = {
+		[MT_EGGMOBILE] = "EGG",
+		[MT_EGGMOBILE2] = "EGG",
+		[MT_EGGMOBILE3] = "EGG",
+		[MT_EGGMOBILE4] = "EGG",
+		[MT_FANG] = "FNG",
+		[MT_METALSONIC_BATTLE] = "MSN",
+		[MT_CYBRAKDEMON] = "BRK",
+		[MT_BLACKEGGMAN] = "BRK",
+	},
+	addonbossprefix = {
+		--mrce
+		MT_FBOSS = "EGG",
+		MT_FBOSS2 = "EGG",
+		MT_XBOSS2 = "EGG",
+		MT_EGGANIMUS = "EGG",
+		MT_EGGANIMUS_EX = "EGG",
+		MT_EGGBALLER = "EGG",
+		MT_EGGFREEZER = "EGG",
+		MT_EGGEBOMBER = "EGG",
+		MT_SANDSUB_326 = "EGG",
+		MT_GREENHILLBOSS = "EGG",
+		MT_EGGMOBILE7 = "EGG",
+		
+		--true arena
+		MT_GREENHILLBOSS = "EGG",
+		MT_EGGOFLAMER = "EGG",
+		MT_EGGOFLAMERB = "EGG",
+		MT_SANDSUB_326 = "EGG",
+		MT_FROSTBURN = "EGG",
+		MT_EGGZAP = "EGG",
+	},
+
 })
 
 rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
@@ -336,6 +451,8 @@ rawset(_G, "TakisInitTable", function(p)
 		crushscale = FU/3,
 		prevz = 0,
 		ballretain = 0,
+		timeshit = 0,
+		
 		nadocount = 0,
 		nadotic = 0,
 		nadouse = 0,
@@ -403,7 +520,7 @@ rawset(_G, "TakisInitTable", function(p)
 			quakes = 1,
 			flashes = 1,
 			windowstyle = 'win10', --for cosmenu, all lowercase
-			additiveai = 0,
+			additiveai = 1,
 			clutchstyle = 1, --0 for bar, 1 for meter
 			sharecombos = 1,
 			dontshowach = 0, --1 to not show ach messages
@@ -653,6 +770,47 @@ rawset(_G, "TakisInitTable", function(p)
 				percent = 0, --we use this for the fills
 				score = 0, --same here
 			},
+			bosscards = {
+				maxcards = 0,
+				dontdrawcards = false,
+				cards = 0,
+				cardshake = 0,
+				mo = 0,
+				name = '',
+				statusface = {
+					priority = 0,
+					state = "IDLE",
+					frame = 0,
+				},
+			},
+			bosstitle = {
+				tic = 0,
+				mom = 0,
+				takis = {
+					100,60
+				},
+				egg = {
+					200,140
+				},
+				--x only
+				vs = {
+					160-19,
+					160,
+				},
+				
+				basetakis = {
+					100,60
+				},
+				baseegg = {
+					200,140
+				},
+				--x only
+				basevs = {
+					160-19,
+					160,
+				}
+			}
+			
 				/*
 			scoretext = {
 				cmap = V_GREENMAP,
@@ -881,6 +1039,8 @@ SafeFreeslot("sfx_tknado")
 sfxinfo[sfx_tknado].caption = "Tornado spin"
 SafeFreeslot("sfx_tkfndo")
 sfxinfo[sfx_tkfndo].caption = "Tornado spin!"
+SafeFreeslot("sfx_takhmb")
+sfxinfo[sfx_takhmb].caption = "/"
 
 --spr_ freeslot
 
@@ -1404,11 +1564,6 @@ mobjinfo[MT_TAKIS_GIB] = {
 
 addHook("NetVars",function(n)
 	TAKIS_NET = n($)
-	/*
-	for k,v in ipairs(netsynchlist)
-		TAKIS_NET[k] = n($)
-	end
-	*/
 	
 	TAKIS_MAX_HEARTCARDS = n($)
 	--TAKIS_DEBUGFLAG = n($)
