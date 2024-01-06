@@ -58,13 +58,22 @@ local function drawheartcards(v,p)
 			patch = v.cachePatch("HEARTCARD3")
 		end
 		
-		if TAKIS_MAX_HEARTCARDS-i > takis.heartcards-1
+		local hp = (takis.HUD.heartcards.spintic) and takis.HUD.heartcards.oldhp or takis.heartcards
+		
+		if takis.HUD.heartcards.spintic
+			local maxhp2 = takis.heartcards
+			if (TAKIS_MAX_HEARTCARDS-i > takis.HUD.heartcards.oldhp - 1)
+				patch = v.cachePatch("HEARTCSPIN"..4-(takis.HUD.heartcards.spintic/2))
+			end
+		end
+		if TAKIS_MAX_HEARTCARDS-i > takis.heartcards - 1
 		or p.spectator
 			patch = v.cachePatch("HEARTCARD2")
 			if p.spectator
 				eflag = V_HUDTRANSHALF
 			end
-		end			
+		end
+		
 		--
 		
 		--always make the first card (onscreen) go up
@@ -133,6 +142,22 @@ local function drawbosscards(v,p)
 	if (bosscards == nil) then return end
 	if not (bosscards.mo and bosscards.mo.valid) then return end
 	if (bosscards.nocards) then return end
+	
+	local amiinsrbz = false
+	
+	if (gametype == GT_SRBZ)
+		if (not p.chosecharacter)
+		or p.shop_open
+			amiinsrbz = true
+		end
+	end
+	
+	if p.takistable.inNIGHTSMode
+	or (TAKIS_NET.inspecialstage)
+	or amiinsrbz
+	or p.takistable.hhexiting
+		return
+	end
 	
 	--space allocated for all the cards
 	local maxspace = 110*FU
@@ -428,7 +453,7 @@ local function calcbossface(bosscards,me)
 	status.priority = 0
 		
 	if (bosscards.maxcards > 0)
-	and (bosscards.cards <= (bosscards.maxcards/bosscards.maxcards or 1))
+	and (bosscards.cards <= 2)
 		status.state = "LWHP"
 		status.frame = (2*leveltime/3)%2
 		status.priority = 0	
@@ -461,9 +486,15 @@ local function calcbossface(bosscards,me)
 	if status.priority < 8
 		
 		--evil grin when killing someone
-		--or a boss
-		if (me.target and me.target.valid)
-		and (me.target.health == 0)
+		-- --or attacking		
+		if (me.p_target and me.p_target.valid)
+		and (me.p_target.health == 0 
+		or me.p_target.state == S_PLAY_PAIN
+		or me.p_target.sprite2 == SPR2_PAIN)
+		/*
+		or (me.state == me.info.meleestate
+		or me.state == me.info.missilestate)
+		*/
 			status.state = "EVL_"
 			status.frame = (leveltime/4)%2
 			status.priority = 7
@@ -496,8 +527,14 @@ local function drawbossface(v,p)
 	
 	local healthstate,healthframe = calcbossface(bosscards,bosscards.mo)	
 	local headpatch
-	headpatch = v.cachePatch(pre..healthstate..tostring(healthframe))
-	--print(pre..healthstate..tostring(healthframe))
+	local headstring = pre..healthstate..tostring(healthframe)
+	if not v.patchExists(headstring)
+		pre = "TAK"
+		headstring = pre..healthstate..tostring(healthframe)
+		eflags = $|V_FLIP
+	end
+	
+	headpatch = v.cachePatch(headstring)
 	
 	v.drawScaled((300-20)*FU,
 		27*FU,
@@ -847,16 +884,6 @@ local function drawlivesarea(v,p)
 		return
 	end
 	
-	takis.HUD.hudname = skins[TAKIS_SKIN].hudname
-	if p.skincolor == SKINCOLOR_GREEN
-		takis.HUD.hudname = "Taykis"
-	elseif p.skincolor == SKINCOLOR_RED
-	and not ((p.skincolor == skincolor_redteam) and G_GametypeHasTeams())
-		takis.HUD.hudname = "Yakis"
-	elseif p.skincolor == SKINCOLOR_SALMON
-		takis.HUD.hudname = "Rakis"
-	end
-		
 	--face background
 	v.drawScaled(
 		(hudinfo[HUD_LIVES].x)*FU,
@@ -1562,22 +1589,18 @@ local function drawcombostuff(v,p)
 			*/
 		end
 		
-	else
-		if takis.combo.failcount
-			takis.combo.failcount = 0
-		end
 	end
 
 	if takis.combo.awardable
 	and not takis.combo.dropped
 		--takis.combo.awardable = true
 		
-		if takis.HUD.combo.tokengrow ~= 0
-			takis.HUD.combo.tokengrow = $/2
-		end
+		local patch = v.cachePatch("FCTOKEN")
 		
-		local x = (300-30)*FU
-		local y = 35*FU
+		local fs = takis.HUD.flyingscore
+		local x = fs.scorex*FU-(patch.width*FU/3)
+		local y = (fs.scorey+20)*FU
+		
 		if p.ptsr_rank
 		and HAPPY_HOUR.othergt
 			x = $-20*FU
@@ -1585,7 +1608,7 @@ local function drawcombostuff(v,p)
 		local grow = takis.HUD.combo.tokengrow
 		
 		v.drawScaled(x-(grow*25),y-(grow*20),FU/3+grow,
-			v.cachePatch("FCTOKEN"),
+			patch,
 			V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP, 
 			v.getColormap(nil, p.skincolor)
 		)
@@ -2051,12 +2074,16 @@ local function drawpizzaranks(v,p)
 	local takis = p.takistable
 	local h = takis.HUD.rank
 	
-	local x = (300-30)*FU
-	local y = 35*FU
+		
+	local patch = v.cachePatch("HUDRANK"..p.ptsr_rank)
 	
+	local fs = takis.HUD.flyingscore
+	local x = fs.scorex*FU-(patch.width*FU/3)
+	local y = (fs.scorey+20)*FU
+		
 	if p.ptsr_rank
 		v.drawScaled(x-(h.grow*25),y-(h.grow*20),FU/3+h.grow,
-			v.cachePatch("HUDRANK"..p.ptsr_rank),
+			patch,
 			V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP
 		)
 		if h.percent
@@ -2232,6 +2259,16 @@ local function drawwareffect(v,p)
 	--drawfill my favorite :kindlygimmesummadat:
 	v.drawScaled(0,0,FU*10,v.cachePatch("TAUNTBACK"),(9-fade)<<V_ALPHASHIFT,v.getColormap(nil,SKINCOLOR_RED))
 end
+
+local letter = {
+	"Dear pesky blaster...",
+	"The Badniks and I have taken over your",
+	"spirit stash. The spirits are now",
+	"permanent guests at each of my seven",
+	"Special Stages. I dare you to find them...",
+	"If you can!"
+}
+		
 
 --		needa make a font for this
 local function drawcosmenu(v,p)
@@ -2504,11 +2541,18 @@ local function drawcosmenu(v,p)
 		end
 		local color = v.getColormap(nil,p.skincolor)
 		v.drawScaled(160*FU,100*FU,FU,v.cachePatch("IMP_LETTER"),V_HUDTRANS,color)
-		v.drawString(82,11,"Dear pesky blasters...",V_ALLOWLOWERCASE|V_HUDTRANS|V_INVERTMAP,"thin")
+		/*
+		v.drawString(82,11,"Dear pesky rodents...",V_ALLOWLOWERCASE|V_HUDTRANS|V_INVERTMAP,"thin")
 		v.drawString(76,21,"The Badniks and I have taken over\nGreenflower City. The Chaos Emeralds are",V_RETURN8|V_ALLOWLOWERCASE|V_HUDTRANS|V_INVERTMAP,"thin")
 		v.drawString(72,37,"now permanent guests at one of my seven",V_ALLOWLOWERCASE|V_HUDTRANS|V_INVERTMAP,"thin")
-		v.drawString(69,37+8,"Special Stages. I dare you to find them, if\nyou can! ",V_ALLOWLOWERCASE|V_HUDTRANS|V_INVERTMAP,"thin")
-		v.drawString(68,73,"C2 - Exit",V_ALLOWLOWERCASE|V_HUDTRANS|V_GRAYMAP,"left")
+		v.drawString(69,45,"Special Stages. I dare you to find them, if\nyou can! ",V_ALLOWLOWERCASE|V_HUDTRANS|V_INVERTMAP,"thin")
+		*/
+		
+		for k,val in ipairs(letter)
+			v.drawString(82,11*k,val,V_ALLOWLOWERCASE|V_HUDTRANS|V_INVERTMAP,"thin")		
+		end
+		
+		v.drawString(82,11*(#letter+1),"C2 - Exit",V_ALLOWLOWERCASE|V_HUDTRANS|V_GRAYMAP,"left")
 		v.drawScaled(108*FU,131*FU,FU,v.cachePatch("IMP_SIG"),V_HUDTRANS)
 	end
 end
@@ -2722,17 +2766,6 @@ local function drawbosstitles(v,p)
 	local bosscards = takis.HUD.bosscards
 	local title = takis.HUD.bosstitle
 	
-	/*
-	local patch = v.cachePatch("TA_MENUBG")
-	local width = patch.width
-	local height = patch.height
-	local total_width = (v.width() / v.dupx()) + 1
-	local total_height = (v.height() / v.dupy()) + 1
-	local hscale = FixedDiv(total_width * FU, width * FU)
-	local vscale = FixedDiv(total_height * FU, height * FU)
-	v.drawStretched(0, 0, hscale, vscale, patch, V_SNAPTOTOP|V_SNAPTOLEFT)
-	*/
-	
 	if not title.tic then return end
 	
 	if not (bosscards.mo and bosscards.mo.valid) then return end
@@ -2766,6 +2799,21 @@ local function drawbosstitles(v,p)
 			local bosswidth = v.levelTitleWidth(bosscards.name)
 			local sx,sy
 			
+	
+			local patch = v.cachePatch("BT_SPIKEY"..(title.tic/2%3))
+			
+			local width = patch.width
+			local height = patch.height
+			local total_width = (v.width() / v.dupx()) + 1
+			local hscale = FixedDiv(total_width * FU, width * FU)
+			local vscale = FU
+			if (3*TR-title.tic) < 17
+				vscale = FixedDiv(3*TR*FU-(title.tic*FU),16*FU)
+			elseif title.tic < 17
+				vscale = FixedDiv(title.tic*FU,16*FU)				
+			end
+			
+			v.drawStretched(0, (ty+10)*FU, hscale, vscale, patch, V_SNAPTOLEFT)
 			--6 41
 			v.drawScaled((tx-94)*FU,(ty-19)*FU,FU,v.cachePatch("BTP_TAKIS"..(title.tic/3%2)),0,v.getColormap(nil,p.skincolor))
 			sx,sy = v.RandomRange(-1,1),v.RandomRange(-1,1)
@@ -2782,13 +2830,15 @@ local function drawbosstitles(v,p)
 				SKINCOLOR_KETCHUP,SKINCOLOR_WHITE
 			)
 			
+			patch = v.cachePatch("BT_SPIKEY"..(title.tic/2%3))
+			v.drawStretched(320*FU, (y+10)*FU, hscale, vscale, patch, V_SNAPTORIGHT|V_FLIP)
 			--294 121
-			--v.drawScaled((x+94)*FU,(y-19)*FU,FU,v.cachePatch("BTP_"..bosscards.name..(title.tic/3%2)),0)
-			local bosspatch = v.cachePatch("BTP_BOSSBLANK")
-			local pstring = "BTP_"..bosscards.name..(title.tic/3%2)
-			bosspatch = v.cachePatch(pstring)
+			local bosspatch --= v.cachePatch("BTP_BOSSBLANK")
+			local pstring = "BTP_"..string.upper(bosscards.name)..(title.tic/3%2)
 			if not v.patchExists(pstring)
 				bosspatch = v.cachePatch("BTP_BOSSDEFAULT"..(title.tic/3%2))
+			else
+				bosspatch = v.cachePatch(pstring)
 			end
 			
 			v.drawScaled((x+94)*FU,(y-19)*FU,FU,bosspatch,0)
@@ -3250,7 +3300,7 @@ local function drawdebug(v,p)
 				)	
 			elseif i == 10
 				v.drawString((hudinfo[HUD_LIVES].x+30)*FU+(35*cos(ra)),
-					(ypos-8+offy2)*FU-(35*sin(ra))-(4*FU),
+					(ypos-8+offy2)*FU-(35*sin(ra))-(7*FU),
 					"200",
 					V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
 					"thin-fixed-center"
@@ -3531,8 +3581,8 @@ addHook("HUD", function(v,p,cam)
 				customhud.SetupItem("PTSR_itspizzatime","spicerunners")
 			else
 				customhud.SetupItem("PTSR_itspizzatime",modname)
-				drawhappyhour(v,p)			
 			end
+			drawhappyhour(v,p)
 			customhud.SetupItem("PTSR_bar","spicerunners")
 			customhud.SetupItem("PTSR_tooltips","spicerunners")
 			customhud.SetupItem("PTSR_rank", "spicerunners")
@@ -3684,13 +3734,61 @@ addHook("HUD", function(v)
 	end
 end,"title")
 
+local emeraldslist = {
+	[0] = SKINCOLOR_GREEN,
+	[1] = SKINCOLOR_SIBERITE,
+	[2] = SKINCOLOR_SAPPHIRE,
+	[3] = SKINCOLOR_SKY,
+	[4] = SKINCOLOR_TOPAZ,
+	[5] = SKINCOLOR_FLAME,
+	[6] = SKINCOLOR_SLATE,
+}
+
 addHook("HUD", function(v)
 	if consoleplayer
 	and consoleplayer.takistable
 		local p = consoleplayer
 		local takis = p.takistable
-		drawjumpscarelol(v,p)
+		hud.enable("coopemeralds")
 		if takis.isTakis
+			hud.disable("coopemeralds")
+			
+			if not multiplayer
+				local maxspirits = 6
+				local maxspace = 200
+				for i = 0,maxspirits
+					local patch,flip = v.getSpritePatch(SPR_TSPR,
+						(emeralds & 1<<i == 0) and B or A,
+						(((leveltime/4)+i)%8)+1
+					)
+					v.drawScaled(
+						60*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i,
+						120*FU,
+						FU,
+						patch,
+						((flip) and V_FLIP or 0)|((emeralds & 1<<i == 0) and V_50TRANS or 0),
+						v.getColormap(nil,emeraldslist[i])
+					)
+				end
+			else
+				local maxspirits = 6
+				local maxspace = 70
+				for i = 0,maxspirits
+					local patch,flip = v.getSpritePatch(SPR_TSPR,
+						(emeralds & 1<<i == 0) and B or A,
+						(((leveltime/4)+i)%8)+1
+					)
+					v.drawScaled(
+						20*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i,
+						11*FU+(patch.height*FU/4/2),
+						FU/4,
+						patch,
+						((flip) and V_FLIP or 0)|((emeralds & 1<<i == 0) and V_50TRANS or 0),
+						v.getColormap(nil,emeraldslist[i])
+					)
+				end			
+			end
+			
 			local flash,timetic,extratext,extrafunc,type = howtotimer(p)
 			
 			if not (type == "regular"
@@ -3700,6 +3798,8 @@ addHook("HUD", function(v)
 			
 			drawtimer(v,p,true)
 		end
+		
+		drawjumpscarelol(v,p)
 	end
 end,"scores")
 
@@ -3719,5 +3819,53 @@ addHook("HUD", function(v,p,tic,endtic)
 	
 	hud.disable("stagetitle")
 end,"titlecard")
+
+addHook("HUD", function(v)
+	if consoleplayer
+	and consoleplayer.takistable
+		local p = consoleplayer
+		local takis = p.takistable
+		
+		hud.enable("intermissiontitletext")
+		hud.enable("intermissionemeralds")
+		
+		if skins[consoleplayer.skin].name == TAKIS_SKIN
+			if takis.lastss
+				if not TAKIS_NET.stagefailed
+					hud.disable("intermissiontitletext")
+					
+					local string = "Got a Spirit!"
+					v.drawLevelTitle(160-(v.levelTitleWidth(string)/2),
+						46,
+						string,
+						0
+					)
+				end
+				hud.disable("intermissionemeralds")
+				local maxspirits = 6
+				local maxspace = 200
+				
+				local em = takis.lastemeralds
+				if TAKIS_NET.inttic >= TR then em = emeralds end
+				
+				for i = 0,maxspirits
+					local patch,flip = v.getSpritePatch(SPR_TSPR,
+						(em & 1<<i == 0) and B or A,
+						(((TAKIS_NET.inttic/4)+i)%8)+1
+					)
+					v.drawScaled(
+						60*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i,
+						104*FU,
+						FU,
+						patch,
+						((flip) and V_FLIP or 0)|((em & 1<<i == 0) and V_50TRANS or 0),
+						v.getColormap(nil,emeraldslist[i])
+					)
+				end
+				
+			end
+		end
+	end
+end,"intermission")
 
 filesdone = $+1

@@ -58,6 +58,7 @@ rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 				S_ChangeMusic(hh.song,p)
 				mapmusname = hh.song
 			end
+			TakisGiveCombo(p,p.takistable,false,true)
 			if multiplayer
 				p.realmo.momx,p.realmo.momy,p.realmo.momz = 0,0,0
 				p.powers[pw_nocontrol] = 5
@@ -217,8 +218,12 @@ addHook("ThinkFrame",do
 							else
 								p.score = 0
 							end
-						else	
-							P_AddPlayerScore(p,-5)
+						else
+							if p.marescore > 5
+								P_AddPlayerScore(p,-5)
+							else
+								p.marescore = 0
+							end
 						end
 					end
 				end
@@ -605,6 +610,7 @@ addHook("MapLoad", function(mapid)
 	end
 	if (gamemap == titlemap) then return end
 	if (TAKIS_NET.inescapable[string.lower(G_BuildMapTitle(gamemap))] == true) then return end
+	if (mapheaderinfo[gamemap].takis_hh_nohappyhour) then return end
 	
 	if not hastakis then return end
 	

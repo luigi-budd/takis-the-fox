@@ -798,7 +798,7 @@ TAKIS_TEXTBOXES.gmap1000 = {
 	},
 	[1] = {							
 		[1] = { 
-			text = "Welcome to the tutorial. You will all you need to know about Takis' moveset. Press |esc\x82[JUMP]|esc\x80 to advance.",
+			text = "Welcome to the tutorial. I hope you like red. You will all you need to know about Takis' moveset. Press |esc\x82[JUMP]|esc\x80 to advance.",
 			soundchance = 0,
 			delay = 2*TICRATE*3/2,
 			next = 2,
@@ -1099,7 +1099,7 @@ addHook("ThinkFrame",do
 			},
 			[2] = { 
 				name = "Peppino",
-				portrait = {"npeppino", SPR2_CLNG, A, 8, true},
+				portrait = {"npeppino", SPR2_STND, A, 8, true},
 				color = SKINCOLOR_WHITE,
 				text = "Peppino",
 				sound = {sfx_menu1},

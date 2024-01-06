@@ -418,6 +418,7 @@ local boolean = {
 	["false"] = false,
 }
 
+COM_AddCommand("freeroam",NiGHTSFreeroam,COM_ADMIN)
 /*
 COM_AddCommand("_gmodify", function(p,gdex,value,vty)
 	local dex = _G[gdex]

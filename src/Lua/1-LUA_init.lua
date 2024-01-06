@@ -9,17 +9,24 @@
 	remember to put this in the MB page luigi
 	
 	-dashdahog - takis' sprites inspiration. I LOVE TAILEELS!!!
-	-jisk - jelped jith jome jode
-	-unmatched bracket - waterslide pain -> sliding code
+	-Jisk - jelped jith jome jode
+	-Unmatched Bracket - waterslide pain -> sliding code, compiling code
+	-katsy - bounce sector detection
+	-Banddy - metal sonic boss portrait
 	
 */
+
+local constlist = {}
 
 local pnk = "\x8E"
 local wht = "\x80"
 
 rawset(_G, "TR", TICRATE)
+table.insert(constlist,{"TR",TICRATE})
 
 rawset(_G, "TAKIS_ISDEBUG", true)
+table.insert(constlist,{"TAKIS_ISDEBUG",true})
+
 rawset(_G, "TAKIS_DEBUGFLAG", 0)
 local dbgflags = {
 	"BUTTONS",
@@ -36,10 +43,13 @@ local dbgflags = {
 	"HURTMSG",
 }
 for k,v in ipairs(dbgflags)
-	rawset(_G,"DEBUG_"..v,1<<(k-1))
-	print("Enummed DEBUG_"..v.." ("..1<<(k-1)..")")
+	local val = 1<<(k-1)
+	rawset(_G,"DEBUG_"..v,val)
+	print("Enummed DEBUG_"..v.." ("..val..")")
+	table.insert(constlist,{"DEBUG_"..v,val})
 end
 
+--these arent really used so theres no point in verifying these
 local ioflags = {
 	"ACH",
 	"CONFIG",
@@ -77,10 +87,19 @@ addHook("ThinkFrame",do
 end)
 
 rawset(_G, "TAKIS_MAX_HEARTCARDS", 6)
+
 rawset(_G, "TAKIS_MAX_HEARTCARD_FUSE", 30*TR)
+table.insert(constlist,{"TAKIS_MAX_HEARTCARD_FUSE",30*TR})
+
 rawset(_G, "TAKIS_HEARTCARDS_SHAKETIME", 17)
+table.insert(constlist,{"TAKIS_HEARTCARDS_SHAKETIME",17})
+
 rawset(_G, "TAKIS_MAX_COMBOTIME", 7*TR)
+table.insert(constlist,{"TAKIS_MAX_COMBOTIME",7*TR})
+
 rawset(_G, "TAKIS_PART_COMBOTIME", 4*TR/5)
+table.insert(constlist,{"TAKIS_PART_COMBOTIME",4*TR/5})
+
 --just soap lol!
 rawset(_G, "TAKIS_COMBO_RANKS", {
 	"Lame...",
@@ -115,7 +134,11 @@ rawset(_G, "TAKIS_COMBO_RANKS", {
 	pnk.."Fun-\x81ky!",
 })
 rawset(_G, "TAKIS_COMBO_UP", 5)
+table.insert(constlist,{"TAKIS_COMBO_UP",5})
+
 rawset(_G, "TAKIS_HAPPYHOURFONT", "TAHRF")
+table.insert(constlist,{"TAKIS_HAPPYHOURFONT","TAHRF"})
+
 rawset(_G, "TAKIS_TITLETIME", 0)
 rawset(_G, "TAKIS_TITLEFUNNY", 0)
 rawset(_G, "TAKIS_TITLEFUNNYY", 0)
@@ -131,8 +154,10 @@ local hurtmsgenum = {
 	"NADO",
 }
 for k,v in ipairs(hurtmsgenum)
-	rawset(_G,"HURTMSG_"..v,k-1)
-	print("Enummed HURTMSG_"..v.." ("..(k-1)..")")
+	local val = k-1
+	rawset(_G,"HURTMSG_"..v,val)
+	print("Enummed HURTMSG_"..v.." ("..val..")")
+	table.insert(constlist,{"HURTMSG_"..v,val})
 end
 
 local noabflags = {
@@ -146,13 +171,18 @@ local noabflags = {
 	"THOK",
 }
 for k,v in ipairs(noabflags)
-	rawset(_G,"NOABIL_"..v,1<<(k-1))
-	print("Enummed NOABIL_"..v.." ("..1<<(k-1)..")")
+	local val = 1<<(k-1)
+	rawset(_G,"NOABIL_"..v,val)
+	print("Enummed NOABIL_"..v.." ("..val..")")
+	table.insert(constlist,{"NOABIL_"..v,val})
 end
 --anything that uses spin
 rawset(_G,"NOABIL_SPIN",NOABIL_CLUTCH|NOABIL_HAMMER|NOABIL_SHOTGUN|NOABIL_WAVEDASH)
+table.insert(constlist,{"NOABIL_SPIN",NOABIL_CLUTCH|NOABIL_HAMMER|NOABIL_SHOTGUN|NOABIL_WAVEDASH})
+
 --i dont *think* i should put thok in here, but that might change
 rawset(_G,"NOABIL_ALL",NOABIL_SPIN|NOABIL_SLIDE|NOABIL_SHIELD|NOABIL_DIVE)
+table.insert(constlist,{"NOABIL_ALL",NOABIL_SPIN|NOABIL_SLIDE|NOABIL_SHIELD|NOABIL_DIVE})
 
 local transfoenum = {
 	"SHOTGUN",
@@ -160,10 +190,13 @@ local transfoenum = {
 	"BALL",
 	"ELEC",
 	"TORNADO",
+	"FIREASS",
 }
 for k,v in ipairs(transfoenum)
-	rawset(_G,"TRANSFO_"..v,1<<(k-1))
-	print("Enummed TRANSFO_"..v.." ("..1<<(k-1)..")")
+	local val = 1<<(k-1)
+	rawset(_G,"TRANSFO_"..v,val)
+	print("Enummed TRANSFO_"..v.." ("..val..")")
+	table.insert(constlist,{"TRANSFO_"..v,val})
 end
 
 --spike stuff according tro source
@@ -199,6 +232,9 @@ rawset(_G, "TAKIS_NET", {
 	
 	ideyadrones = {},
 	
+	inttic = 0,
+	stagefailed = true,
+	
 	--DONT change to happy hour if the song is any one of these
 	specsongs = {
 		["_1up"] = true,
@@ -227,8 +263,13 @@ rawset(_G, "TAKIS_NET", {
 	
 	inescapable = {
 		["techno hill zone 1"] = true,
+		["deep sea zone 1"] = true,
+		["deep sea zone 2"] = true,
+		["castle eggman zone 1"] = true,
+		["red volcano zone 1"] = true,
 		["egg rock zone 1"] = true,
 		["black core zone 1"] = true,
+		["pipe towers zone"] = true,
 	},
 	
 	heartcardmo = {},
@@ -236,10 +277,10 @@ rawset(_G, "TAKIS_NET", {
 	--titlecard stuff
 	bossnames = {
 		-- Vanilla SRB2
-		[MT_EGGMOBILE] = "Egg Mobile",
+		[MT_EGGMOBILE] = "Egg Zapper",
 		[MT_EGGMOBILE2] = "Egg Slimer",
 		[MT_EGGMOBILE3] = "Sea Egg",
-		[MT_EGGMOBILE4] = "Egg Coliseum",
+		[MT_EGGMOBILE4] = "E. Colosseum",
 		[MT_FANG] = "Fang",
 		[MT_METALSONIC_BATTLE] = "Metal Sonic",
 		[MT_CYBRAKDEMON] = "Brak Eggman",
@@ -343,6 +384,7 @@ rawset(_G, "TAKIS_NET", {
 })
 
 rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
+table.insert(constlist,{"TAKIS_HAMMERDISP",FixedMul(52*FU,9*FU/10)})
 
 freeslot("MT_TAKIS_TAUNT_HITBOX")
 freeslot("S_TAKIS_TAUNT_HITBOX")
@@ -431,6 +473,8 @@ rawset(_G, "TakisInitTable", function(p)
 		lastgt = 0,
 		lastskincolor = 0,
 		lastdestroyed = 0,
+		lastemeralds = 0,
+		lastss = 0,
 		achfile = 0,
 		drilleffect = 0,
 		issuperman = false,
@@ -452,6 +496,10 @@ rawset(_G, "TakisInitTable", function(p)
 		prevz = 0,
 		ballretain = 0,
 		timeshit = 0,
+		gotspirit = 0,
+		--always assume a specialstage was failed unless
+		--we're exiting with a spirit in hand
+		ssfailed = true,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -684,6 +732,11 @@ rawset(_G, "TakisInitTable", function(p)
 			heartcards = {
 				shake = 0,
 				add = 0,
+				
+				--spinning anim
+				spintics = 0,
+				oldhp = 0,
+				hpdiff = 0,
 			},
 			rings = {
 				FIXED = {19*FU, 56*FU},
@@ -712,7 +765,7 @@ rawset(_G, "TakisInitTable", function(p)
 				x = 0,
 				y = 0,
 				lastscore = 0,
-				scorenum = 0,
+				scorenum = p.score,
 				xshake = 0,
 				yshake = 0,
 				
@@ -1041,6 +1094,8 @@ SafeFreeslot("sfx_tkfndo")
 sfxinfo[sfx_tkfndo].caption = "Tornado spin!"
 SafeFreeslot("sfx_takhmb")
 sfxinfo[sfx_takhmb].caption = "/"
+SafeFreeslot("sfx_sptclt")
+sfxinfo[sfx_sptclt].caption = "Collect Spirit"
 
 --spr_ freeslot
 
@@ -1063,6 +1118,7 @@ SafeFreeslot("SPR_RGDA") --ragdoll A
 SafeFreeslot("SPR_THND")
 SafeFreeslot("SPR_TVSG")
 SafeFreeslot("SPR_TGIB")
+SafeFreeslot("SPR_TSPR")
 
 --
 
@@ -1451,7 +1507,7 @@ function A_ShotgunBox(mo)
 	gun.dropped = true
 	local oldscale = gun.scale
 	gun.scale = $/20
-	P_SetObjectMomZ(gun,4*FU)
+	L_ZLaunch(gun,4*FU)
 	gun.destscale = oldscale
 	
 	if mo.info.seesound
@@ -1562,6 +1618,21 @@ mobjinfo[MT_TAKIS_GIB] = {
 	radius = 4*FRACUNIT,
 }
 
+freeslot("S_TAKIS_SPIRIT","MT_TAKIS_SPIRIT")
+states[S_TAKIS_SPIRIT] = {
+	sprite = SPR_TSPR,
+	frame = A,
+	tics = -1,
+}
+--TODO: make this a collectable
+mobjinfo[MT_TAKIS_SPIRIT] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_SPIRIT,
+	flags = MF_SLIDEME|MF_NOCLIPTHING|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY,
+	height = 4*FRACUNIT,
+	radius = 4*FRACUNIT,
+}
+
 addHook("NetVars",function(n)
 	TAKIS_NET = n($)
 	
@@ -1586,6 +1657,17 @@ addHook("NetVars",function(n)
 	}
 	for _,v in ipairs(hhsync)
 		HAPPY_HOUR[v] = n($)
+	end
+end)
+
+addHook("ThinkFrame",do
+	for k,v in ipairs(constlist)
+		local enum = v[1]
+		local val = v[2]
+		
+		if _G[enum] ~= val
+			_G[enum] = val
+		end
 	end
 end)
 

@@ -182,6 +182,8 @@ addHook("ThinkFrame", do
 		return
 	end
 	
+	t.inttic = 0
+	
 	livesCount()
 	
 	local playerCount = 0
@@ -235,5 +237,31 @@ addHook("ThinkFrame", do
 	
 end)
 
+--didnt know stagefailed was passed onto IntermissionThinker
+--until i looked at the source code. this should be documented
+--on the wiki now
+addHook("IntermissionThinker",function(stagefailed)
+	t.inttic = $+1
+	t.stagefailed = stagefailed
+	
+	for p in players.iterate
+		local takis = p.takistable
+		
+		if takis
+		and (skins[p.skin].name == TAKIS_SKIN)
+		and takis.lastss
+			if t.inttic == TR
+				if not stagefailed
+					S_StartSound(nil,sfx_sptclt,p)
+				else
+					S_StartSound(nil,sfx_altdi1,p)
+				end
+			elseif t.inttic == 2
+			and not stagefailed
+				S_FadeMusic(0,MUSICRATE,p)
+			end
+		end
+	end
+end)
 
 filesdone = $+1

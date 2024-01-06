@@ -124,6 +124,31 @@ rawset(_G, "TakisAnimateHappyHour", function(p)
 	local hud = takis.HUD
 	local me = p.mo
 
+	if HAPPY_HOUR.timelimit
+		
+		if HAPPY_HOUR.timeleft
+			local tics = HAPPY_HOUR.timeleft
+			local time = hud.timeshake
+			
+			local dontdo = false
+			if (HAPPY_HOUR.othergt)
+				dontdo = takis.io.nohappyhour == 1
+			end
+			
+			if tics <= (56*TR)
+			and not (dontdo)
+			and not HAPPY_HOUR.gameover
+				hud.timeshake = ((56*TR)-tics)+1
+			end
+			
+		else
+			hud.timeshake = 0
+		end
+		
+	else
+		hud.timeshake = 0
+	end
+	
 	local dontdo = false
 	if (HAPPY_HOUR.othergt)
 		dontdo = takis.io.nohappyhour == 1
@@ -203,6 +228,73 @@ rawset(_G, "TakisAnimateHappyHour", function(p)
 
 end)
 
+rawset(_G, "TakisHappyHourThinker", function(p)
+	local takis = p.takistable
+	local me = p.realmo
+	
+	--happy hour hud and stuff
+	local dontdo2 = false
+	if (HAPPY_HOUR.othergt)
+		dontdo2 = takis.io.nohappyhour == 1
+	end
+	
+	if HAPPY_HOUR.happyhour
+	and not (dontdo2)
+	and not HAPPY_HOUR.gameover
+		local tics = HAPPY_HOUR.time
+		
+		if (tics == 1)
+			S_StartSound(nil,sfx_mclang)
+			TakisGiveCombo(p,takis,false,true)
+		end
+		
+		if (me.health)
+		--how convienient that 8 tics just so happens to be
+		--exactly 22 centiseconds!
+		and (tics == 8)
+			if (p.happyhourscream
+			and p.happyhourscream.skin == me.skin)
+				S_StartSound(nil,p.happyhourscream.sfx,p)
+			end
+		end
+		
+		
+		DoQuake(p,2*FU,1,0)
+		
+		if (tics <= TR)
+			DoQuake(p,(72-(2*tics))*FU,1,0)
+		end
+		
+	end
+	
+	//end of happy hour quakes
+	if HAPPY_HOUR.timelimit
+	
+		if HAPPY_HOUR.timeleft
+			local tics = HAPPY_HOUR.timeleft
+			local time = takis.HUD.timeshake
+			
+			if tics <= (56*TR)
+				if not takis.sethappyend
+					S_ChangeMusic("hpyhre",false,p,0,0,3*MUSICRATE)
+					mapmusname = "hpyhre"
+					takis.sethappyend = true
+				end
+				DoQuake(p,(time*FU)/50,1,0)
+				DoQuake(p,(time*FU)/50,1,0)
+			end
+			
+		else
+			takis.sethappyend = false
+		end
+		
+	else
+		takis.sethappyend = false
+	end
+	
+
+end)
+
 local blerp0 = {
 	["ULTIMATE"] = 0,
 	["SHOTGUN"] = 0,
@@ -221,6 +313,16 @@ rawset(_G, "TakisHUDStuff", function(p)
 	local hud = takis.HUD
 	local me = p.realmo
 	
+	hud.hudname = skins[TAKIS_SKIN].hudname
+	if p.skincolor == SKINCOLOR_GREEN
+		hud.hudname = "Taykis"
+	elseif p.skincolor == SKINCOLOR_RED
+	and not ((p.skincolor == skincolor_redteam) and G_GametypeHasTeams())
+		hud.hudname = "Yakis"
+	elseif p.skincolor == SKINCOLOR_SALMON
+		hud.hudname = "Rakis"
+	end
+		
 	if hud.menutext.tics
 		hud.menutext.tics = $-1
 	end
@@ -263,6 +365,13 @@ rawset(_G, "TakisHUDStuff", function(p)
 
 	if hud.heartcards.shake > 0
 		hud.heartcards.shake = $-1
+	end
+	
+	if hud.heartcards.spintic
+		hud.heartcards.spintic = $-1
+	else
+		if hud.heartcards.oldhp then hud.heartcards.oldhp = 0 end
+		if hud.heartcards.hpdiff then hud.heartcards.hpdiff = 0 end
 	end
 	
 	if hud.statusface.evilgrintic > 0
@@ -357,31 +466,6 @@ rawset(_G, "TakisHUDStuff", function(p)
 			end
 			
 		end
-	end
-	
-	if HAPPY_HOUR.timelimit
-	
-		if HAPPY_HOUR.timeleft
-			local tics = HAPPY_HOUR.timeleft
-			local time = hud.timeshake
-			
-			local dontdo = false
-			if (HAPPY_HOUR.othergt)
-				dontdo = takis.io.nohappyhour == 1
-			end
-			
-			if tics <= (56*TR)
-			and not (dontdo)
-			and not HAPPY_HOUR.gameover
-				hud.timeshake = ((56*TR)-tics)+1
-			end
-			
-		else
-			hud.timeshake = 0
-		end
-		
-	else
-		hud.timeshake = 0
 	end
 	
 	if hud.flyingscore.tics > 0
@@ -569,6 +653,11 @@ rawset(_G, "TakisHUDStuff", function(p)
 		if title.tic == 16 then title.mom = -6 end
 		title.tic = $-1
 	end
+
+	if hud.combo.tokengrow ~= 0
+		hud.combo.tokengrow = $/2
+	end
+	
 	
 --hud stuff end
 --hudstuff end
@@ -699,7 +788,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			
 			if (takis.justHitFloor)
 				local range = 235
-				P_SetObjectMomZ(me,4*FU)
+				L_ZLaunch(me,4*FU)
 				p.drawangle = $+(FixedAngle(
 					P_RandomRange(-range,range)*FU+P_RandomFixed()
 					)
@@ -1334,66 +1423,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		me.eflags = $ &~MFE_SPRUNG
 		takis.fakesprung = false
 	end
-		
-	--happy hour hud and stuff
-	local dontdo2 = false
-	if (HAPPY_HOUR.othergt)
-		dontdo2 = takis.io.nohappyhour == 1
-	end
-	
-	if HAPPY_HOUR.happyhour
-	and not (dontdo2)
-	and not HAPPY_HOUR.gameover
-		local tics = HAPPY_HOUR.time
-		
-		if (tics == 1)
-			S_StartSound(nil,sfx_mclang)
-			TakisGiveCombo(p,takis,false,true)
-		end
-		
-		if (me.health)
-		--how convienient that 8 tics just so happens to be
-		--exactly 22 centiseconds!
-		and (tics == 8)
-			if (p.happyhourscream
-			and p.happyhourscream.skin == me.skin)
-				S_StartSound(nil,p.happyhourscream.sfx,p)
-			end
-		end
-		
-		DoQuake(p,2*FU,1,0)
-		
-		if (tics <= TR)
-			DoQuake(p,(72-(2*tics))*FU,1,0)
-		end
-		
-	end
-	
-	//end of happy hour quakes
-	if HAPPY_HOUR.timelimit
-	
-		if HAPPY_HOUR.timeleft
-			local tics = HAPPY_HOUR.timeleft
-			local time = takis.HUD.timeshake
-			
-			if tics <= (56*TR)
-			and (takis.io.nohappyhour == 0)
-				if not takis.sethappyend
-					S_ChangeMusic("hpyhre",false,p,0,0,3*MUSICRATE)
-					mapmusname = "hpyhre"
-					takis.sethappyend = true
-				end
-				DoQuake(p,(time*FU)/50,1,0)
-				DoQuake(p,(time*FU)/50,1,0)
-			end
-			
-		else
-			takis.sethappyend = false
-		end
-		
-	else
-		takis.sethappyend = false
-	end
 	
 	if takis.glowyeffects
 		
@@ -1430,9 +1459,9 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 			ghost.destscale = me.scale/3
 			ghost.blendmode = AST_ADD
 			P_SetOrigin(ghost, 
-			ghost.x-(me.momx/dist)*i, 
-			ghost.y-(me.momy/dist)*i, 
-			ghost.z-(me.momz/dist)*i
+				ghost.x-(me.momx/dist)*i, 
+				ghost.y-(me.momy/dist)*i, 
+				ghost.z-(me.momz/dist)*i
 			)
 			
 		end
@@ -1460,23 +1489,43 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		
 		if ((m2) and (m2.valid))
 		and (p2.takistable)
-		and m2.skin == TAKIS_SKIN
 			local dx = me.x-m2.x
 			local dy = me.y-m2.y
 			
 			--in range!
 			if FixedHypot(dx,dy) <= TAKIS_TAUNT_DIST
-			and (not takis.taunttime)				
-				if p2.takistable.tauntjoinable
-					--this is stupid,,,, :/
-					local tics = 6
-					if ((takis.tauntjoin) and (takis.tauntjoin.valid))
-					and not (takis.accspeed or me.momz)
-					and me.health
-						takis.tauntjoin.tics = tics
-					else
-						takis.tauntjoin = P_SpawnMobjFromMobj(me, 0, 0, me.height*2, MT_TAKIS_TAUNT_JOIN)
-						takis.tauntjoin.target = me
+				if m2.skin == TAKIS_SKIN
+					if (not takis.taunttime)
+						if p2.takistable.tauntjoinable
+							--this is stupid,,,, :/
+							local tics = 6
+							if ((takis.tauntjoin) and (takis.tauntjoin.valid))
+							and not (takis.accspeed or me.momz)
+							and me.health
+								takis.tauntjoin.tics = tics
+							else
+								takis.tauntjoin = P_SpawnMobjFromMobj(me, 0, 0, me.height*2, MT_TAKIS_TAUNT_JOIN)
+								takis.tauntjoin.target = me
+							end
+						end
+					end
+				elseif m2.skin == "inazuma"
+					--done some data mining PLS DONT KIL ME
+					--INZAAUMA
+					local isultimate = false
+					
+					isultimate = (p2.inazuma and p2.inazuma.flags & (1<<6))
+					
+					if isultimate
+						local tics = 6
+						if ((takis.tauntjoin) and (takis.tauntjoin.valid))
+						and not (takis.accspeed or me.momz)
+						and me.health
+							takis.tauntjoin.tics = tics
+						else
+							takis.tauntjoin = P_SpawnMobjFromMobj(me, 0, 0, me.height*2, MT_TAKIS_TAUNT_JOIN)
+							takis.tauntjoin.target = me
+						end
 					end
 				end
 			end
@@ -1666,6 +1715,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if (p.takis_noabil ~= nil)
 		takis.noability = $|p.takis_noabil
 	end
+	
+	if takis.pittime then takis.pittime = $-1 end
 	
 	p.alreadyhascombometer = 2
 	
@@ -1864,11 +1915,18 @@ rawset(_G, "TakisBreakAndBust", function(p, me)
 end)
 
 rawset(_G, "DoQuake", function(p, int, tic, minus)
-	local m = int/tic
-	if minus == 0
-		m = 0
+	if (skins[p.skin].name == TAKIS_SKIN)
+		local m = int/tic
+		if minus == 0
+			m = 0
+		end
+		table.insert(p.takistable.quake,{intensity = int,tics = tic,minus = m})
+	else
+		if p == displayplayer
+		and p.takistable.io.quakes
+			P_StartQuake(int,tic)
+		end
 	end
-	table.insert(p.takistable.quake,{intensity = int,tics = tic,minus = m})
 end)
 
 rawset(_G, "DoFlash", function(p, pal, tic)
@@ -2014,7 +2072,7 @@ rawset(_G, "TakisTeamNewShields", function(player)
 					player.mo.state = S_PLAY_ROLL
 					S_StartSound(player.mo,sfx_s3k44)
 				end
-				P_SetObjectMomZ(player.mo, -24*FRACUNIT, false)
+				L_ZLaunch(player.mo, -24*FRACUNIT, false)
 			end
 			if f == SH_FLAMEAURA
 			and not (takis.thokked or takis.dived or p.pflags & (PF_THOKKED|PF_SHIELDABILITY))
@@ -2103,17 +2161,28 @@ rawset(_G, "TakisHealPlayer", function(p,me,takis,healtype,healamt)
 		if takis.heartcards == TAKIS_MAX_HEARTCARDS
 			return
 		end
+
+		takis.HUD.heartcards.oldhp = takis.heartcards
+		takis.HUD.heartcards.spintic = 4*2
+		
 		takis.heartcards = TAKIS_MAX_HEARTCARDS
-		takis.HUD.heartcards.add = 5*FU
+		takis.HUD.heartcards.hpdiff = takis.heartcards - takis.HUD.heartcards.oldhp
+		
 		takis.HUD.statusface.happyfacetic = 2*TR
 		p.timeshit = 0
 	elseif healtype == 1
 		if takis.heartcards == TAKIS_MAX_HEARTCARDS
 			return
 		end
+		
+		takis.HUD.heartcards.oldhp = takis.heartcards
+		takis.HUD.heartcards.spintic = 4*2
+		
 		takis.heartcards = $+healamt
-		takis.HUD.heartcards.add = (healamt*FU)*3/2
+		takis.HUD.heartcards.hpdiff = takis.heartcards - takis.HUD.heartcards.oldhp
+		
 		takis.HUD.statusface.happyfacetic = 2*TR
+		
 		if p.timeshit
 			p.timeshit = $-1
 		end
@@ -2144,7 +2213,7 @@ rawset(_G, "TakisHealPlayer", function(p,me,takis,healtype,healamt)
 		heart.fuse = TR*3
 		heart.flags = $ &~MF_NOGRAVITY
 		local ran = P_RandomRange(2,5)*FU+P_RandomFixed()		
-		P_SetObjectMomZ(heart,FixedMul(ran,me.scale*2))
+		L_ZLaunch(heart,FixedMul(ran,me.scale*2))
 		
 		ran = P_RandomRange(2,5)*FU+P_RandomFixed()		
 		P_Thrust(heart,heart.angle,FixedMul(ran,me.scale))
@@ -2227,7 +2296,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 			ragdoll.flags = MF_SOLID|MF_NOCLIPTHING
 			ragdoll.ragdoll = true
 			
-			P_SetObjectMomZ(ragdoll,7*t.scale)
+			L_ZLaunch(ragdoll,7*t.scale)
 			
 			local thrust = 63
 			P_Thrust(ragdoll,ragdoll.angle,
@@ -2260,7 +2329,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 			ragdoll.scale = tm.scale
 			ragdoll.timealive = 1
 			
-			P_SetObjectMomZ(ragdoll,7*t.scale)
+			L_ZLaunch(ragdoll,7*t.scale)
 			P_Thrust(ragdoll,ragdoll.angle,-63*t.scale-FixedMul(speed,t.scale))
 			for i = 0, 34
 				A_BossScream(ragdoll,1,MT_SONIC3KBOSSEXPLODE)
@@ -2289,19 +2358,12 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 			return
 		end
 		
-		S_StartSound(t,sfx_tacrit)
-		local ghost = P_SpawnGhostMobj(tm)
-		ghost.color = tm.color
-		ghost.colorized = true
-		ghost.scale = tm.scale*7/5
-		ghost.destscale = ghost.scale*3/2
-		ghost.frame = $|TR_TRANS80
-		ghost.blendmode = AST_ADD
 		
 		if speed < 60*t.scale
-			P_DamageMobj(tm,t,source,2)
-		else
+			P_DamageMobj(tm,t,source)
+		elseif speed >= 60*t.scale
 			P_KillMobj(tm,t,source)
+			S_StartSound(t,sfx_tacrit)
 		end
 	end
 end)
@@ -2631,7 +2693,7 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 			p.jt = -5
 			takis.deathfloored = true
 		else
-			P_SetObjectMomZ(me,10*FU)
+			L_ZLaunch(me,10*FU)
 			me.rollangle = 0
 			takis.stoprolling = true
 			takis.deathfloored = false
@@ -3040,6 +3102,11 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 		else
 			p.aiming = FixedAngle(FU*89)
 		end
+	else
+		if me.flags2 & MF2_TWOD
+		or twodlevel
+			p.aiming = 0
+		end
 	end
 	
 	local ssmul = 10
@@ -3400,8 +3467,10 @@ rawset(_G, "TakisShotgunify", function(p)
 	
 	takis.transfo = $|TRANSFO_SHOTGUN
 	takis.shotgunned = true
-	S_ChangeMusic("war",true,p)
-	S_StartSound(nil,sfx_shgnl,p)
+	if ultimatemode
+		S_ChangeMusic("war",true,p)
+	end
+	S_StartSound(me,sfx_shgnl)
 	
 	if not (TakisReadAchievements(p) & ACHIEVEMENT_BOOMSTICK)
 		takis.shotguntuttic = 4*TR+(TR/2)
@@ -3476,6 +3545,7 @@ rawset(_G,"TakisMenuOpenClose",function(p)
 end)
 
 --because im LAZY.
+--gets @actor's @type of z for @targ
 rawset(_G,"GetActorZ",function(actor,targ,type)
 	if type == nil then type = 1 end
 	if not (actor and actor.valid) then return 0 end
@@ -3597,7 +3667,7 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang)
 		gib.rollangle = FixedAngle(P_RandomRange(0,359)*FU+P_RandomFixed())
 		gib.angleroll = FixedAngle(P_RandomRange(1,15)*FU+P_RandomFixed())*(angrng or -1)
 		gib.fuse = 3*TR
-		P_SetObjectMomZ(gib,P_RandomRange(6,20)*gib.scale+P_RandomFixed())
+		L_ZLaunch(gib,P_RandomRange(6,20)*gib.scale+P_RandomFixed())
 		if (t and t.valid)
 			P_Thrust(gib,
 				R_PointToAngle2(t.x,t.y, tm.x,tm.y),
@@ -3616,7 +3686,7 @@ rawset(_G,"CanFlingThing",function(en,flags)
 		flingable = true
 	end
 	
-	if en.takis_flingme
+	if en.takis_flingme ~= nil
 		if en.takis_flingme == true
 			flingable = true
 		elseif en.takis_flingme == false
@@ -3624,9 +3694,16 @@ rawset(_G,"CanFlingThing",function(en,flags)
 		end
 	end
 	
-	if en.type == MT_EGGMAN_BOX then flingable = false end
+	if (en.type == MT_EGGMAN_BOX or en.type == MT_EGGMAN_GOLDBOX) then flingable = false end
 	return flingable
 	
+end)
+
+rawset(_G, 'L_ZLaunch', function(mo,thrust,relative)
+	if mo.eflags&MFE_UNDERWATER
+		thrust = $*3/5
+	end
+	P_SetObjectMomZ(mo,thrust,relative)
 end)
 
 filesdone = $+1

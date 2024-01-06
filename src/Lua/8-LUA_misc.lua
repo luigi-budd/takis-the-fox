@@ -184,6 +184,7 @@ addHook("MobjThinker", function(rag)
 					SpawnRagThing(found,rag,rag.parent2)
 					local sfx = P_SpawnGhostMobj(found)
 					sfx.flags2 = $|MF2_DONTDRAW
+					S_StartSound(sfx,sfx_smack)
 				elseif (SPIKE_LIST[found.type] == true)
 					P_KillMobj(found,rag,rag.parent2)
 				end
@@ -514,7 +515,7 @@ addHook("MobjDeath",function(mo,i,s)
 		debris.fuse = 3*TR
 		debris.angle = R_PointToAngle2(debris.x,debris.y, mo.x,mo.y)
 		debris.flags = $ &~MF_NOGRAVITY
-		P_SetObjectMomZ(debris,10*mo.scale)
+		L_ZLaunch(debris,10*mo.scale)
 		P_Thrust(debris,InvAngle(debris.angle),2*mo.scale)
 	end
 	
@@ -615,6 +616,8 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		if not consoleplayer.takistable.shotgunned
 			return
 		end
+		
+		if not ultimatemode then return end
 		
 		local newname = string.lower(newname)
 		
@@ -770,9 +773,21 @@ addHook("MobjMoveCollide",function(shot,mo)
 	end
 	
 	if CanFlingThing(mo)
+	and (mo.health)
 		SpawnEnemyGibs(shot,mo)
 		SpawnRagThing(mo,shot,shot.tracer)
 		SpawnBam(mo)
+		if (mo.flags & MF_BOSS)
+			local boom = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
+			boom.flags2 = $|MF2_DONTDRAW
+			boom.radius,boom.height = mo.radius,mo.height
+			
+			S_StartSound(mo,sfx_tkapow)
+			for i = 0,P_RandomRange(10,20)
+				A_BossScream(boom,1,MT_SONIC3KBOSSEXPLODE)
+			end
+			DoFlash(shot.tracer.player,PAL_WHITE,3)
+		end
 		return true
 	end
 	
@@ -808,7 +823,7 @@ local function gunragdoll(gun,i)
 	rag.frame = B
 	rag.rollangle = ANGLE_90-(ANG10*3)
 	
-	P_SetObjectMomZ(rag,10*FU)
+	L_ZLaunch(rag,10*FU)
 	P_Thrust(rag, R_PointToAngle2(rag.x,rag.y, i.x,i.y), -5*rag.scale)
 	
 	S_StartSound(i,sfx_shgnk)
@@ -1162,6 +1177,11 @@ addHook("BossThinker", function(mo)
 		TAKIS_NET.inbossmap = true
 	end
 	
+	if (mo.target and mo.target.valid)
+	and (mo.target.player and mo.target.player.valid)
+		mo.p_target = mo.target
+	end
+	
 end)
 
 addHook("MobjThinker",function(effect)
@@ -1347,6 +1367,9 @@ local function makefling(mo)
 	
 	mo.takis_flingme = true
 	
+	if mo.type == MT_ROSY
+		mo.flags = $|MF_ENEMY
+	end
 end
 
 local flinglist = {
@@ -1441,7 +1464,7 @@ addHook("MobjThinker",function(card)
 	if grounded
 		if (card.eflags & MFE_JUSTHITFLOOR)
 			if (-card.lastmomz > 2*FU)
-				P_SetObjectMomZ(card,-card.lastmomz/2)
+				L_ZLaunch(card,-card.lastmomz/2)
 				S_StartSound(card,sfx_hrtcdt)
 			end
 		end
@@ -1680,7 +1703,7 @@ addHook("MobjThinker",function(gib)
 	if (P_IsObjectOnGround(gib)
 	and not gib.bounced)
 		gib.flags = $|MF_NOCLIPHEIGHT|MF_NOCLIP
-		P_SetObjectMomZ(gib,P_RandomRange(4,9)*FU+P_RandomFixed())
+		L_ZLaunch(gib,P_RandomRange(4,9)*FU+P_RandomFixed())
 		gib.bounced = true
 	end
 end,MT_TAKIS_GIB)
@@ -1802,7 +1825,7 @@ local function bossMeterThink(p)
 			if bosscards.cardshake then bosscards.cardshake = $-1 end
 			
 			if bosscards.cards
-				if bosscards.cards <= (bosscards.maxcards/bosscards.maxcards)
+				if bosscards.cards <= (2)
 					if not (leveltime%TR)
 						bosscards.cardshake = $+TAKIS_HEARTCARDS_SHAKETIME/2
 					end
@@ -1879,4 +1902,62 @@ addHook("MobjDamage", bossHurt);
 addHook("MobjDeath", bossHurt);
 addHook("PlayerThink",bossMeterThink)
 
+--chaos emeralds are replaced with spirits
+local emeraldslist = {
+	[0] = SKINCOLOR_GREEN,
+	[1] = SKINCOLOR_SIBERITE,
+	[2] = SKINCOLOR_SAPPHIRE,
+	[3] = SKINCOLOR_SKY,
+	[4] = SKINCOLOR_TOPAZ,
+	[5] = SKINCOLOR_FLAME,
+	[6] = SKINCOLOR_SLATE,
+}
+
+addHook("MobjThinker",function(gem)
+	if not (gem and gem.valid) then return end
+	if emeraldslist[gem.emeralddex] == nil then P_RemoveMobj(gem) return end
+	
+	local me = gem.tracer
+	
+	if not (me and me.valid) then P_RemoveMobj(gem) return end
+	
+	if not HAPPY_HOUR.gameover
+		if not gem.emeraldcolor
+			gem.emeraldcolor = emeraldslist[gem.emeralddex]
+		end
+		gem.color = gem.emeraldcolor
+		if gem.timealive == nil
+			gem.timealive = 0
+		else
+			gem.timealive = $+1
+		end
+		gem.circle = R_PointToAngle(gem.x,gem.y)+FixedAngle( ((2*FU)*3/2)*gem.timealive )
+		
+		
+		local x,y = ReturnTrigAngles(gem.circle)
+		local z = sin(gem.circle)*12
+		P_MoveOrigin(gem,
+			me.x + 25*x,
+			me.y + 25*y,
+			GetActorZ(me,gem,1) + z + (7*gem.scale)
+		)
+		
+		gem.angle = gem.circle+ANGLE_90
+		
+		if not camera.chase
+			gem.flags2 = $|MF2_DONTDRAW
+		else
+			gem.flags2 = $ &~MF2_DONTDRAW
+		end
+	else
+		if gem.flags & MF_NOGRAVITY
+			S_StartSound(gem,sfx_shldls)
+			P_SetObjectMomZ(gem,6*FU)
+			P_Thrust(gem,gem.circle+ANGLE_90,2*gem.scale)
+			gem.flags = $ &~MF_NOGRAVITY
+		end
+	end
+end,MT_TAKIS_SPIRIT)
+
 filesdone = $+1
+
