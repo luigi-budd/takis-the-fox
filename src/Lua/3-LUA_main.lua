@@ -111,6 +111,7 @@
 	-[done]happy hour quakes not working
 	-bubbles reset state and stuff
 	-[done]use takis.HUD.flyingscore to align all the rank stuff
+	-2d mode is SHIT!! fix weird state bugs
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -1127,7 +1128,6 @@ addHook("PlayerThink", function(p)
 				TakisResetTauntStuff(takis,false)
 				
 				if me.state == S_PLAY_TAKIS_SMUGASSGRIN
-				or me.state == S_PLAY_TAKIS_SMUGASSGRIN2
 					me.tics = 1
 				end
 			end
@@ -1499,7 +1499,7 @@ addHook("PlayerThink", function(p)
 						and me.health
 						and not ((takis.inPain) or (takis.inFakePain))
 						and not (takis.noability & NOABIL_THOK)
-							local time = min(takis.hammerblastdown,TR*3/2)
+							local time = min(takis.hammerblastdown,TR*25/10)
 							takis.hammerblastjumped = 1
 							P_DoJump(p,false)
 							me.state = S_PLAY_ROLL
@@ -1535,18 +1535,20 @@ addHook("PlayerThink", function(p)
 								end
 							end
 							
-							local thrust = max(80*FU-takis.accspeed,0)
-							if (p.powers[pw_sneakers])
-								thrust = $*9/5
+							if takis.accspeed+15*FU <= 80*FU
+								P_InstaThrust(me,ang,
+									FixedDiv(
+										FixedMul(
+											FixedMul(takis.accspeed+15*FU,me.scale),
+											p.powers[pw_sneakers] and FU*9/5 or FU
+										),
+										max(FU,takis.dropdashstale*3/2*me.scale)
+									),
+									true
+								)
+							else
+								me.friction = FU
 							end
-							
-							P_InstaThrust(me,ang,
-								FixedDiv(
-									FixedMul(takis.accspeed,me.scale)+FixedMul(thrust,me.scale),
-									max(FU,takis.dropdashstale*3/2*me.scale)
-								),
-								true
-							)
 							P_MovePlayer(p)
 							
 							--effect
@@ -1677,6 +1679,11 @@ addHook("PlayerThink", function(p)
 				
 				if takis.inFakePain
 					takis.fakeflashing = 4*flashingtics/5
+					if (me.flags2 & MF2_TWOD or twodlevel)
+					and (me.state == S_PLAY_PAIN)
+						me.state = S_PLAY_STND
+						P_MovePlayer(p)
+					end
 				end
 				
 				if not (takis.justHitFloor)
@@ -2373,6 +2380,7 @@ addHook("PlayerSpawn", function(p)
 		TakisResetHammerTime(p)
 		TakisDeShotgunify(p)
 		takis.transfo = 0
+		p.jumpfactor = skins[p.skin].jumpfactor
 		
 		takis.heartcards = TAKIS_MAX_HEARTCARDS
 		
@@ -2595,6 +2603,24 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		return true
 	end
 	
+	--fireass
+	local extraheight = false
+	if dmgt & DMG_FIRE
+		if not (p.powers[pw_shield] & SH_PROTECTFIRE)
+		and not (takis.transfo & TRANSFO_FIREASS)
+			S_StartSound(me,sfx_trnsfo)
+			takis.transfo = $|TRANSFO_FIREASS
+			takis.fireasssmoke = TR/2
+			takis.fireasstime = 10*TR
+			extraheight = true
+		else
+			if takis.fireasstime < 10*TR
+				takis.fireasstime = $+4
+			end
+			return true
+		end
+	end
+	
 	if mo.health
 	or (takis.heartcards)
 		S_StartSound(mo,sfx_smack)
@@ -2698,8 +2724,13 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 			local ang = R_PointToAngle2(mo.x,mo.y, inf.x, inf.y)
 			P_InstaThrust(mo,ang,-5*mo.scale)
 		end
-		L_ZLaunch(mo,8*mo.scale)
-		mo.state = S_PLAY_PAIN
+		L_ZLaunch(mo,(extraheight) and 17*mo.scale or 8*mo.scale)
+		if not extraheight
+			mo.state = S_PLAY_PAIN
+		else
+			mo.state = S_PLAY_DEAD
+		end
+		
 		takis.inFakePain = true
 		p.pflags = $ &~(PF_THOKKED|PF_JUMPED)
 		takis.thokked = false
@@ -3442,12 +3473,7 @@ addHook("AbilitySpecial", function(p)
 	takis.thokked = true
 	takis.hammerblastjumped = 0
 	
-	local sfactor = FU
-	if (me.eflags & MFE_UNDERWATER)
-		sfactor = FixedDiv(117*FRACUNIT, 200*FRACUNIT)
-	end
-	
-	L_ZLaunch(p.mo,FixedMul(15*FU, sfactor))
+	P_SetObjectMomZ(p.mo,15*FU)
 	
 	S_StartSoundAtVolume(me,sfx_takdjm,4*255/5)
 
@@ -3461,7 +3487,7 @@ addHook("AbilitySpecial", function(p)
 			ring.frame = $|FF_TRANS50
 			ring.startingtrans = FF_TRANS50
 			ring.scale = FixedDiv(me.scale,2*FU)
-			P_SetObjectMomZ(ring,FixedMul(-me.momz*2*takis.gravflip, sfactor))
+			P_SetObjectMomZ(ring,-me.momz*2*takis.gravflip)
 			--i thought this would fade out the object
 			ring.fuse = 10
 			ring.destscale = FixedMul(ring.scale,2*FU)
@@ -3605,6 +3631,7 @@ addHook("MobjMoveCollide",function(tm,t)
 				if takis.transfo & TRANSFO_BALL
 					local sfx = P_SpawnGhostMobj(tm)
 					sfx.flags2 = $|MF2_DONTDRAW
+					sfx.tics,sfx.fuse = 3*TR,3*TR
 					S_StartSound(sfx,sfx_bowl)
 				end
 				return false
@@ -3724,5 +3751,22 @@ addHook("MobjMoveBlocked", function(mo, thing, line)
 		end
 	end
 end, MT_PLAYER)
+
+addHook("MobjDeath", function(mobj, inflictor, source)
+	if source 
+	and source.valid 
+	and source.player 
+	and source.player.valid
+	and source.player.mo
+	and source.player.mo.valid
+	and source.skin == TAKIS_SKIN
+		local p = source.player
+		local soap = p.takistable
+		
+		TakisResetHammerTime(p)
+		
+		source.state = S_PLAY_GASP
+	end
+end, MT_EXTRALARGEBUBBLE)
 
 filesdone = $+1

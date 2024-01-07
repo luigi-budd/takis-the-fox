@@ -64,10 +64,11 @@ local function think_smug(p)
 	local me = p.mo
 	local takis = p.takistable
 
+	me.state = S_PLAY_TAKIS_SMUGASSGRIN
 	if not takis.tauntspecial
-		me.state = S_PLAY_TAKIS_SMUGASSGRIN
+		me.frame = A
 	else
-		me.state = S_PLAY_TAKIS_SMUGASSGRIN2
+		me.frame = B
 	end
 	if me.tics == -1
 		me.tics = 12

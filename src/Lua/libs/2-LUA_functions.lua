@@ -689,6 +689,16 @@ local function otherwind(me)
 	wind.source = me
 	wind.blendmode = AST_ADD
 end
+
+local superred = {
+	[0] = SKINCOLOR_PEPPER,
+	[1] = SKINCOLOR_SALMON,
+	[2] = SKINCOLOR_FLAME,
+	[3] = SKINCOLOR_KETCHUP,
+	[4] = SKINCOLOR_GARNET,
+	[5] = SKINCOLOR_RED
+}
+
 -- thinkers for each transfo
 rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 	if (takis.transfo & TRANSFO_BALL)
@@ -1036,7 +1046,68 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 		end
 		
 	end
-	
+	if (takis.transfo & TRANSFO_FIREASS)
+		if takis.inWater
+			takis.transfo = $ &~TRANSFO_FIREASS
+			S_StartSound(me,sfx_shgnk)
+			me.color = p.skincolor
+			me.colorized = false
+			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor
+			return
+		end
+		
+		if takis.fireasstime > 3*TR
+			local flame = P_SpawnMobjFromMobj(me,
+				P_RandomRange(-me.radius/me.scale,me.radius/me.scale)*me.scale+P_RandomFixed(),
+				P_RandomRange(-me.radius/me.scale,me.radius/me.scale)*me.scale+P_RandomFixed(),
+				P_RandomRange(-me.height/me.scale,me.height/me.scale)*me.scale+P_RandomFixed(),
+				MT_FLAMEPARTICLE
+			)
+			P_SetObjectMomZ(flame,P_RandomRange(2,4)*me.scale+P_RandomFixed())
+		end
+		
+		if takis.fire == 1
+		and takis.fireballtime == 0
+			P_SpawnPlayerMissile(me,MT_FIREBALL)
+			S_StartSound(me,sfx_mario7)
+			takis.fireballtime = TR
+		end
+		
+		p.jumpfactor = skins[TAKIS_SKIN].jumpfactor*3/2
+		
+		if takis.fireasstime > 3*TR
+			me.color = superred[P_RandomRange(0,5)]
+			me.colorized = true
+		else
+			if takis.fireasstime > TR
+				if not (takis.fireasstime/2 % 2)
+					me.color = p.skincolor
+					me.colorized = false
+				else
+					me.color = superred[P_RandomRange(0,5)]
+					me.colorized = true
+				end
+			else
+				if not (takis.fireasstime % 2)
+					me.color = p.skincolor
+					me.colorized = false
+				else
+					me.color = superred[P_RandomRange(0,5)]
+					me.colorized = true
+				end
+			end
+		end
+		
+		if takis.fireasstime <= 0
+			takis.transfo = $ &~TRANSFO_FIREASS
+			S_StartSound(me,sfx_shgnk)
+			me.color = p.skincolor
+			me.colorized = false
+			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor			
+		end
+		
+		takis.fireasstime = $-1
+	end
 end)
 
 --checks to turn into a transfo
@@ -1718,6 +1789,19 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if takis.pittime then takis.pittime = $-1 end
 	
+	if takis.fireasssmoke
+		if not takis.onGround
+			me.sprite2 = SPR2_FASS
+			A_BossScream(me,1,MT_TNTDUST)
+			takis.fireasssmoke = $-1
+		else
+			P_MovePlayer(p)
+			takis.fireasssmoke = 0
+		end
+	end
+	
+	if takis.fireballtime then takis.fireballtime = $-1 end
+	
 	p.alreadyhascombometer = 2
 	
 --shorts end
@@ -1741,6 +1825,7 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	
 	local ghost = P_SpawnMobjFromMobj(me,0,0,0,MT_TAKIS_AFTERIMAGE)
 	ghost.target = me
+		
 	--ghost.fuse = SoapFetchConstant("afterimages_fuse")
 	
 	ghost.skin = me.skin
@@ -3607,8 +3692,8 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	local sortext = sor.health and '' or "The late "
 	
 	for i = 0, #takis.hurtmsg
-		print("i "..i)
-		print(takis.hurtmsg[i].tics)
+		--print("i "..i)
+		--print(takis.hurtmsg[i].tics)
 		if takis.hurtmsg[i].tics
 			print(sortext..sor.player.ctfnamecolor.."'s "..takis.hurtmsg[i].text.." "..livetext.." "..p.ctfnamecolor)
 			return true

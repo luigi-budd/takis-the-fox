@@ -291,19 +291,19 @@ local function calcstatusface(p,takis)
 	if takis.HUD.statusface.priority < 9
 		
 		--pain
-		if ((takis.inPain or takis.inFakePain)
-		or (takis.ticsforpain)
-		or (me.sprite2 == SPR2_PAIN)
-		or (me.state == S_PLAY_PAIN)
-		or (takis.HUD.statusface.painfacetic))
-		or (me.pizza_out or me.pizza_in)
-		and (not takis.resettingtoslide)
-		and (me.sprite2 ~= SPR2_SLID)
-			takis.HUD.statusface.state = "PAIN"
-			takis.HUD.statusface.frame = (leveltime%4)/2
-			takis.HUD.statusface.priority = 8
+		if not takis.resettingtoslide
+			if ((takis.inPain or takis.inFakePain)
+			or (takis.ticsforpain)
+			or (me.sprite2 == SPR2_PAIN)
+			or (me.state == S_PLAY_PAIN)
+			or (takis.HUD.statusface.painfacetic))
+			or (me.pizza_out or me.pizza_in)
+			and me.sprite2 ~= SPR2_SLID
+				takis.HUD.statusface.state = "PAIN"
+				takis.HUD.statusface.frame = (leveltime%4)/2
+				takis.HUD.statusface.priority = 8
+			end
 		end
-		
 	end
 	
 	
@@ -3051,6 +3051,7 @@ local function drawdebug(v,p)
 		drawflag(v,x+30,y-70,"PC",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_PANCAKE))
 		drawflag(v,x+45,y-70,"EL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_ELEC))
 		drawflag(v,x+60,y-70,"TR",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_TORNADO))
+		drawflag(v,x+75,y-70,"FA",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_FIREASS))
 		
 		v.drawString(x,y-58,"noability",flags|V_GREENMAP,"thin")
 		drawflag(v,x+00,y-50,"CL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_CLUTCH))
@@ -3751,42 +3752,45 @@ addHook("HUD", function(v)
 		local takis = p.takistable
 		hud.enable("coopemeralds")
 		if takis.isTakis
-			hud.disable("coopemeralds")
+			if G_CoopGametype()
 			
-			if not multiplayer
-				local maxspirits = 6
-				local maxspace = 200
-				for i = 0,maxspirits
-					local patch,flip = v.getSpritePatch(SPR_TSPR,
-						(emeralds & 1<<i == 0) and B or A,
-						(((leveltime/4)+i)%8)+1
-					)
-					v.drawScaled(
-						60*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i,
-						120*FU,
-						FU,
-						patch,
-						((flip) and V_FLIP or 0)|((emeralds & 1<<i == 0) and V_50TRANS or 0),
-						v.getColormap(nil,emeraldslist[i])
-					)
+				hud.disable("coopemeralds")
+				
+				if not multiplayer
+					local maxspirits = 6
+					local maxspace = 200
+					for i = 0,maxspirits
+						local patch,flip = v.getSpritePatch(SPR_TSPR,
+							(emeralds & 1<<i == 0) and B or A,
+							(((leveltime/4)+i)%8)+1
+						)
+						v.drawScaled(
+							60*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i,
+							120*FU,
+							FU,
+							patch,
+							((flip) and V_FLIP or 0)|((emeralds & 1<<i == 0) and V_50TRANS or 0),
+							v.getColormap(nil,emeraldslist[i])
+						)
+					end
+				else
+					local maxspirits = 6
+					local maxspace = 70
+					for i = 0,maxspirits
+						local patch,flip = v.getSpritePatch(SPR_TSPR,
+							(emeralds & 1<<i == 0) and B or A,
+							(((leveltime/4)+i)%8)+1
+						)
+						v.drawScaled(
+							20*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i,
+							11*FU+(patch.height*FU/4/2),
+							FU/4,
+							patch,
+							((flip) and V_FLIP or 0)|((emeralds & 1<<i == 0) and V_50TRANS or 0),
+							v.getColormap(nil,emeraldslist[i])
+						)
+					end			
 				end
-			else
-				local maxspirits = 6
-				local maxspace = 70
-				for i = 0,maxspirits
-					local patch,flip = v.getSpritePatch(SPR_TSPR,
-						(emeralds & 1<<i == 0) and B or A,
-						(((leveltime/4)+i)%8)+1
-					)
-					v.drawScaled(
-						20*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i,
-						11*FU+(patch.height*FU/4/2),
-						FU/4,
-						patch,
-						((flip) and V_FLIP or 0)|((emeralds & 1<<i == 0) and V_50TRANS or 0),
-						v.getColormap(nil,emeraldslist[i])
-					)
-				end			
 			end
 			
 			local flash,timetic,extratext,extrafunc,type = howtotimer(p)

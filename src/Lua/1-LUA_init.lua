@@ -500,6 +500,9 @@ rawset(_G, "TakisInitTable", function(p)
 		--always assume a specialstage was failed unless
 		--we're exiting with a spirit in hand
 		ssfailed = true,
+		fireasssmoke = 0,
+		fireasstime = 0,
+		fireballtime = 0,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -592,11 +595,13 @@ rawset(_G, "TakisInitTable", function(p)
 				--the associated taunt icon for each taunt
 				--MUST BE HUD PATCHES!!
 				pix = {
-					[1] = "TAHY_FACE0",	
+					[1] = "TAUNTPIX_PAIN",	
+					[2] = "TAUNTPIX_SMUG",	
 				},
 				--fixed point scales
 				scales = {
-					[1] = FU/5,
+					[1] = FU/2,
+					[2] = FU/2,
 				},
 			},
 			--text x offsets
@@ -1125,7 +1130,7 @@ SafeFreeslot("SPR_TSPR")
 --spr2 freeslot
 
 SafeFreeslot("SPR2_TAKI")
-SafeFreeslot("SPR2_TAK2")
+--SafeFreeslot("SPR2_TAK2") I LOVE WASTING FREESLOTS!!!!
 SafeFreeslot("SPR2_TDED")
 SafeFreeslot("SPR2_THUP")
 spr2defaults[SPR2_THUP] = SPR2_STND
@@ -1189,13 +1194,6 @@ freeslot("S_PLAY_TAKIS_SMUGASSGRIN")
 states[S_PLAY_TAKIS_SMUGASSGRIN] = {
     sprite = SPR_PLAY,
     frame = SPR2_TAKI,
-    tics = -1,
-    nextstate = S_PLAY_STND
-}
-freeslot("S_PLAY_TAKIS_SMUGASSGRIN2")
-states[S_PLAY_TAKIS_SMUGASSGRIN2] = {
-    sprite = SPR_PLAY,
-    frame = SPR2_TAK2,
     tics = -1,
     nextstate = S_PLAY_STND
 }

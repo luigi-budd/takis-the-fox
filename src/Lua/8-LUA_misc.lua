@@ -1119,7 +1119,7 @@ addHook("MobjThinker",function(me)
 			if (p and p == displayplayer)
 				local found = p.realmo
 				
-				local x,y = ReturnTrigAngles(R_PointToAngle2(me.x,me.y, found.x,found.y))
+				local x,y = ReturnTrigAngles(R_PointToAngle2(me.x,me.y, camera.x,camera.y))
 				if found.flags2 & MF2_TWOD
 				or twodlevel
 					x,y = ReturnTrigAngles(InvAngle(R_PointToAngle(found.x,found.y)))
@@ -1140,7 +1140,7 @@ addHook("MobjThinker",function(me)
 				or twodlevel
 					card.angle = (R_PointToAngle(me.x,me.y))-ANGLE_90
 				else
-					card.angle = (R_PointToAngle2(me.x,me.y, found.x,found.y))-ANGLE_90
+					card.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
 				end
 				--
 
@@ -1162,7 +1162,7 @@ addHook("MobjThinker",function(me)
 				or twodlevel
 					combo.angle = (R_PointToAngle(me.x,me.y))-ANGLE_90
 				else
-					combo.angle = (R_PointToAngle2(me.x,me.y, found.x,found.y))-ANGLE_90
+					combo.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
 				end
 				--
 			end
@@ -1295,6 +1295,19 @@ addHook("MobjMoveCollide",function(effect,t)
 	
 end,MT_TAKIS_DRILLEFFECT)
 
+--not sure where this thinkframe went
+addHook("ThinkFrame", function ()
+    for p in players.iterate() do
+        if not (p and p.valid) then continue end
+		
+		local takis = p.takistable
+		
+		if takis
+			takis.inwaterslide = p.pflags & PF_SLIDING
+		end
+	end
+end)
+
 --i couldve sworn i had a postthink in here
 --that may just be thinking this is soap lol
 --anyway, thanks to Unmatched Bracket for this code!!!
@@ -1312,12 +1325,13 @@ addHook("PostThinkFrame", function ()
 			p.drawangle = me.angle+takis.nadoang
 		end
 		
-        if takis.inwaterslide
-		and not (takis.inPain or takis.inFakePain) then
+		if takis.inwaterslide
+			
             takis.resettingtoslide = true
-			p.mo.sprite2 = SPR2_SLID
-            p.mo.frame = ($ & ~FF_FRAMEMASK) | (leveltime % 4) / 2
-            p.drawangle = p.mo.angle
+			me.state = S_PLAY_DEAD
+			me.sprite2 = SPR2_SLID
+            me.frame = ($ & ~FF_FRAMEMASK) | (leveltime % 4) / 2
+            p.drawangle = me.angle
 			continue
         end
 		
@@ -1958,6 +1972,22 @@ addHook("MobjThinker",function(gem)
 		end
 	end
 end,MT_TAKIS_SPIRIT)
+
+--gotemeralds to spirits
+addHook("MobjThinker",function(gem)
+	if not (gem and gem.valid) then return end
+	if emeraldslist[gem.frame & FF_FRAMEMASK] == nil then return end
+	
+	if not gem.emeraldcolor
+		gem.emeraldcolor = emeraldslist[gem.frame & FF_FRAMEMASK]
+	end
+	local soda = P_SpawnMobjFromMobj(gem,0,0,0,MT_TAKIS_SPIRIT)
+	soda.tracer = gem.target
+	soda.emeralddex = gem.frame & FF_FRAMEMASK
+	P_RemoveMobj(gem)
+	return
+end,MT_GOTEMERALD)
+
 
 filesdone = $+1
 
