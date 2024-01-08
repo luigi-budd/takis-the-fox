@@ -253,6 +253,7 @@ rawset(_G, "TAKIS_NET", {
 		["_gover"] = true,
 		--spice runers
 		["ovrtme"] = true,
+		["ovrtm2"] = true,
 		["rnk_a"] = true,
 		["rnk_cb"] = true,
 		["rnk_d"] = true,
@@ -263,6 +264,7 @@ rawset(_G, "TAKIS_NET", {
 	
 	inescapable = {
 		["techno hill zone 1"] = true,
+		["techno hill zone 2"] = true,
 		["deep sea zone 1"] = true,
 		["deep sea zone 2"] = true,
 		["castle eggman zone 1"] = true,
@@ -270,6 +272,10 @@ rawset(_G, "TAKIS_NET", {
 		["egg rock zone 1"] = true,
 		["black core zone 1"] = true,
 		["pipe towers zone"] = true,
+		["haunted heights zone"] = true,
+		-- do you REALLY wanna back track these 2?
+		["aerial garden zone"] = true,
+		["azure temple zone"] = true,
 	},
 	
 	heartcardmo = {},
@@ -496,7 +502,7 @@ rawset(_G, "TakisInitTable", function(p)
 		prevz = 0,
 		ballretain = 0,
 		timeshit = 0,
-		gotspirit = 0,
+		spiritlist = {},
 		--always assume a specialstage was failed unless
 		--we're exiting with a spirit in hand
 		ssfailed = true,
@@ -584,10 +590,13 @@ rawset(_G, "TakisInitTable", function(p)
 			yadd = 500*FU,
 			tictime = 0,
 			list = {
+				--this is stupid, maybe i can use tables
+				--and draw each line seperately
 				[1] = "Ouchy \nOuch!",
 				[2] = "Smugness",
 				[3] = "Conga",
 				[4] = "Home-run\n     Bat",
+				[5] = "Bird\nWord!",
 			},
 			--1-7 x pos
 			cursor = 1,
@@ -597,17 +606,23 @@ rawset(_G, "TakisInitTable", function(p)
 				pix = {
 					[1] = "TAUNTPIX_PAIN",	
 					[2] = "TAUNTPIX_SMUG",	
+					[3] = "TAUNTPIX_CONG",	
+					[4] = "TAUNTPIX_HRBT",	
+					[5] = "TAUNTPIX_BIRD",	
 				},
 				--fixed point scales
 				scales = {
 					[1] = FU/2,
 					[2] = FU/2,
+					[3] = FU/2,
+					[4] = FU/2,
 				},
 			},
 			--text x offsets
 			xoffsets = {
 				[1] = 11,
 				[4] = 12,
+				[5] = 9,
 			},
 		},
 		cosmenu = {
@@ -688,6 +703,7 @@ rawset(_G, "TakisInitTable", function(p)
 		justHitFloor = false,
 		inSRBZ = false,
 		inChaos = false,
+		isSuper = false,
 		
 		--fake powers
 		fakeflashing = 0,
@@ -1147,6 +1163,7 @@ SafeFreeslot("SPR2_PLHD")
 --fireass
 SafeFreeslot("SPR2_FASS")
 SafeFreeslot("SPR2_NADO")
+SafeFreeslot("SPR2_TBRD")
 
 --
 
@@ -1305,6 +1322,14 @@ states[S_PLAY_TAKIS_CONGA] = {
 	var2 = 1,
 	tics = -1,
     nextstate = S_PLAY_TAKIS_CONGA
+}
+
+freeslot("S_PLAY_TAKIS_BIRD")
+states[S_PLAY_TAKIS_BIRD] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_TBRD,
+	tics = -1,
+    nextstate = S_PLAY_TAKIS_BIRD
 }
 
 freeslot("S_TAKIS_SHOTGUN")
@@ -1656,6 +1681,7 @@ addHook("NetVars",function(n)
 	for _,v in ipairs(hhsync)
 		HAPPY_HOUR[v] = n($)
 	end
+	TAKIS_ACHIEVEMENTINFO = n($)
 end)
 
 addHook("ThinkFrame",do

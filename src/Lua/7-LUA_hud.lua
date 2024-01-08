@@ -1072,7 +1072,7 @@ local function drawlivesarea(v,p)
 				end
 				workx = $+9
 			end
-		
+		 
 		end
 		
 	end
@@ -1107,20 +1107,21 @@ local function drawlivesarea(v,p)
 		v.drawString(hudinfo[HUD_LIVES].x+20, hudinfo[HUD_LIVES].y+(disp+5), "Break Minecart",V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS, "thin")
 	end
 	
-	--xmom stuff
-	/*
-	if (S_PLAY_TRICKUP and S_PLAY_TRICKDOWN)
-		if me and ((me.state != S_PLAY_TRICKUP) and (me.state != S_PLAY_TRICKDOWN)) return end	
-		v.drawScaled(
-			(hudinfo[HUD_LIVES].x+8)*FU, (hudinfo[HUD_LIVES].y-7)*FU,
-			FU/2,
-			v.getSprite2Patch(TAKIS_SKIN,me.sprite2,false,me.frame,2,me.rollangle),
-			V_HUDTRANS|V_SNAPTOBOTTOM|V_SNAPTOLEFT,
-			v.getColormap(TAKIS_SKIN, p.skincolor)
+	if (takis.nocontrol and takis.taunttime)
+		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
+			(hudinfo[HUD_LIVES].y+disp)*FU,
+			(FU/2)+(FU/12),
+			v.cachePatch("TB_C1"),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
+		)
+		v.drawString(hudinfo[HUD_LIVES].x+20,
+			hudinfo[HUD_LIVES].y+(disp+5),
+			"Cancel Taunt",
+			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
+			"thin"
 		)
 	end
-	*/
-	
+		
 	if TAKIS_ISDEBUG
 		v.drawString(hudinfo[HUD_LIVES].x+60,
 			hudinfo[HUD_LIVES].y,
@@ -2535,10 +2536,6 @@ local function drawcosmenu(v,p)
 	
 	if takis.HUD.showingletter
 		v.fadeScreen(0xFF00,16)
-		if (p.cmd.buttons & BT_CUSTOM2)
-			takis.HUD.showingletter = false
-			P_RestoreMusic(p)
-		end
 		local color = v.getColormap(nil,p.skincolor)
 		v.drawScaled(160*FU,100*FU,FU,v.cachePatch("IMP_LETTER"),V_HUDTRANS,color)
 		/*
@@ -3015,7 +3012,7 @@ local function drawdebug(v,p)
 	end
 	
 	if (TAKIS_DEBUGFLAG & DEBUG_BUTTONS)
-		local x, y = 16, 156
+		local x, y = 15, hudinfo[HUD_LIVES].y
 		local flags = V_HUDTRANS|V_PERPLAYER|V_SNAPTOBOTTOM|V_SNAPTOLEFT
 		local color = (p.skincolor and skincolors[p.skincolor].ramp[4] or 0)
 		local color2 = (ColorOpposite(p.skincolor) and skincolors[ColorOpposite(p.skincolor)].ramp[4] or 0)
@@ -3027,6 +3024,7 @@ local function drawdebug(v,p)
 		DrawButton(v, p, x+55, y, flags, color, color2, takis.c3,  'C3', 'thin')
 		DrawButton(v, p, x+66, y, flags, color, color2, takis.fire,'F', 'left')
 		DrawButton(v, p, x+77, y, flags, color, color2, takis.firenormal,'FN', 'thin')
+		DrawButton(v, p, x+88, y, flags, color, color2, takis.weaponmasktime,takis.weaponmask, 'left')
 		
 		v.drawString(x,y-108,"pw_strong",flags,"thin")
 		drawflag(v,x+00,y-100,"NN",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_NONE))
@@ -3838,10 +3836,13 @@ addHook("HUD", function(v)
 				if not TAKIS_NET.stagefailed
 					hud.disable("intermissiontitletext")
 					
-					local string = "Got a Spirit!"
-					v.drawLevelTitle(160-(v.levelTitleWidth(string)/2),
+					local string2 = (All7Emeralds(emeralds)) and "Got them all!" or "Got a Spirit!"
+					if string.lower(G_BuildMapTitle(takis.lastmap)) == "black hole zone"
+						string2 = "Got nothing LMAO"
+					end
+					v.drawLevelTitle(160-(v.levelTitleWidth(string2)/2),
 						46,
-						string,
+						string2,
 						0
 					)
 				end
@@ -3865,6 +3866,32 @@ addHook("HUD", function(v)
 						((flip) and V_FLIP or 0)|((em & 1<<i == 0) and V_50TRANS or 0),
 						v.getColormap(nil,emeraldslist[i])
 					)
+				end
+				
+				--tween
+				if TAKIS_NET.inttic < TR
+					local expectedtime = TR
+					for i = 0,maxspirits
+						if (emeralds & 1<<i == 0) then continue end
+						if (em & 1<<i) then continue end
+						
+						local patch,flip = v.getSpritePatch(SPR_TSPR,
+							A,
+							(((TAKIS_NET.inttic/4)+i)%8)+1
+						)
+						
+						local tweenx = ease.outexpo(( FU / expectedtime )*(TAKIS_NET.inttic),160*FU, 60*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i)
+						local tweeny = ease.outexpo(( FU / expectedtime )*(TAKIS_NET.inttic),-300*FU, 104*FU)
+						
+						v.drawScaled(
+							tweenx,
+							tweeny,
+							FU,
+							patch,
+							((flip) and V_FLIP or 0),
+							v.getColormap(nil,emeraldslist[i])
+						)
+					end
 				end
 				
 			end

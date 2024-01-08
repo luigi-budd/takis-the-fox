@@ -181,10 +181,10 @@ addHook("MobjThinker", function(rag)
 				if CanFlingThing(found,MF_ENEMY|MF_BOSS)
 					SpawnEnemyGibs(rag,found)
 					SpawnBam(found)
-					SpawnRagThing(found,rag,rag.parent2)
 					local sfx = P_SpawnGhostMobj(found)
 					sfx.flags2 = $|MF2_DONTDRAW
 					S_StartSound(sfx,sfx_smack)
+					SpawnRagThing(found,rag,rag.parent2)
 				elseif (SPIKE_LIST[found.type] == true)
 					P_KillMobj(found,rag,rag.parent2)
 				end
@@ -1254,6 +1254,7 @@ addHook("MobjThinker",function(drone)
 			return
 		end
 		HH_Trigger(drone,coolp,coolp.nightstime)
+		S_StartSound(drone,sfx_mclang)
 		coolp.mo.angle = coolp.drawangle
 		NiGHTSFreeroam(coolp)
 	end
@@ -1604,6 +1605,7 @@ addHook("MobjThinker",function(th)
 			new.flags2 = s.flags2
 			new.angle = s.angle
 			new.scale = s.scale
+			new.color = s.color
 			
 			P_RemoveMobj(th)
 		end	
@@ -1628,7 +1630,10 @@ local dontflinglist = {
 	MT_EGGMAN_BOX,
 	MT_BIGMINE,
 	MT_SHELL,
-	MT_STEAM	--thz steam
+	MT_STEAM,	--thz steam
+	--strange divide by 0 with one of these 2
+	MT_ROLLOUTSPAWN,
+	MT_ROLLOUTROCK,
 }
 
 for k,type in ipairs(dontflinglist)
@@ -1935,9 +1940,20 @@ addHook("MobjThinker",function(gem)
 	
 	if not (me and me.valid) then P_RemoveMobj(gem) return end
 	
-	if not HAPPY_HOUR.gameover
+	local die = false
+	if HAPPY_HOUR.gameover
+	or not me.health
+		die = true
+	end
+	
+	if not die
+		--assume we've just spawned
 		if not gem.emeraldcolor
 			gem.emeraldcolor = emeraldslist[gem.emeralddex]
+			--never let spirits overlap
+			if gem.emeralddex ~= 0
+				gem.timealive = me.player.takistable.spiritlist[gem.emeralddex-1].timealive--+((360/7)*gem.emeralddex)
+			end
 		end
 		gem.color = gem.emeraldcolor
 		if gem.timealive == nil
@@ -1945,24 +1961,28 @@ addHook("MobjThinker",function(gem)
 		else
 			gem.timealive = $+1
 		end
-		gem.circle = R_PointToAngle(gem.x,gem.y)+FixedAngle( ((2*FU)*3/2)*gem.timealive )
-		
+		local extraang = 0
+		if me.player.powers[pw_carry] == CR_NIGHTSMODE
+			extraang = R_PointToAngle(gem.x,gem.y)
+		end
+		gem.circle = extraang+FixedAngle( ((2*FU)*3/2)*gem.timealive )
+		gem.circle = $+(FixedAngle(FixedDiv(333*FU,7*FU)*gem.emeralddex+1))
 		
 		local x,y = ReturnTrigAngles(gem.circle)
 		local z = sin(gem.circle)*12
 		P_MoveOrigin(gem,
-			me.x + 25*x,
-			me.y + 25*y,
+			me.x + 30*x,
+			me.y + 30*y,
 			GetActorZ(me,gem,1) + z + (7*gem.scale)
 		)
 		
 		gem.angle = gem.circle+ANGLE_90
-		
 		if not camera.chase
 			gem.flags2 = $|MF2_DONTDRAW
 		else
 			gem.flags2 = $ &~MF2_DONTDRAW
 		end
+		
 	else
 		if gem.flags & MF_NOGRAVITY
 			S_StartSound(gem,sfx_shldls)
@@ -1984,6 +2004,7 @@ addHook("MobjThinker",function(gem)
 	local soda = P_SpawnMobjFromMobj(gem,0,0,0,MT_TAKIS_SPIRIT)
 	soda.tracer = gem.target
 	soda.emeralddex = gem.frame & FF_FRAMEMASK
+	gem.target.player.takistable.spiritlist[soda.emeralddex] = soda
 	P_RemoveMobj(gem)
 	return
 end,MT_GOTEMERALD)

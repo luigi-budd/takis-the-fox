@@ -113,44 +113,54 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 	},
 })
 
-rawset(_G,"TakisReadAchievements",function(p)
-	local number = 0
-	
-	if io
-		DEBUG_print(p,IO_ACH)
-		
-		local file = io.openlocal(ACHIEVEMENT_PATH)
-		
-		if file
-			
-			number = tonumber(file:read("*a"))
-			
-			file:close()
-		end
-	end
-	
-	p.takistable.achfile = number
-	return number
-end)
+TAKIS_ACHIEVEMENTINFO.luasig = "iamlua"..P_RandomFixed()
 
-local function writeach(p,ach,num)
-	if consoleplayer ~= p
+COM_AddCommand("_loadachs", function(p, check, num)
+	if check ~= TAKIS_ACHIEVEMENTINFO.luasig then
+		P_KillMobj(p.realmo)
+		print(p.name.." couldn't stand the heat.")
 		return
 	end
 	
+	p.takistable.achfile = tonumber(num)
+end)
+
+rawset(_G, "TakisSaveAchievements", function(p)
+	if (p ~= consoleplayer) then return end
+	
 	if io
-		
-		DEBUG_print(p,IO_ACH|IO_SAVE)
+		DEBUG_print(p,IO_CONFIG|IO_SAVE)
 		
 		local file = io.openlocal(ACHIEVEMENT_PATH, "w+")
-		local pro = num|ach
-		file:write(tostring(pro))
-			
+		file:write(p.takistable.achfile)
+		
 		file:close()
 		
 	end
+end)
 
-end
+rawset(_G, "TakisLoadAchievements", function(p)
+	
+	if io --load savefile
+		DEBUG_print(p,IO_CONFIG|IO_SAVE)
+		
+		local file = io.openlocal(ACHIEVEMENT_PATH)
+		
+		--load file
+		if file 
+		
+			local code = file:read("*a")
+			
+			if code ~= nil
+				COM_BufInsertText(p, "_loadachs "..TAKIS_ACHIEVEMENTINFO.luasig.." "..code)
+			end
+		
+			file:close()
+		
+		end
+		
+	end
+end)
 
 rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	if (TAKIS_NET.noachs and netgame) then return end
@@ -165,11 +175,18 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 		error("ACHIEVEMENT_ constant out of range.")
 	end
 	
-	local number = TakisReadAchievements(p)
+	local number = p.takistable.achfile
 	
 	--we already have the achievement
 	if (number & (achieve))
 		return
+	end
+	
+	p.takistable.achfile = $|achieve
+	TakisSaveAchievements(p)
+	
+	if not (p.takistable.HUD.showingachs & achieve)
+		table.insert(p.takistable.HUD.steam,{tics = 4*TR,xadd = 9324919,enum = achieve})
 	end
 	
 	S_StartSound(nil,sfx_achern,p)
@@ -187,11 +204,13 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 		S_StartSound(nil,sfx_achern,p2)
 	end
 	
-	if not (p.takistable.HUD.showingachs & achieve)
-		table.insert(p.takistable.HUD.steam,{tics = 4*TR,xadd = 9324919,enum = achieve})
+end)
+
+rawset(_G,"TakisReadAchievements",function(p)
+	if TAKIS_ISDEBUG
+		print("\x82WARNING\x80: TakisReadAchievements is deprecated and will be removed soon. Instead, check for p.takistable.achfile.")
 	end
-	
-	writeach(p,achieve,number)
+	return p.takistable.achfile
 end)
 
 filesdone = $+1

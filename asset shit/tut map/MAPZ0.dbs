@@ -1,0 +1,56 @@
+type = "Doom Builder Map Settings Configuration";
+gameconfig = "SRB2-22.cfg";
+strictpatches = 0;
+
+maps
+{
+	
+	MAPZ0
+	{
+		defaultfloortexture = "VOIDGM";
+		overrideceilheight = false;
+		
+		resources
+		{
+		}
+		defaulttoptexture = "VOIDGRBS";
+		overridemiddletexture = false;
+		
+		scriptfiles
+		{
+			
+			file
+			{
+				filename = "OBJCTCFG";
+				hash = 484659484;
+			}
+		}
+		viewpositionx = 7972.131f;
+		viewpositiony = 6735.068f;
+		viewscale = 1.124551f;
+		overridefloortexture = false;
+		customceilheight = 128;
+		customfloorheight = 0;
+		
+		grid
+		{
+			backoffsety = 0;
+			backoffsetx = 0;
+			backscalex = 100;
+			gridsize = 32;
+			background = "";
+			backsource = 0;
+			backscaley = 100;
+		}
+		defaultceiltexture = "F_SKY1";
+		overridebrightness = false;
+		uselongtexturenames = false;
+		overridebottomtexture = false;
+		overridefloorheight = false;
+		overridetoptexture = false;
+		custombrightness = 196;
+		overrideceiltexture = false;
+		defaultwalltexture = "VOIDGRBS";
+		defaultbottomtexture = "VOIDGRBS";
+	}
+}

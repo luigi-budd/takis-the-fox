@@ -419,6 +419,20 @@ local boolean = {
 }
 
 COM_AddCommand("freeroam",NiGHTSFreeroam,COM_ADMIN)
+
+COM_AddCommand("spheres", function(p, num)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if tonumber(num) == nil then return end
+	
+	num = tonumber($)
+	
+	p.spheres = num
+end,COM_ADMIN)
+
 /*
 COM_AddCommand("_gmodify", function(p,gdex,value,vty)
 	local dex = _G[gdex]

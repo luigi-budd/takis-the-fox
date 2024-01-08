@@ -252,10 +252,14 @@ addHook("IntermissionThinker",function(stagefailed)
 		and takis.lastss
 			if t.inttic == TR
 				if not stagefailed
+				and string.lower(G_BuildMapTitle(takis.lastmap)) ~= "black hole zone"
 					S_StartSound(nil,sfx_sptclt,p)
 				else
 					S_StartSound(nil,sfx_altdi1,p)
 				end
+			elseif t.inttic == TR+(TR*4/5)
+			and All7Emeralds(emeralds)
+				S_StartSound(nil,sfx_tayeah,p)
 			elseif t.inttic == 2
 			and not stagefailed
 				S_FadeMusic(0,MUSICRATE,p)

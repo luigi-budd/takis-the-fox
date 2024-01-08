@@ -241,8 +241,7 @@ COM_AddCommand("takis_importantletter", function(p)
 	end
 	
 	takis.HUD.showingletter = true
-	--maybe this one too?
-	S_ChangeMusic("letter",true,p)
+	P_PlayJingleMusic(p,"letter",0,true,JT_OTHER)
 end)
 
 COM_AddCommand("takis_openmenu", function(p)
@@ -294,6 +293,9 @@ COM_AddCommand("takis_deleteachievements", function(p)
 		
 		local file = io.openlocal(ACHIEVEMENT_PATH, "w+")
 		file:write(0)
+		TakisSaveAchievements(p)
+		p.takistable.achfile = 0
+		
 		prn(p,"Deleted "..skins[TAKIS_SKIN].realname.."'s achievements.")
 		
 		file:close()

@@ -31,8 +31,7 @@ local function init_conga(p)
 	takis.taunttime = 2
 	takis.stasistic = 2
 	takis.tauntacceptspartners = false
-	S_ChangeMusic("_CONGA",true,p)
-	S_StartMusicCaption("Conga!!",300*TR,p)
+	P_PlayJingleMusic(p,"_conga",0,true,JT_OTHER)
 end
 
 local function init_bat(p)
@@ -50,6 +49,19 @@ local function init_bat(p)
 	S_StartSound(me,sfx_spndsh)
 	takis.tauntcanparry = false
 end
+
+local function init_bird(p)
+	local me = p.mo
+	local takis = p.takistable
+	local menu = takis.tauntmenu
+	
+	takis.taunttime = 2
+	takis.stasistic = 2
+	takis.tauntacceptspartners = false
+	me.state = S_PLAY_TAKIS_BIRD
+end
+
+
 
 --taunt thinks
 
@@ -97,9 +109,9 @@ local function think_conga(p)
 	--cancel conga
 	if (p.cmd.buttons & BT_CUSTOM1)
 		TakisResetTauntStuff(takis)
-		S_StartMusicCaption("Conga!!",TR,p)
 		P_RestoreMusic(p)
 		me.state = S_PLAY_STND
+		P_MovePlayer(p)
 	end
 end
 
@@ -124,12 +136,32 @@ local function think_bat(p)
 	end
 end
 
+local function think_bird(p)
+	local me = p.mo
+	local takis = p.takistable
+	
+	takis.nocontrol = 2
+	takis.taunttime = $+2
+	
+	if me.state == S_PLAY_TAKIS_BIRD
+		--me.state = S_PLAY_TAKIS_BIRD
+		me.frame = ((takis.taunttime-2)/4 % 6)
+	end
+	
+	--cancel conga
+	if (p.cmd.buttons & BT_CUSTOM1)
+		TakisResetTauntStuff(takis)
+		me.state = S_PLAY_STND
+		P_MovePlayer(p)
+	end
+end
 
 rawset(_G, "TAKIS_TAUNT_INIT", {
 	[1] = init_ouch,
 	[2] = init_smug,
 	[3] = init_conga,
 	[4] = init_bat,
+	[5] = init_bird,
 })
 
 rawset(_G, "TAKIS_TAUNT_THINK", {
@@ -137,6 +169,7 @@ rawset(_G, "TAKIS_TAUNT_THINK", {
 	[2] = think_smug,
 	[3] = think_conga,
 	[4] = think_bat,
+	[5] = think_bird,
 })
 
 filesdone = $+1

@@ -106,6 +106,7 @@ rawset(_G, "TakisBooleans", function(p,me,takis,SKIN)
 	takis.inNIGHTSMode = (p.powers[pw_carry] == CR_NIGHTSMODE) or (maptol & TOL_NIGHTS)
 	takis.inSRBZ = gametype == GT_SRBZ
 	takis.inChaos = (CBW_Chaos_Library and CBW_Chaos_Library.Gametypes[gametype])
+	takis.isSuper = p.powers[pw_super] > 0
 end)
 
 local function dorandom()
@@ -578,6 +579,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 	elseif hud.combo.fillnum <= TAKIS_MAX_COMBOTIME*FU/2
 		hud.combo.shake = P_RandomFixed()*2/3
 	else
+		/*
 		if hud.combo.shake ~= 0
 			if hud.combo.shake > 0
 				hud.combo.shake = $-1
@@ -587,6 +589,8 @@ rawset(_G, "TakisHUDStuff", function(p)
 		else
 			hud.combo.shake = 0
 		end
+		*/
+		hud.combo.shake = sin(FixedAngle(leveltime*5))*15
 	end
 
 	hud.showingachs = 0
@@ -1056,6 +1060,17 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			return
 		end
 		
+		
+		if P_PlayerTouchingSectorSpecial(p,1,3)
+			if takis.fireasstime < 10*TR
+				takis.fireasstime = $+4
+			end			
+		else
+			if takis.fireasstime == 3*TR
+				S_StartSound(me,sfx_steam2)
+			end
+		end
+		
 		if takis.fireasstime > 3*TR
 			local flame = P_SpawnMobjFromMobj(me,
 				P_RandomRange(-me.radius/me.scale,me.radius/me.scale)*me.scale+P_RandomFixed(),
@@ -1066,7 +1081,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			P_SetObjectMomZ(flame,P_RandomRange(2,4)*me.scale+P_RandomFixed())
 		end
 		
-		if takis.fire == 1
+		if (takis.fire == 1 or takis.firenormal == 1)
 		and takis.fireballtime == 0
 			P_SpawnPlayerMissile(me,MT_FIREBALL)
 			S_StartSound(me,sfx_mario7)
@@ -1712,7 +1727,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	and (HAPPY_HOUR.overtime)
 	and (HAPPY_HOUR.happyhour)
 		if (takis.heartcards > 1)
-		and (not p.exiting)
+		and (not p.ptsr_outofgame)
 			takis.heartcards = 1
 		end
 		p.powers[pw_sneakers] = 3
@@ -1756,7 +1771,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if (me.pizza_out)
-	and (me.state ~= takis.pizzastate)
 	and (takis.pizzastate)
 	and (me.pizza_out == 1)
 		P_MovePlayer(p)
@@ -1911,10 +1925,10 @@ rawset(_G, "DoTakisSquashAndStretch", function(p, me, takis)
 		p.tr = 0
 	end
 	if p.jt > 0 then
-		p.jt = p.jt - 1
+		p.jt = $ - 1
 	end
 	if p.jt < 0 then
-		p.jt = p.jt + 1
+		p.jt = $ + 1
 	end
 	if not dontdo
 		if me.momz*takis.gravflip < 1 then
@@ -1953,7 +1967,8 @@ rawset(_G, "DoTakisSquashAndStretch", function(p, me, takis)
 		or takis.thokked) then
 			p.tk = 0
 		end
-		if (p.pflags & PF_THOKKED or takis.thokked) and p.tk == 0 then
+		if (p.pflags & PF_THOKKED or takis.thokked)
+		and p.tk == 0 then
 			p.tk = 1
 			p.jt = 5
 		end
@@ -2233,6 +2248,8 @@ rawset(_G, "TakisHealPlayer", function(p,me,takis,healtype,healamt)
 	
 	--hurt
 	if healtype == 3
+		if takis.isSuper then return end
+		
 		if takis.heartcards ~= 0
 			takis.heartcards = $-(abs(healamt))
 		end
@@ -3067,6 +3084,8 @@ rawset(_G,"TakisPowerfulArma",function(p)
 	local rad = 2700*FU
 	
 	if not (TAKIS_NET.nerfarma)
+		--yes powerful arma is just regular arma lol
+		P_BlackOw(p)
 		S_StartSound(me, sfx_bkpoof)
 		DoFlash(p,PAL_NUKE,20)
 		DoQuake(p,75*FU,20)
@@ -3305,6 +3324,12 @@ rawset(_G,"TakisMenuThinker",function(p)
 	if (p.cmd.buttons & BT_CUSTOM1)
 		TakisMenuOpenClose(p)
 		return
+	end
+	
+	if (p.cmd.buttons & BT_CUSTOM2)
+	and takis.HUD.showingletter
+		takis.HUD.showingletter = false
+		P_RestoreMusic(p)
 	end
 	
 	local menu = takis.cosmenu
@@ -3558,7 +3583,7 @@ rawset(_G, "TakisShotgunify", function(p)
 	S_StartSound(me,sfx_shgnl)
 	
 	if not (TakisReadAchievements(p) & ACHIEVEMENT_BOOMSTICK)
-		takis.shotguntuttic = 4*TR+(TR/2)
+		takis.shotguntuttic = 7*TR+(TR/2)
 	end
 	
 	TakisAwardAchievement(p,ACHIEVEMENT_BOOMSTICK)
