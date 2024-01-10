@@ -1350,7 +1350,7 @@ addHook("MobjThinker",function(ring)
 	local start = ring.startingtrans
 	local startn = transtonum[ring.startingtrans]
 	if ring.fuse < 10-startn
-		ring.frame = A|numtotrans[10-ring.fuse]
+		ring.frame = (ring.frame & FF_FRAMEMASK)|numtotrans[10-ring.fuse]
 	end
 end,MT_WINDRINGLOL)
 
@@ -1952,6 +1952,8 @@ addHook("MobjThinker",function(gem)
 			gem.emeraldcolor = emeraldslist[gem.emeralddex]
 			--never let spirits overlap
 			if gem.emeralddex ~= 0
+			and (me.player.takistable.spiritlist and
+			me.player.takistable.spiritlist[gem.emeralddex-1])
 				gem.timealive = me.player.takistable.spiritlist[gem.emeralddex-1].timealive--+((360/7)*gem.emeralddex)
 			end
 		end

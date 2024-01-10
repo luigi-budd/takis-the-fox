@@ -49,6 +49,7 @@ rawset(_G, "TakisButtonStuff", function(p,takis)
 		if takis.nocontrol
 			takis.nocontrol = $-1
 		end
+		/*
 		takis.jump = 0
 		takis.use = 0
 		takis.tossflag = 0
@@ -61,6 +62,8 @@ rawset(_G, "TakisButtonStuff", function(p,takis)
 		takis.weaponmask = 0
 		takis.weaponnext = 0
 		takis.weaponprev = 0
+		*/
+		takis.noability = NOABIL_ALL|NOABIL_THOK
 		if takis.nocontrol
 			p.powers[pw_nocontrol] = takis.nocontrol
 		end
@@ -1060,6 +1063,9 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			return
 		end
 		
+		--erm,,,
+		P_RemoveShield(p)
+		p.powers[pw_shield] = $|SH_PROTECTFIRE
 		
 		if P_PlayerTouchingSectorSpecial(p,1,3)
 			if takis.fireasstime < 10*TR
@@ -1118,7 +1124,8 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			S_StartSound(me,sfx_shgnk)
 			me.color = p.skincolor
 			me.colorized = false
-			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor			
+			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor
+			p.powers[pw_shield] = $ &~SH_PROTECTFIRE
 		end
 		
 		takis.fireasstime = $-1
@@ -1149,10 +1156,6 @@ end)
 rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	TakisHUDStuff(p)
-	
-	if (takis.noability)
-		takis.noability = 0
-	end
 	
 	--fake pw_flashing
 	if takis.fakeflashing > 0
@@ -1341,6 +1344,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 			d.tracer = me
 			d.angle = p.drawangle
 			d.dispoffset = 2
+			d.takis_flingme = false
 			p.powers[pw_strong] = $|STR_PUNCH|STR_STOMP|STR_UPPER
 		end
 		if not (leveltime%2)
@@ -1763,7 +1767,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if (me.pizza_in)
 	and me.state ~= S_PLAY_DEAD
 		if not (takis.pizzastate)
-			takis.pizzastate = me.state
+			takis.pizzastate = true
 		end
 		me.state = S_PLAY_DEAD
 		me.frame = A
@@ -1773,8 +1777,9 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if (me.pizza_out)
 	and (takis.pizzastate)
 	and (me.pizza_out == 1)
+		me.state = S_PLAY_STND
 		P_MovePlayer(p)
-		takis.pizzastate = 0
+		takis.pizzastate = false
 		TakisGiveCombo(p,takis,false,true)
 	end
 	

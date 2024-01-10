@@ -137,6 +137,9 @@ end)
 rawset(_G, "TakisSaveStuff", function(p, silent)
 	if (p ~= consoleplayer) then return end
 	
+	--well i dont see why not
+	TakisSaveAchievements(p)
+	
 	--write
 	local a1 = 0 
 	local a2 = 0 
@@ -198,8 +201,6 @@ rawset(_G, "TakisLoadStuff", function(p)
 	
 	if io --load savefile
 		DEBUG_print(p,IO_CONFIG|IO_SAVE)
-		
-		TakisLoadAchievements(p)
 		
 		local file = io.openlocal("client/takisthefox/config.dat")
 		

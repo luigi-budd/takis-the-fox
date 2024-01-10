@@ -128,6 +128,11 @@ end)
 rawset(_G, "TakisSaveAchievements", function(p)
 	if (p ~= consoleplayer) then return end
 	
+	--dont overwrite our existing achs if we havent loaded them yet
+	if not p.takistable.io.loadedach
+		return
+	end
+	
 	if io
 		DEBUG_print(p,IO_CONFIG|IO_SAVE)
 		

@@ -285,22 +285,10 @@ COM_AddCommand("takis_deleteachievements", function(p)
 		return	
 	end
 	
-	if consoleplayer ~= p
-		return
-	end
+	p.takistable.achfile = 0
+	TakisSaveAchievements(p)
 	
-	if io
-		
-		local file = io.openlocal(ACHIEVEMENT_PATH, "w+")
-		file:write(0)
-		TakisSaveAchievements(p)
-		p.takistable.achfile = 0
-		
-		prn(p,"Deleted "..skins[TAKIS_SKIN].realname.."'s achievements.")
-		
-		file:close()
-		
-	end
+	prn(p,"Deleted "..skins[TAKIS_SKIN].realname.."'s achievements.")
 	
 end)
 

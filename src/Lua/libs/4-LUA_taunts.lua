@@ -132,6 +132,7 @@ local function think_bat(p)
 			b.tracer = me
 			b.boxtype = "bat"
 			b.fuse = 2
+			b.takis_flingme = false
 		end
 	end
 end

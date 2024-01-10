@@ -100,7 +100,7 @@
 	-[done]synch happy hour for joining players
 	-[done]transformations
 	-[scrapped]bat taunt keeps colorization if interuppted
-	-[scapped]textspectator hud stuff
+	-[scrapped]textspectator hud stuff
 	-[pretty much done]shields are squished with pancake
 	-[done?]wtf is resynching & crashing servers!?? DEBUG!!!!
 	-[done?]death slam not activating sometimes
@@ -113,6 +113,7 @@
 	-[done]use takis.HUD.flyingscore to align all the rank stuff
 	-2d mode is SHIT!! fix weird state bugs
 	-SHIT IS STILL RESYNCHING!!
+	-fireass in nights freeroam
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -210,7 +211,7 @@ addHook("PlayerThink", function(p)
 	
 	if not p.takistable
 		TakisInitTable(p)
-		return
+		--return
 	end
 	
 	if not p.takistable.io.loaded
@@ -219,6 +220,11 @@ addHook("PlayerThink", function(p)
 		else
 			TakisLoadStuff(p)
 		end
+	end
+	
+	if not (p.takistable.io.loadedach)
+		p.takistable.io.loadedach = true
+		TakisLoadAchievements(p)
 	end
 	
 	--whatev
@@ -253,6 +259,9 @@ addHook("PlayerThink", function(p)
 			end
 		end
 		
+		if takis.noability
+			takis.noability = 0
+		end
 		TakisButtonStuff(p,takis)
 		TakisBooleans(p,me,takis,TAKIS_SKIN)
 		--more accurate speed thing
@@ -513,6 +522,9 @@ addHook("PlayerThink", function(p)
 									takis.clutchcombotime = 2*TR
 									
 									S_StartSoundAtVolume(me,sfx_kc5b,255/3)
+									if ccombo >= 3
+										S_StartSoundAtVolume(me,sfx_cltch2,255/2)
+									end
 									
 									--effect
 									local ghost = P_SpawnGhostMobj(me)
@@ -630,7 +642,7 @@ addHook("PlayerThink", function(p)
 					end
 					
 					--hammer blast
-					if takis.use == (TR/4)
+					if takis.use == (TR/5)
 					and not takis.onGround
 					and not takis.hammerblastdown
 					and not (takis.inPain or takis.inFakePain)
@@ -1941,6 +1953,7 @@ addHook("PlayerThink", function(p)
 				or (takis.nocontrol)
 				or (me.pizza_in or me.pizza_out)
 				or (takis.inWaterSlide)
+				or (p.ptsr_outofgame)
 					takis.combo.frozen = true
 					if ((p.exiting) and not (p.pflags & PF_FINISHED))
 						takis.combo.cashable = true
@@ -2036,6 +2049,13 @@ addHook("PlayerThink", function(p)
 				end
 				TakisResetHammerTime(p)
 				takis.dontfootdust = true
+				
+				if (p.powers[pw_carry] == CR_ROLLOUT)
+					if me.state == S_PLAY_FALL
+						me.state = S_PLAY_STND
+						P_MovePlayer(p)
+					end
+				end
 			end
 			
 			--this is actually stupid
@@ -2188,10 +2208,10 @@ addHook("PlayerThink", function(p)
 					takis.HUD.rank.percent = $*2
 				elseif (rank == "A")
 					takis.HUD.rank.score = p.score-(per*3)
-					takis.HUD.rank.percent = $*5
+					takis.HUD.rank.percent = $*4
 				elseif (rank == "S")
 					takis.HUD.rank.score = p.score-(per*8)
-					takis.HUD.rank.percent = $*5
+					takis.HUD.rank.percent = $*4
 				end
 				
 				takis.HUD.rank.score = $+takis.combo.score
@@ -2521,6 +2541,7 @@ addHook("PlayerCanDamage", function(player, mobj)
 end)
 
 --handle takis damage here
+--freeroam damage is handled in the ShouldDamage
 addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	if not mo
 	or not mo.valid
@@ -2531,16 +2552,13 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	local takis = p.takistable
 
 	if takis.inFakePain
-		print("ASAAA")
 		return true
 	end
 	
-	print("@")
 	if ((p.powers[pw_flashing])
 	and (p.powers[pw_carry] == CR_NIGHTSMODE))
 		return
 	end
-	print("A")
 
 	if p.deadtimer > 10
 		return
@@ -2619,12 +2637,12 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	end
 	
 	--fireass
-	print(dmgt & DMG_FIRE)
 	local extraheight = false
-	if dmgt & DMG_FIRE
+	if dmgt == DMG_FIRE
 	and (p.powers[pw_carry] ~= CR_NIGHTSMODE)
 		if not (p.powers[pw_shield] & SH_PROTECTFIRE)
 		and not (takis.transfo & TRANSFO_FIREASS)
+			S_StartSound(mo,sfx_fire)
 			S_StartSound(mo,sfx_trnsfo)
 			takis.transfo = $|TRANSFO_FIREASS
 			takis.fireasssmoke = TR/2
@@ -2985,18 +3003,74 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		or sor == mo)
 			return
 		end
-		S_StartSound(mo,sfx_nghurt)
-		if p.nightstime > TICRATE*5
-			p.nightstime = $-TICRATE*5
-		else
-			p.nightstime = 0
+		
+		--fireass
+		local extraheight = false
+		if dmgt == DMG_FIRE
+		and (p.powers[pw_carry] ~= CR_NIGHTSMODE)
+			if not (p.powers[pw_shield] & SH_PROTECTFIRE)
+			and not (takis.transfo & TRANSFO_FIREASS)
+				S_StartSound(mo,sfx_trnsfo)
+				takis.transfo = $|TRANSFO_FIREASS
+				takis.fireasssmoke = TR/2
+				takis.fireasstime = 10*TR
+				extraheight = true
+			else
+				return false
+			end
 		end
-		takis.fakeflashing = flashingtics
-		DoQuake(p,30*FU*(max(1,p.timeshit*2/3)),15)
-		p.timeshit = $+1
+		
+		if not extraheight
+			S_StartSound(mo,sfx_nghurt)
+			if p.nightstime > TICRATE*5
+				p.nightstime = $-TICRATE*5
+			else
+				p.nightstime = 0
+			end
+		end
+		
 		S_StartSound(mo,sfx_smack)
+		DoQuake(p,30*FU*(max(1,p.timeshit*2/3)),15)
 		S_StartAntonOw(mo)
+
+		SpawnEnemyGibs(inf or mo,mo)
+
+		TakisResetHammerTime(p)
+
 		P_DoPlayerPain(p,sor,inf)
+		takis.ticsforpain = TR
+
+		S_StartSound(mo,sfx_shldls)
+		if (dmgt & DMG_SPIKE)
+			S_StartSound(mo,sfx_spkdth)
+		end
+		
+		p.timeshit = $+1
+		takis.timeshit = $+1
+		
+		if inf
+		and inf.valid
+			local ang = R_PointToAngle2(mo.x,mo.y, inf.x, inf.y)
+			P_InstaThrust(mo,ang,-5*mo.scale)
+		end
+		L_ZLaunch(mo,(extraheight) and 17*mo.scale or 8*mo.scale)
+		if not extraheight
+			mo.state = S_PLAY_PAIN
+		else
+			mo.state = S_PLAY_DEAD
+		end
+		
+		takis.inFakePain = true
+		p.pflags = $ &~(PF_THOKKED|PF_JUMPED)
+		takis.thokked = false
+		takis.dived = false
+		if (dmgt == DMG_ELECTRIC)
+			S_StartSound(mo,sfx_buzz2)
+			mo.state = S_PLAY_DEAD
+			takis.transfo = $|TRANSFO_ELEC
+			takis.electime = TR*3/2
+			L_ZLaunch(mo,4*mo.scale)
+		end
 		
 		return
 	end
@@ -3520,6 +3594,7 @@ addHook("AbilitySpecial", function(p)
 	return true
 end)
 
+--jump effect
 addHook("JumpSpecial", function(p)
 	if p.mo.skin ~= TAKIS_SKIN then return end
 	
@@ -3527,6 +3602,8 @@ addHook("JumpSpecial", function(p)
 	local takis = p.takistable
 	
 	if takis.jump then return end
+	if (takis.thokked or p.pflags & PF_THOKKED) then return end
+	if (takis.jumptime > 0) then return end
 	
 	if takis.onGround
 		local maxi = P_RandomRange(8,16)
@@ -3545,13 +3622,21 @@ addHook("JumpSpecial", function(p)
 			dust.destscale = dust.scale/2
 		end
 
-		local wind = P_SpawnMobjFromMobj(me,0,0,0,MT_THOK)
+		local wind = P_SpawnMobjFromMobj(me,0,0,0,MT_WINDRINGLOL)
 		wind.scale = me.scale
-		wind.fuse = wind.tics
+		
+		wind.fuse = 7
+		wind.tics = -1
+		
+		wind.frame = A
 		wind.sprite = SPR_RAIN
+		wind.frame = B
+		
 		wind.renderflags = $|RF_PAPERSPRITE
+		wind.startingtrans = FF_TRANS10
+		
 		wind.angle = R_PointToAngle2(0, 0, me.momx, me.momy)
-		wind.spritexscale,wind.spriteyscale = me.scale*3/2,me.scale
+		wind.spritexscale,wind.spriteyscale = me.scale,me.scale
 		wind.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0, 0, me.momx, me.momy),FixedMul(9*FU,p.jumpfactor)) + ANGLE_90
 	end
 end)
@@ -3634,6 +3719,7 @@ addHook("MobjMoveCollide",function(tm,t)
 					if (t.flags2 & MF2_AMBUSH)
 						S_StartSound(tm,sfx_trnsfo)
 						tm.state = S_PLAY_ROLL
+						p.pflags = $|PF_SPINNING
 						takis.transfo = $|TRANSFO_BALL
 					end
 					

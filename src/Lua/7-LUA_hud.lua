@@ -1490,7 +1490,7 @@ local function drawcombostuff(v,p)
 		
 		if not (takis.combo.outrotics)
 			v.drawString(backx+5*comboscale+(FixedMul(patchx,comboscale)),
-				backy+7*comboscale,
+				backy+6*comboscale+(v.cachePatch("TAKCOFILL").height*comboscale/2)-(7*comboscale/2),
 				takis.combo.score,
 				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
 				"thin-fixed-center"
@@ -3049,6 +3049,9 @@ local function drawdebug(v,p)
 		drawflag(v,x+30,y-70,"PC",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_PANCAKE))
 		drawflag(v,x+45,y-70,"EL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_ELEC))
 		drawflag(v,x+60,y-70,"TR",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_TORNADO))
+		drawflag(v,x+75,y-78,
+			FixedMul(FixedDiv(takis.fireasstime*FU,10*TR*FU),100*FU)/FU.."%",
+		flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_FIREASS))
 		drawflag(v,x+75,y-70,"FA",flags,V_GREENMAP,V_REDMAP,"thin",(takis.transfo & TRANSFO_FIREASS))
 		
 		v.drawString(x,y-58,"noability",flags|V_GREENMAP,"thin")
@@ -3094,7 +3097,17 @@ local function drawdebug(v,p)
 				V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOTOP,
 				"thin"
 			)
-		end	
+		end
+		local work = 0
+		for p2 in players.iterate
+			v.drawString(290,30+(work*8),
+				"["..#p2.."] "..p2.name.." - "..p2.takistable.achfile,
+				V_HUDTRANS|V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE|
+				((p2 == p) and V_YELLOWMAP or 0),
+				"thin-right"
+			)
+			work = $+1
+		end
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_QUAKE)
 		for k,va in ipairs(takis.quake)

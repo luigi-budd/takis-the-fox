@@ -262,6 +262,7 @@ addHook("IntermissionThinker",function(stagefailed)
 				S_StartSound(nil,sfx_tayeah,p)
 			elseif t.inttic == 2
 			and not stagefailed
+			and string.lower(G_BuildMapTitle(takis.lastmap)) ~= "black hole zone"
 				S_FadeMusic(0,MUSICRATE,p)
 			end
 		end

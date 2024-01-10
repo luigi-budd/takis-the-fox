@@ -569,6 +569,7 @@ rawset(_G, "TakisInitTable", function(p)
 			hasfile = false,
 			loaded = false,
 			loadwait = 25,
+			loadedach = false,
 			
 			nostrafe = 0,
 			nohappyhour = 0,
@@ -616,6 +617,7 @@ rawset(_G, "TakisInitTable", function(p)
 					[2] = FU/2,
 					[3] = FU/2,
 					[4] = FU/2,
+					[5] = FU/2,
 				},
 			},
 			--text x offsets
