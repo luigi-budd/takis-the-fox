@@ -276,6 +276,12 @@ rawset(_G, "TAKIS_NET", {
 		-- do you REALLY wanna back track these 2?
 		["aerial garden zone"] = true,
 		["azure temple zone"] = true,
+		
+		["hell coaster zone 1"] = true,
+		--this stage kinda already has an escape sequence
+		--of its own
+		["festung oder so"] = true,
+		["spiral hill pizza"] = true,
 	},
 	
 	heartcardmo = {},
@@ -509,6 +515,8 @@ rawset(_G, "TakisInitTable", function(p)
 		fireasssmoke = 0,
 		fireasstime = 0,
 		fireballtime = 0,
+		starman = false,
+		coyote = 5,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -526,7 +534,7 @@ rawset(_G, "TakisInitTable", function(p)
 		tauntjoinable = false,
 		--quick taunts activated by
 		--tossflag+c2/c3
-		--uses taunt idss
+		--uses taunt ids
 		--these are actually io but they arent in the io table :trol:
 		tauntquick1 = 0,
 		tauntquick2 = 0,
@@ -800,6 +808,7 @@ rawset(_G, "TakisInitTable", function(p)
 			funny = {
 				y = 500*FU,
 				alsofunny = false,
+				wega = false,
 				tics = 0,
 			},
 			ptsr = {
@@ -996,6 +1005,8 @@ SafeFreeslot("sfx_slam")
 sfxinfo[sfx_slam].caption = "\x8DSlam!!\x80"
 SafeFreeslot("sfx_jumpsc")
 sfxinfo[sfx_jumpsc].caption = "\x85".."AAAAAHHHHH!!!!\x80"
+SafeFreeslot("sfx_wega")
+sfxinfo[sfx_wega].caption = "\x85".."AAAAAHHHHH!!!!\x80"
 SafeFreeslot("sfx_mclang")
 sfxinfo[sfx_mclang] = {
 	caption = "\x8DMysterious clanging\x80",
@@ -1633,7 +1644,7 @@ freeslot("MT_TAKIS_GIB")
 states[S_TAKIS_GIB] = {
 	sprite = SPR_TGIB,
 	frame = A,
-	tics = 3*TR,
+	tics = -1,
 }
 mobjinfo[MT_TAKIS_GIB] = {
 	doomednum = -1,

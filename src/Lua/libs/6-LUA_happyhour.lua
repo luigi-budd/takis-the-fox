@@ -172,6 +172,31 @@ addHook("ThinkFrame",do
 				local me = p.mo
 				local takis = p.takistable
 				
+				/*
+				if P_RandomChance(FU/4)
+					local fa = FixedAngle(P_RandomRange(0,360)*FU)
+					local x,y = ReturnTrigAngles(fa)
+					local range = P_RandomRange(1000,2000)
+					local xvar = P_RandomRange(100,300)*P_RandomRange(1,2)
+					local yvar = P_RandomRange(100,300)*P_RandomRange(1,2)
+					local thok = P_SpawnMobjFromMobj(me,
+						range*x+P_RandomRange(-yvar,yvar)*me.scale,
+						range*y+P_RandomRange(-yvar,yvar)*me.scale,
+						P_RandomRange(-yvar,yvar)*me.scale,
+						MT_THOK
+					)
+					thok.scale = P_RandomRange(1,5)*FU+P_RandomFixed()
+					thok.flags2 = $|MF2_DONTDRAW
+					A_BossScream(thok,1,choosething(MT_BOSSEXPLODE,MT_SONIC3KBOSSEXPLODE))
+					
+					local sfx = P_SpawnGhostMobj(thok)
+					sfx.flags2 = $|MF2_DONTDRAW
+					sfx.tics = TR*3/4
+					sfx.fuse = TR*3/4
+					S_StartSound(sfx,sfx_tkapow)
+				end
+				*/
+				
 				--finish thinker
 				if (p.exiting or p.pflags & PF_FINISHED)
 				and (hh.exit and hh.exit.valid)

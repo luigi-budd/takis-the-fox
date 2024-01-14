@@ -89,6 +89,7 @@ rawset(_G, "TakisBooleans", function(p,me,takis,SKIN)
 	
 	takis.justHitFloor = takis.timetouchingground == 1
 	takis.onGround = (P_IsObjectOnGround(me)) or (takis.onPosZ) and (not (P_CheckDeathPitCollide(me)))
+	if (p.powers[pw_carry] == CR_ROLLOUT) then takis.onGround = true end
 	takis.inPain = P_PlayerInPain(p)
 	takis.isTakis = (me.skin == SKIN) or (skins[p.skin].name == SKIN)
 	
@@ -1063,10 +1064,6 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			return
 		end
 		
-		--erm,,,
-		P_RemoveShield(p)
-		p.powers[pw_shield] = $|SH_PROTECTFIRE
-		
 		if P_PlayerTouchingSectorSpecial(p,1,3)
 			if takis.fireasstime < 10*TR
 				takis.fireasstime = $+4
@@ -1607,6 +1604,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 					isultimate = (p2.inazuma and p2.inazuma.flags & (1<<6))
 					
 					if isultimate
+					and not (takis.taunttime or p.textBoxInAction)
 						local tics = 6
 						if ((takis.tauntjoin) and (takis.tauntjoin.valid))
 						and not (takis.accspeed or me.momz)
@@ -1821,6 +1819,39 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if takis.fireballtime then takis.fireballtime = $-1 end
 	
+	if (p.powers[pw_invulnerability] and
+	TAKIS_NET.isretro)
+		takis.starman = true
+		local color = SKINCOLOR_GREEN
+
+		--not everyone is salmon
+		local salnum = #skincolors[ColorOpposite(p.skincolor)]
+		takis.afterimagecolor = $+1
+		if (takis.afterimagecolor > #skincolors-1-salnum)
+			takis.afterimagecolor = 1
+		end
+		color = salnum+takis.afterimagecolor
+		
+		me.color = color
+		me.colorized = true
+		if not (p.powers[pw_invulnerability] > 3*TR)
+			if p.powers[pw_invulnerability] > TR
+				if not (p.powers[pw_invulnerability]/2 % 2)
+					me.color = (p.powers[pw_shield] & SH_FIREFLOWER) and SKINCOLOR_WHITE or p.skincolor
+					me.colorized = false
+				end
+			else
+				if not (p.powers[pw_invulnerability] % 2)
+					me.color = (p.powers[pw_shield] & SH_FIREFLOWER) and SKINCOLOR_WHITE or p.skincolor
+					me.colorized = false
+				end
+			end
+		end
+	elseif takis.starman
+		me.color = (p.powers[pw_shield] & SH_FIREFLOWER) and SKINCOLOR_WHITE or p.skincolor
+		me.colorized = false
+	end
+	
 	p.alreadyhascombometer = 2
 	
 --shorts end
@@ -1841,6 +1872,8 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	or not me.valid
 		return
 	end
+	
+	local takis = p.takistable
 	
 	local ghost = P_SpawnMobjFromMobj(me,0,0,0,MT_TAKIS_AFTERIMAGE)
 	ghost.target = me
@@ -1873,11 +1906,13 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	
 	--not everyone is salmon
 	local salnum = #skincolors[ColorOpposite(p.skincolor)]
-	p.takistable.afterimagecolor = $+1
-	if (p.takistable.afterimagecolor > #skincolors-1-salnum)
-		p.takistable.afterimagecolor = 1
+	if not (takis.starman)
+		takis.afterimagecolor = $+1
+		if (takis.afterimagecolor > #skincolors-1-salnum)
+			takis.afterimagecolor = 1
+		end
 	end
-	color = salnum+p.takistable.afterimagecolor
+	color = salnum+takis.afterimagecolor
 	
 	if G_GametypeHasTeams()
 		color = p.skincolor-1
@@ -2081,6 +2116,10 @@ rawset(_G, "CanPlayerHurtPlayer", function(p1,p2,nobs)
 			return false
 		end
 		if ((p2.powers[pw_flashing]) or (p2.powers[pw_invulnerability]) or (p2.powers[pw_super]))
+			return false
+		end
+		
+		if (p1.botleader == p2)
 			return false
 		end
 	end
@@ -3587,7 +3626,7 @@ rawset(_G, "TakisShotgunify", function(p)
 	end
 	S_StartSound(me,sfx_shgnl)
 	
-	if not (TakisReadAchievements(p) & ACHIEVEMENT_BOOMSTICK)
+	if not (takis.achfile & ACHIEVEMENT_BOOMSTICK)
 		takis.shotguntuttic = 7*TR+(TR/2)
 	end
 	
@@ -3819,6 +3858,27 @@ rawset(_G, 'L_ZLaunch', function(mo,thrust,relative)
 		thrust = $*3/5
 	end
 	P_SetObjectMomZ(mo,thrust,relative)
+end)
+
+--AAAAHHHH!
+rawset(_G,"TakisJumpscare",function(p,wega)
+	local takis = p.takistable
+	TakisAwardAchievement(p,ACHIEVEMENT_JUMPSCARE)
+	takis.HUD.funny.tics = 3*TR
+	takis.HUD.funny.y = 400*FU
+	takis.HUD.funny.alsofunny = P_RandomChance(FU/10)
+	--wega
+	if not takis.HUD.funny.alsofunny
+	or (wega == true)
+		takis.HUD.funny.wega = (wega) and true or P_RandomChance(FU/4)
+		if takis.HUD.funny.wega
+			S_SetInternalMusicVolume(0,p)
+			S_FadeMusic(100,3*MUSICRATE,p)
+			S_StartSound(nil,sfx_wega,p)
+			return
+		end
+	end
+	S_StartSound(nil,sfx_jumpsc,p)
 end)
 
 filesdone = $+1

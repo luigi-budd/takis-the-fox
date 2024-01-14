@@ -170,6 +170,11 @@ end)
 rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	if (TAKIS_NET.noachs and netgame) then return end
 	
+	if p.bot == BOT_2PAI
+	or p.bot == BOT_MPAI
+		return
+	end
+	
 	if achieve == nil
 		error("TakisAwardAchievement was not given an achievement!")
 	end
@@ -209,13 +214,6 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 		S_StartSound(nil,sfx_achern,p2)
 	end
 	
-end)
-
-rawset(_G,"TakisReadAchievements",function(p)
-	if TAKIS_ISDEBUG
-		print("\x82WARNING\x80: TakisReadAchievements is deprecated and will be removed soon. Instead, check for p.takistable.achfile.")
-	end
-	return p.takistable.achfile
 end)
 
 filesdone = $+1

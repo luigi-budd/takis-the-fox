@@ -1,8 +1,8 @@
-//LOOKING AT MY CODE,,, CURSED!!!
-//𓀀 𓀁 𓀂 𓀃 𓀄 𓀅 𓀆 𓀇 𓀈 𓀉 𓀊 𓀋 𓀌 𓀍 𓀎 𓀏 𓀐 𓀑 𓀒 𓀓 𓀔 𓀕 𓀖 𓀗 𓀘 𓀙 𓀚
-//j
+--LOOKING AT MY CODE,,, CURSED!!!
+--𓀀 𓀁 𓀂 𓀃 𓀄 𓀅 𓀆 𓀇 𓀈 𓀉 𓀊 𓀋 𓀌 𓀍 𓀎 𓀏 𓀐 𓀑 𓀒 𓀓 𓀔 𓀕 𓀖 𓀗 𓀘 𓀙 𓀚
+--/j
 
-// "Terrible Character..."
+-- "Terrible Character..."
 
 if (VERSION == 202) and (SUBVERSION < 12)
 	local special = P_RandomChance(FRACUNIT/13)
@@ -33,12 +33,12 @@ if (VERSION == 202) and (SUBVERSION < 12)
 	return
 end
 
-//file tree
+--file tree
 local guh = {
 	"init",
 	"net",
 }
-//libs
+--libs
 local filelistt1 = {
 	"CustomHud",
 	"functions",
@@ -59,7 +59,7 @@ local filelist = {
 	"misc",
 	"MOTD",
 }
-//
+--
 
 rawset(_G, "filesdone", 0)
 rawset(_G, "NUMFILES", (#guh)+(#filelistt1)+(#filelist-1))
@@ -103,7 +103,7 @@ end)
 
 
 
-//the file stuff
+--the file stuff
 local pre = "LUA_"
 local suf = ".lua"
 
@@ -122,7 +122,7 @@ for k,v in ipairs(filelistt1)
 end
 
 for k,v in ipairs(filelist)
-	if k == 4 then continue end
+	if (string.sub(v,1,4) == "DNU-") then continue end
 	dofile((k+1).."-"..pre..v..suf)
 	print("Done "..filesdone.." file(s)")
 end

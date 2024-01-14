@@ -208,22 +208,19 @@ addHook("ThinkFrame", do
 	t.playercount = playerCount
 	t.takiscount = takisCount
 	
-	--PLEASE... I WANT MY EARS
-	/*
 	if not (leveltime % 3*TR)
 	and ((multiplayer) and not splitscreen)
 	and not (t.noachs)
 		if t.takiscount >= 6
 			for p in players.iterate
-				if (p ~= consoleplayer) then continue end
 				if skins[p.skin].name == TAKIS_SKIN
+				and not (p.takistable.achfile & ACHIEVEMENT_TAKISFEST)
 					TakisAwardAchievement(p,ACHIEVEMENT_TAKISFEST)
 				end
 			end
 			
 		end
 	end
-	*/
 	
 	if (ultimatemode)
 		if TAKIS_MAX_HEARTCARDS ~= 1
@@ -260,10 +257,6 @@ addHook("IntermissionThinker",function(stagefailed)
 			elseif t.inttic == TR+(TR*4/5)
 			and All7Emeralds(emeralds)
 				S_StartSound(nil,sfx_tayeah,p)
-			elseif t.inttic == 2
-			and not stagefailed
-			and string.lower(G_BuildMapTitle(takis.lastmap)) ~= "black hole zone"
-				S_FadeMusic(0,MUSICRATE,p)
 			end
 		end
 	end

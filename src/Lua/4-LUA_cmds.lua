@@ -1,4 +1,9 @@
 local prn = CONS_Printf
+local function choose(...)
+	local args = {...}
+	local choice = P_RandomRange(1,#args)
+	return args[choice]
+end
 
 COM_AddCommand("takis_nostrafe", function(p)
 	if gamestate ~= GS_LEVEL
@@ -100,7 +105,7 @@ local function GetPlayer(player, pname)
 	return player2
 end
 
-COM_AddCommand("takis_dojumpscare", function(p,node)
+COM_AddCommand("takis_dojumpscare", function(p,node,wega)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
 		return
@@ -112,20 +117,30 @@ COM_AddCommand("takis_dojumpscare", function(p,node)
 	end
 
 	if not node
-		prn(p,"Forces Takis' jumpscare on someone.")
+		prn(p,"Forces Takis' jumpscare on someone. Type @random to choose a random person in the server")
 		return
+	end
+	
+	--@ because you cant start names with it
+	if node == "@random"
+		local plist = {}
+		for play in players.iterate
+			if play.bot
+			or play.quittime
+				continue
+			end
+			table.insert(plist,#play)
+		end
+		if #plist == 1
+			prn(p,"There's no one else to choose but you!")
+		end
+		
+		node = choose(unpack(plist))
 	end
 	
 	local p2 = GetPlayer(p,node)
 	if p2
-		local takis = p2.takistable
-		if not (TakisReadAchievements(p2) & ACHIEVEMENT_JUMPSCARE)
-			TakisAwardAchievement(p2,ACHIEVEMENT_JUMPSCARE)
-		end
-		S_StartSound(nil,sfx_jumpsc,p2)
-		takis.HUD.funny.tics = 3*TR
-		takis.HUD.funny.y = 400*FU
-		takis.HUD.funny.alsofunny = P_RandomChance(FU/10)
+		TakisJumpscare(p2,wega ~= nil)
 		prn(p,"Jumpscared "..p2.name)
 	end
 	

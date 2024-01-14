@@ -534,6 +534,19 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		return
 	end
 	
+	local p = consoleplayer
+	local takis = p.takistable
+	
+	if (gamestate == GS_INTERMISSION)
+	and takis.lastss
+		newname = string.lower(newname)
+		
+		if newname == "_clear"
+			--mapmusname = song
+			return "blstcl",mflags,true,pos,prefade,fade	
+		end
+	end
+	
 	local dohhmus = true
 	if (consoleplayer.takistable.io.nohappyhour == 1)
 		dohhmus = false
@@ -545,7 +558,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 	end
 	
 	--print(" s "..tostring(HAPPY_HOUR.happyhour))
-	if (HAPPY_HOUR.happyhour)
+	if (HAPPY_HOUR.happyhour and not HAPPY_HOUR.gameover)
 	and dohhmus
 	
 		local hh = HAPPY_HOUR
@@ -1051,6 +1064,10 @@ addHook("MobjThinker",function(me)
 			end
 			
 			me.activators.cardsrespawn[k] = $-1
+			
+			if (HAPPY_HOUR.time == 1)
+				me.activators.cardsrespawn[k] = 0
+			end
 		elseif v == 0
 		and (me.activators.cards[k] ~= false)
 			me.activators.cards[k] = false
@@ -1078,6 +1095,10 @@ addHook("MobjThinker",function(me)
 			end
 			
 			me.activators.comborespawn[k] = $-1
+			
+			if (HAPPY_HOUR.time == 1)
+				me.activators.comborespawn[k] = 0
+			end
 		elseif v == 0
 		and (me.activators.combo[k] ~= false)
 			me.activators.combo[k] = false
@@ -1097,7 +1118,7 @@ addHook("MobjThinker",function(me)
 		end
 	end
 	
-	local br = 145*me.scale
+	local br = 215*me.scale
 	
 	for p in players.iterate
 		if p and p.valid
@@ -1724,6 +1745,7 @@ addHook("MobjThinker",function(gib)
 		gib.flags = $|MF_NOCLIPHEIGHT|MF_NOCLIP
 		L_ZLaunch(gib,P_RandomRange(4,9)*FU+P_RandomFixed())
 		gib.bounced = true
+		gib.tics = 3*TR
 	end
 end,MT_TAKIS_GIB)
 
@@ -2011,6 +2033,13 @@ addHook("MobjThinker",function(gem)
 	return
 end,MT_GOTEMERALD)
 
+addHook("MobjThinker",function(rock)
+	if not (rock and rock.valid) then return end
+	
+	local speed = FixedHypot(rock.momx,rock.momy)
+	local topspeed = FixedMul(rock.info.speed,rock.scale)
+	
+end,MT_ROLLOUTROCK)
 
 filesdone = $+1
 

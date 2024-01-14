@@ -59,6 +59,7 @@ addHook("TouchSpecial", function(mo,mobj)
 			end
 			if mobj.player.freeroamtime
 			and mobj.player.nightsfreeroam
+				TakisResetHammerTime(mobj.player)
 				mobj.player.setnighttime = true
 				mobj.player.nightsfreeroam = false
 			end

@@ -175,6 +175,8 @@ COM_AddCommand("shield", function(p,sh)
 		p.powers[pw_shield] = shields[sh]
 		if shields[sh] ~= 0
 			P_SpawnShieldOrb(p)
+		else
+			P_RemoveShield(p)
 		end
 		if sh == "ff"
 			p.realmo.color = SKINCOLOR_WHITE

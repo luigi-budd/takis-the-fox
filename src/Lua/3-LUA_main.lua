@@ -90,7 +90,7 @@
 	-[done]linedef trigger to open dialog
 	-[done]pt spice runners support
 	-[done]replace menu patches with drawfill
-	-takisfest ach being buggy as hell, keeps doign every tiem
+	-[done?]takisfest ach being buggy as hell, keeps doign every tiem
 	-[done]redo the cos menu. antonblast styled?
 	-[done]remove disciplinary action
 	-[done]happy hour is weird when it is synched
@@ -111,9 +111,9 @@
 	-[done]happy hour quakes not working
 	-[done]bubbles reset state and stuff
 	-[done]use takis.HUD.flyingscore to align all the rank stuff
-	-2d mode is SHIT!! fix weird state bugs
+	-[done?]2d mode is SHIT!! fix weird state bugs
 	-SHIT IS STILL RESYNCHING!!
-	-fireass in nights freeroam
+	-[done]fireass in nights freeroam
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -457,10 +457,10 @@ addHook("PlayerThink", function(p)
 			end
 			
 			if me.friction > 29*FU/32
-				if not (leveltime % 4)
-				and takis.onGround
+				--if not (leveltime % 4)
+				if takis.onGround
 				and not p.powers[pw_sneakers]
-					me.friction = $-(FU/50)
+					me.friction = $-(FU/200)
 				end
 			end
 			
@@ -471,11 +471,10 @@ addHook("PlayerThink", function(p)
 				if (not takis.shotgunned)
 					--clutch
 					if takis.use == 1
-					and takis.onGround
+					and (takis.onGround or takis.coyote)
 					and not takis.taunttime
 					and me.health
 					and (me.state ~= S_PLAY_GASP)
-					and (takis.notCarried)
 					and (me.sprite2 ~= SPR2_PAIN)
 					and not PSO
 					and not (takis.yeahed)
@@ -593,24 +592,19 @@ addHook("PlayerThink", function(p)
 							thrust = $/4
 						end
 						
+						local mo = (p.powers[pw_carry] & CR_ROLLOUT) and me.tracer or me
+						if mo ~= me then ang = me.angle end
 						thrust = FixedMul(thrust,me.scale)
 						
-						P_Thrust(me,/*p.drawangle*/ang,thrust)
-						
-						/*
-						local x,y = ReturnTrigAngles(p.drawangle-ANGLE_90)
-						local d1 = P_SpawnMobjFromMobj(me,16*x,16*y,0,MT_TAKIS_CLUTCHDUST)
-						x,y = ReturnTrigAngles(p.drawangle)
-						P_SetOrigin(d1,d1.x-16*x,d1.y-16*y,d1.z)
- 						d1.angle = R_PointToAngle2(me.x+me.momx,me.y+me.momy,d1.x,d1.y)
-						P_SetOrigin(d1,d1.x,d1.y,d1.z)
-						*/
+						P_Thrust(mo,ang,thrust)
 						
 						--xmom code
-						local d1 = P_SpawnMobjFromMobj(me, -20*cos(p.drawangle + ANGLE_45), -20*sin(p.drawangle + ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
-						local d2 = P_SpawnMobjFromMobj(me, -20*cos(p.drawangle - ANGLE_45), -20*sin(p.drawangle - ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
-						d1.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d1.x, d1.y) --- ANG5
-						d2.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d2.x, d2.y) --+ ANG5
+						if takis.notCarried
+							local d1 = P_SpawnMobjFromMobj(me, -20*cos(ang + ANGLE_45), -20*sin(p.drawangle + ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
+							local d2 = P_SpawnMobjFromMobj(me, -20*cos(ang - ANGLE_45), -20*sin(p.drawangle - ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
+							d1.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d1.x, d1.y) --- ANG5
+							d2.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d2.x, d2.y) --+ ANG5
+						end
 						
 						local speedmul = FU
 						if (me.flags2 & MF2_TWOD
@@ -623,7 +617,7 @@ addHook("PlayerThink", function(p)
 						
 						local runspeed = FixedMul(skins[TAKIS_SKIN].runspeed,speedmul)
 						if takis.accspeed < runspeed
-							P_Thrust(me,p.drawangle,FixedMul(runspeed-takis.accspeed,me.scale))
+							P_Thrust(mo,ang,FixedMul(runspeed-takis.accspeed,me.scale))
 						end
 						
 						--TODO replace with clutchstart
@@ -1129,13 +1123,7 @@ addHook("PlayerThink", function(p)
 						G_ExitLevel()
 					end
 					if P_RandomChance(FU/70)
-						if takis.HUD.funny.tics == 0
-							S_StartSound(nil,sfx_jumpsc,p)
-							TakisAwardAchievement(p,ACHIEVEMENT_JUMPSCARE)
-							takis.HUD.funny.tics = 3*TR
-							takis.HUD.funny.y = 400*FU
-							takis.HUD.funny.alsofunny = P_RandomChance(FU/10)
-						end
+						TakisJumpscare(p)
 					end
 				end
 			end
@@ -1687,11 +1675,15 @@ addHook("PlayerThink", function(p)
 				p.charflags = $ &~(SF_CANBUSTWALLS|SF_RUNONWATER)
 				p.powers[pw_strong] = $ &~STR_WALL
 				p.runspeed = skins[TAKIS_SKIN].runspeed
-				takis.afterimagecolor = 1
+				if not takis.starman
+					takis.afterimagecolor = 1
+				end
 			end
 			
 			--stuff to do while grounded
 			if takis.onGround
+				takis.coyote = 4
+				
 				if (p.pflags & PF_SHIELDABILITY)
 				and (p.powers[pw_shield] == SH_BUBBLEWRAP)
 					P_DoBubbleBounce(p)
@@ -1701,7 +1693,7 @@ addHook("PlayerThink", function(p)
 				end
 				
 				if takis.inFakePain
-					takis.fakeflashing = 4*flashingtics/5
+					takis.fakeflashing = flashingtics
 					if (me.flags2 & MF2_TWOD or twodlevel)
 					and (me.state == S_PLAY_PAIN)
 						me.state = S_PLAY_STND
@@ -1811,6 +1803,15 @@ addHook("PlayerThink", function(p)
 				--speedpads conserve speed too
 				if P_PlayerTouchingSectorSpecial(p, 3, 5) 
 					P_Thrust(me,me.angle,takis.prevspeed)
+				end
+			else
+				if takis.coyote
+					takis.coyote = $-1
+					if takis.jump == 1
+					and not (p.pflags & (PF_JUMPED|PF_JUMPSTASIS|PF_THOKKED))
+						takis.coyote = 0
+						P_DoJump(p,true)
+					end
 				end
 			end
 			takis.prevmomz = me.momz
@@ -1941,6 +1942,9 @@ addHook("PlayerThink", function(p)
 				takis.saveddmgt = 0
 				takis.stoprolling = false
 				takis.deathfloored = false
+				if p.bot == BOT_2PAI
+					takis.heartcards = TAKIS_MAX_HEARTCARDS
+				end
 			end
 			
 			--handle combo stuff here
@@ -1956,6 +1960,7 @@ addHook("PlayerThink", function(p)
 				or (p.ptsr_outofgame)
 					takis.combo.frozen = true
 					if ((p.exiting) and not (p.pflags & PF_FINISHED))
+					or (p.ptsr_outofgame)
 						takis.combo.cashable = true
 					end
 				else
@@ -2648,6 +2653,9 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 			takis.fireasssmoke = TR/2
 			takis.fireasstime = 10*TR
 			extraheight = true
+			mo.state = S_PLAY_DEAD
+			mo.frame = A
+			mo.sprite2 = SPR2_FASS
 		else
 			return true
 		end
@@ -2759,8 +2767,6 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		L_ZLaunch(mo,(extraheight) and 17*mo.scale or 8*mo.scale)
 		if not extraheight
 			mo.state = S_PLAY_PAIN
-		else
-			mo.state = S_PLAY_DEAD
 		end
 		
 		takis.inFakePain = true
@@ -3118,6 +3124,10 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 			takis.beingcrushed = true
 			return false
 		end
+	elseif dmgt == DMG_FIRE
+		if takis.transfo & TRANSFO_FIREASS
+			return false
+		end
 	end
 	
 end,MT_PLAYER)
@@ -3205,7 +3215,7 @@ local function hammerhitbox(t,tm)
 		return
 	end
 	
-	if not collide2(t,tm)
+	if not L_ZCollide(t,tm)
 		return
 	end
 	
@@ -3217,40 +3227,17 @@ local function hammerhitbox(t,tm)
 		end
 	else
 		
-		if SPIKE_LIST[tm.type]
-			P_KillMobj(tm,t,t.parent)
-			return
-		end
-		
 		if CanFlingThing(tm)
 			P_DamageMobj(tm,t,t.parent)
-		--	P_SetObjectMomZ(t.parent,14*t.parent.scale)
+		elseif SPIKE_LIST[tm.type]
+			P_KillMobj(tm,t,t.parent)
 		end
 		
-		/*
-		if tm.flags & MF_SPRING
-			local z = tm.z
-			if (P_MobjFlip(tm) == -1)
-				z = tm.z+tm.height
-			end
-			if P_CheckPosition(t.parent,tm.x,tm.y,z)
-			and P_CheckSight(t.parent,tm)
-				P_MoveOrigin(t.parent,tm.x,tm.y,z)
-				TakisResetHammerTime(t.parent.player)
-			end
-			return
-		end
-		*/
 		
 	end
 end
 
-local function hammerhitbox2(tm,t)
-	hammerhitbox(tm,t)
-end
-
 addHook("MobjCollide",hammerhitbox,MT_TAKIS_HAMMERHITBOX)
-addHook("MobjMoveCollide",hammerhitbox2,MT_TAKIS_HAMMERHITBOX)
 
 local function tauntbox(t,tm)
 	if not t
@@ -3305,9 +3292,8 @@ local function tauntbox(t,tm)
 			if (t.alreadydid) then return end
 			
 			if CanFlingThing(tm)
-				if not (tm.flags & MF_MONITOR)
-					SpawnEnemyGibs(t,tm)
-				end
+				SpawnEnemyGibs(t,tm)
+				SpawnEnemyGibs(t,tm)
 				spawnragthing(tm,t.tracer)
 				local ghs = P_SpawnGhostMobj(t)
 				ghs.fuse = 10*TR
@@ -3601,11 +3587,14 @@ addHook("JumpSpecial", function(p)
 	local me = p.mo
 	local takis = p.takistable
 	
+	if not takis then return end
+	
 	if takis.jump then return end
 	if (takis.thokked or p.pflags & PF_THOKKED) then return end
 	if (takis.jumptime > 0) then return end
 	
 	if takis.onGround
+	or takis.coyote
 		local maxi = P_RandomRange(8,16)
 		for i = 0, maxi
 			local mt = MT_SPINDUST

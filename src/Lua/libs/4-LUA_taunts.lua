@@ -119,6 +119,11 @@ local function think_bat(p)
 	local me = p.mo
 	local takis = p.takistable
 	
+	if not takis.onGround
+		TakisResetTauntStuff(p)
+		return
+	end
+	
 	takis.stasistic = 2
 	if (takis.taunttime ~= 3*TR)
 		if takis.taunttime > TR

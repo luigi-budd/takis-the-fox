@@ -8,7 +8,7 @@ tm.entries = {
 		text = {
 			"Menu Help",
 			"Takis Manual",
-			'"Important" Letter',
+			'Important Letter',
 		},
 		commands = {
 			"showmenuhints",

@@ -440,7 +440,12 @@ local function drawface(v,p)
 	end
 	
 	if flip == true then eflags = $|V_FLIP end
-	v.drawScaled(20*FU+x,27*FU+y+y2,scale, headpatch, V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER|eflags,v.getColormap(nil,headcolor))
+	v.drawScaled(20*FU+x,27*FU+y+y2,
+		scale,
+		headpatch,
+		V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER|eflags,
+		v.getColormap((me.colorized) and TC_RAINBOW or nil,headcolor)
+	)
 
 end
 
@@ -541,6 +546,8 @@ local function drawbossface(v,p)
 		scale,
 		headpatch,
 		V_SNAPTORIGHT|V_SNAPTOTOP|eflags
+		--er, this kinda looks like shit..
+		--v.getColormap((bosscards.mo.flags2 & MF2_FRET) and TC_BOSS or nil)
 	)
 
 end
@@ -900,27 +907,27 @@ local function drawlivesarea(v,p)
 			(hudinfo[HUD_LIVES].x)*FU,
 			hudinfo[HUD_LIVES].y*FU,
 			FU/2,
-			v.getSprite2Patch(TAKIS_SKIN,SPR2_XTRA,false,A,0,0),
+			v.cachePatch("TAK_LIFEFACE"),
 			hudinfo[HUD_LIVES].f|V_HUDTRANSHALF|V_PERPLAYER,
-			v.getColormap(TAKIS_SKIN, SKINCOLOR_CLOUDY)
+			v.getColormap(TC_RAINBOW, SKINCOLOR_CLOUDY)
 		)
 	elseif ((me) and (me.color))
 		v.drawScaled(
 			(hudinfo[HUD_LIVES].x)*FU,
 			hudinfo[HUD_LIVES].y*FU,
 			FU/2,
-			v.getSprite2Patch(TAKIS_SKIN,SPR2_XTRA,false,A,0,0),
+			v.cachePatch("TAK_LIFEFACE"),
 			hudinfo[HUD_LIVES].f|V_HUDTRANS|V_PERPLAYER,
-			v.getColormap(TAKIS_SKIN, me.color)
+			v.getColormap((me.colorized) and TC_RAINBOW or nil, me.color)
 		)
 	elseif (p.skincolor)
 		v.drawScaled(
 			(hudinfo[HUD_LIVES].x)*FU,
 			hudinfo[HUD_LIVES].y*FU,
 			FU/2,
-			v.getSprite2Patch(TAKIS_SKIN,SPR2_XTRA,false,A,0,0),
+			v.cachePatch("TAK_LIFEFACE"),
 			hudinfo[HUD_LIVES].f|V_HUDTRANS|V_PERPLAYER,
-			v.getColormap(TAKIS_SKIN, p.skincolor)
+			v.getColormap(nil, p.skincolor)
 		)		
 	end
 	
@@ -1627,22 +1634,42 @@ local function drawjumpscarelol(v,p)
 	local h = takis.HUD.funny
 	
 	if h.tics
-		v.fadeScreen(35,10)
-		
-		local scale = FU*7/5
-		local p = v.cachePatch("BALL_BUSTER")
-		
-		local x = v.RandomFixed()*3
-		if ((leveltime%4) < 3)
-			x = -$
+		if not h.wega
+			v.fadeScreen(35,10)
+			
+			local scale = FU*7/5
+			local p = v.cachePatch("BALL_BUSTER")
+			
+			local x = v.RandomFixed()*3
+			if ((leveltime%4) < 3)
+				x = -$
+			end
+			
+			if h.alsofunny
+				p = v.cachePatch("BASTARD")
+				scale = FU/2
+			end
+			
+			v.drawScaled(((300/2)*FU)+x,h.y,scale,p,0)
+		else
+			if h.tics > TR
+				local trans = 0
+				if h.tics < TR+10
+					trans = (10-(h.tics-TR))<<V_ALPHASHIFT
+				end
+				
+				local patch = v.cachePatch("TA_WEGA")
+				
+				local width = patch.width
+				local height = patch.height
+				local total_width = (v.width() / v.dupx()) + 1
+				local total_height = (v.height() / v.dupy()) + 1
+				local hscale = FixedDiv(total_width * FU, width * FU)
+				local vscale = FixedDiv(total_height * FU, height * FU)
+				
+				v.drawStretched(0, 0, hscale, vscale, patch, V_SNAPTOTOP|V_SNAPTOLEFT|trans)		
+			end
 		end
-		
-		if h.alsofunny
-			p = v.cachePatch("BASTARD")
-			scale = FU/2
-		end
-		
-		v.drawScaled(((300/2)*FU)+x,h.y,scale,p,0)
 	end
 	
 end
@@ -2346,8 +2373,20 @@ local function drawcosmenu(v,p)
 			local f = V_SNAPTORIGHT|V_SNAPTOTOP|V_70TRANS
 			local c = v.getColormap(nil,pagecolor)
 			
-			v.drawScaled(((x-bgp.width*(i-1)))*s-bgoffx,(y)*s+bgoffy,s,bgp,f,c)
-			v.drawScaled(((x-bgp.width*i))*s-bgoffx,(y)*s+bgoffy,s,bgp,f,c)
+			v.drawScaled(((x-bgp.width*(i-1)))*s-bgoffx,
+				(y)*s+bgoffy,
+				s,
+				bgp, --v.cachePatch("?"),
+				f,
+				c
+			)
+			v.drawScaled(((x-bgp.width*i))*s-bgoffx,
+				(y)*s+bgoffy,
+				s,
+				bgp, --v.cachePatch("?"),
+				f,
+				c
+			)
 		end
 	end
 	
@@ -2448,11 +2487,9 @@ local function drawcosmenu(v,p)
 			end
 		--achs page
 		else
-			local number = 0
-			TakisReadAchievements(p)
-			number = takis.achfile
+			local number = takis.achfile
 			for i = 0,NUMACHIEVEMENTS-1
-				local has = V_90TRANS
+				local has = V_60TRANS
 				local t = TAKIS_ACHIEVEMENTINFO
 				local ach = t[1<<i]
 				
@@ -2465,7 +2502,7 @@ local function drawcosmenu(v,p)
 				v.drawScaled(x,
 					y,
 					ach.scale or FU,
-					v.cachePatch(ach.icon),
+					(number & (1<<i)) and v.cachePatch(ach.icon) or v.cachePatch("ACH_PLACEHOLDER"),
 					V_SNAPTOLEFT|V_SNAPTOTOP|has
 				)
 				v.drawString(x+FU+(v.cachePatch(ach.icon).width*(ach.scale or FU)),
@@ -3110,6 +3147,7 @@ local function drawdebug(v,p)
 		end
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_QUAKE)
+		local red = (not takis.io.quakes) and V_REDMAP or 0
 		for k,va in ipairs(takis.quake)
 			if va == nil
 				continue
@@ -3118,11 +3156,11 @@ local function drawdebug(v,p)
 			v.drawString(40,8*(k-1),
 				va.tics.." | "..
 				L_FixedDecimal(va.intensity,3),
-				V_HUDTRANS,
+				red|V_HUDTRANS,
 				"left"
 			)
 		end
-		v.drawString(40,-8,L_FixedDecimal(takis.quakeint,3),V_HUDTRANS,"left")
+		v.drawString(40,-8,L_FixedDecimal(takis.quakeint,3),red|V_HUDTRANS,"left")
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_HAPPYHOUR)
 		local strings = prtable("Happy Hour",HAPPY_HOUR,false)
@@ -3786,7 +3824,7 @@ addHook("HUD", function(v)
 					end
 				else
 					local maxspirits = 6
-					local maxspace = 70
+					local maxspace = 66
 					for i = 0,maxspirits
 						local patch,flip = v.getSpritePatch(SPR_TSPR,
 							(emeralds & 1<<i == 0) and B or A,
@@ -3885,7 +3923,9 @@ addHook("HUD", function(v)
 				if TAKIS_NET.inttic < TR
 					local expectedtime = TR
 					for i = 0,maxspirits
+						--we didnt even get this one
 						if (emeralds & 1<<i == 0) then continue end
+						--we already have it
 						if (em & 1<<i) then continue end
 						
 						local patch,flip = v.getSpritePatch(SPR_TSPR,
