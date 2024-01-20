@@ -176,6 +176,7 @@ if (TAKIS_ISDEBUG)
 		"BLOCKMAP",
 		"DEATH",
 		"SPEEDOMETER",
+		"HURTMSG",
 	}
 	for k,v in ipairs(dbgflags)
 		tm.entries[5].text[4+k] = v

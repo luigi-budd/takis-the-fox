@@ -61,6 +61,18 @@ local function init_bird(p)
 	me.state = S_PLAY_TAKIS_BIRD
 end
 
+local function init_yeah(p)
+	local me = p.mo
+	local takis = p.takistable
+	local menu = takis.tauntmenu
+	
+	takis.taunttime = 99
+	takis.stasistic = 2
+	takis.tauntacceptspartners = false
+	TakisSpawnConfetti(me)
+	S_StartSound(me,sfx_tayeah)
+end
+
 
 
 --taunt thinks
@@ -162,12 +174,40 @@ local function think_bird(p)
 	end
 end
 
+local function think_yeah(p)
+	local me = p.mo
+	local takis = p.takistable
+	
+	takis.nocontrol = 2
+	
+	if takis.taunttime > 1
+		if me.sprite2 ~= SPR2_THUP
+			me.frame = A
+			me.sprite2 = SPR2_THUP
+		end
+		
+		takis.HUD.statusface.happyfacetic = 2
+		
+		if P_RandomChance(FRACUNIT-((takis.taunttime*655)+36))
+			me.frame = B
+		else
+			me.frame = A
+		end
+	else
+		me.state = S_PLAY_STND
+		P_MovePlayer(p)
+		takis.taunttime = 0
+	end
+		
+end
+
 rawset(_G, "TAKIS_TAUNT_INIT", {
 	[1] = init_ouch,
 	[2] = init_smug,
 	[3] = init_conga,
 	[4] = init_bat,
 	[5] = init_bird,
+	[6] = init_yeah,
 })
 
 rawset(_G, "TAKIS_TAUNT_THINK", {
@@ -176,6 +216,7 @@ rawset(_G, "TAKIS_TAUNT_THINK", {
 	[3] = think_conga,
 	[4] = think_bat,
 	[5] = think_bird,
+	[6] = think_yeah,
 })
 
 filesdone = $+1

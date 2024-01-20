@@ -10,11 +10,14 @@ local achs = {
 	"JUMPSCARE",
 	"HARDCORE",
 	"CLUTCHSPAM",
-	"COMBOCLOSE",
 	"COMBOALMOST",
 	"BOOMSTICK",
+	"BOWLINGBALL",
+--	"TORNADO",
+	"FIREASS",
+	"SPIRIT",
 	"BRAKMAN",
-	"TORNADO"
+	"OFFICER",
 }
 for k,v in ipairs(achs)
 	rawset(_G,"ACHIEVEMENT_"..string.upper(v),1<<(k-1))
@@ -23,7 +26,7 @@ end
 
 rawset(_G,"NUMACHIEVEMENTS",#achs)
 
-rawset(_G,"ACHIEVEMENT_PATH","client/coolswag.dat")
+rawset(_G,"ACHIEVEMENT_PATH","client/summa.dat")
 
 rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 	[ACHIEVEMENT_COMBO] = {
@@ -36,7 +39,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		name = "Banana Man",
 		icon = "ACH_BANANA",
 		scale = FU/4,
-		text = "Slip on a banana."
+		text = "Slip on Soap's banana."
 	},
 	[ACHIEVEMENT_RAKIS] = {
 		name = "Alter Ego",
@@ -81,12 +84,6 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		scale = FU/4,
 		text = "Never learn how to Clutch\nproperly."
 	},
-	[ACHIEVEMENT_COMBOCLOSE] = {
-		name = "Close Call!",
-		icon = "ACH_COMBOCLOSE",
-		scale = FU/4,
-		text = "Save a high combo from\n".."ending."
-	},
 	[ACHIEVEMENT_COMBOALMOST] = {
 		name = "Almost had it..!",
 		icon = "ACH_PLACEHOLDER",
@@ -99,17 +96,44 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		scale = FU/4,
 		text = "Acquire the shotgun."
 	},
+	[ACHIEVEMENT_BOWLINGBALL] = {
+		name = "Let's Go Bowling!",
+		icon = "ACH_BOOMSTICK",
+		scale = FU/4,
+		text = "Turn into the Ball\nTransfomation."
+	},
+	/*
+	[ACHIEVEMENT_TORNADO] = {
+		name = "Hurricane Taykis",
+		icon = "ACH_TORNADO",
+		scale = FU/4,
+		text = "Turn into the Tornado\nTransfomation.",
+	},
+	*/
+	[ACHIEVEMENT_FIREASS] = {
+		name = "Wood-Fired Takis",
+		icon = "ACH_TORNADO",
+		scale = FU/4,
+		text = "Turn into the Fireass\nTransfomation.",
+	},
+	[ACHIEVEMENT_SPIRIT] = {
+		name = "Spirits get!",
+		icon = "ACH_SPIRITS",
+		scale = FU/4,
+		text = "Retrieve all the lost spirits!",
+	},
 	[ACHIEVEMENT_BRAKMAN] = {
-		name = "I'm Brakman.",
-		icon = "ACH_PLACEHOLDER",
+		name = "Tougher than the rest!",
+		icon = "ACH_BRAKMAN",
 		scale = FU/4,
 		text = "Deal the finishing blow\nto Brak Eggman.",
 	},
-	[ACHIEVEMENT_TORNADO] = {
-		name = "Hurricane Taykis",
-		icon = "ACH_PLACEHOLDER",
+	[ACHIEVEMENT_OFFICER] = {
+		name = "That's the one, officer!",
+		icon = "ACH_OFFICER",
 		scale = FU/4,
-		text = "Turn into the Tornado\nTransfomation.",
+		text = "Get hit over 100 times.",
+		secret = true,
 	},
 })
 
@@ -184,6 +208,10 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	if not achieve
 		error("ACHIEVEMENT_ constant out of range.")
 	end
+	if achieve > (1<<NUMACHIEVEMENTS-1)
+	or not (TAKIS_ACHIEVEMENTINFO[achieve])
+		error("ACHIEVEMENT_ constant not defined.")
+	end
 	
 	local number = p.takistable.achfile
 	
@@ -191,6 +219,12 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	if (number & (achieve))
 		return
 	end
+	
+	local trophy = P_SpawnMobjFromMobj(p.realmo,0,0,0,MT_TAKIS_TROPHY)
+	trophy.tracer = p.realmo
+	p.takistable.trophy = trophy
+	P_SetOrigin(trophy, p.realmo.x, p.realmo.y, GetActorZ(p.realmo,trophy,2))
+	TakisSpawnConfetti(p.realmo)
 	
 	p.takistable.achfile = $|achieve
 	TakisSaveAchievements(p)

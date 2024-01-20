@@ -350,7 +350,9 @@ addHook("TouchSpecial", function(post,touch)
 	if not post.activators
 		post.activators = {
 			cards = {},
-			combo = {}
+			combo = {},
+			cardsrespawn = {},
+			comborespawn = {},
 		}
 	end
 	if not post.activators.cards
@@ -425,6 +427,10 @@ addHook("MobjThinker", function(sweat)
 		sweat.flags2 = $|MF2_DONTDRAW
 	end
 	
+	if sweat.tracer.flags2 & MF2_DONTDRAW
+		sweat.eflags = $|MF2_DONTDRAW
+	end
+	
 	if sweat.tracer.eflags & MFE_VERTICALFLIP
 		sweat.eflags = $|MFE_VERTICALFLIP
 	else
@@ -452,6 +458,10 @@ addHook("MobjThinker", function(bolt)
 	else
 		bolt.flags2 = $ &~MF2_DONTDRAW
 	end
+	if bolt.tracer.flags2 & MF2_DONTDRAW
+		bolt.eflags = $|MF2_DONTDRAW
+	end
+	
 	
 end,MT_SOAP_SUPERTAUNT_FLYINGBOLT)
 
@@ -945,6 +955,14 @@ addHook("PreThinkFrame",function()
 		
 		local takis = p.takistable
 		
+		--handle input stuff here now because ermmmm
+		--pw_nocontrol stuff
+		if takis.noability
+			takis.noability = 0
+		end
+		
+		TakisButtonStuff(p,takis)
+		
 		if (takis.cosmenu.menuinaction)
 			TakisMenuThinker(p)
 		end
@@ -1044,6 +1062,7 @@ addHook("MobjThinker",function(me)
 	end
 	
 	if me.activators == nil
+	or (HAPPY_HOUR.time == 1)
 		me.activators = {
 			cards = {},
 			combo = {},
@@ -1141,6 +1160,9 @@ addHook("MobjThinker",function(me)
 				local found = p.realmo
 				
 				local x,y = ReturnTrigAngles(R_PointToAngle2(me.x,me.y, camera.x,camera.y))
+				if not camera.chase
+					x,y = ReturnTrigAngles(R_PointToAngle2(me.x,me.y, found.x,found.y))
+				end
 				if found.flags2 & MF2_TWOD
 				or twodlevel
 					x,y = ReturnTrigAngles(InvAngle(R_PointToAngle(found.x,found.y)))
@@ -1161,7 +1183,11 @@ addHook("MobjThinker",function(me)
 				or twodlevel
 					card.angle = (R_PointToAngle(me.x,me.y))-ANGLE_90
 				else
-					card.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
+					if camera.chase
+						card.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
+					else
+						card.angle = (R_PointToAngle2(me.x,me.y, found.x,found.y))-ANGLE_90					
+					end
 				end
 				--
 
@@ -1183,7 +1209,11 @@ addHook("MobjThinker",function(me)
 				or twodlevel
 					combo.angle = (R_PointToAngle(me.x,me.y))-ANGLE_90
 				else
-					combo.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
+					if camera.chase
+						combo.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
+					else
+						combo.angle = (R_PointToAngle2(me.x,me.y, found.x,found.y))-ANGLE_90
+					end
 				end
 				--
 			end
@@ -1346,6 +1376,8 @@ addHook("PostThinkFrame", function ()
 		if (takis.transfo & TRANSFO_TORNADO)
 			p.drawangle = me.angle+takis.nadoang
 		end
+		
+		if p.powers[pw_nocontrol] then takis.nocontrol = p.powers[pw_nocontrol] end
 		
 		if takis.inwaterslide
 			
@@ -1655,6 +1687,8 @@ local dontflinglist = {
 	--strange divide by 0 with one of these 2
 	MT_ROLLOUTSPAWN,
 	MT_ROLLOUTROCK,
+	MT_DUSTDEVIL,
+	MT_DUSTLAYER,
 }
 
 for k,type in ipairs(dontflinglist)
@@ -1742,10 +1776,19 @@ addHook("MobjThinker",function(gib)
 	gib.speed = FixedHypot(gib.momx,gib.momy)
 	if (P_IsObjectOnGround(gib)
 	and not gib.bounced)
-		gib.flags = $|MF_NOCLIPHEIGHT|MF_NOCLIP
-		L_ZLaunch(gib,P_RandomRange(4,9)*FU+P_RandomFixed())
-		gib.bounced = true
-		gib.tics = 3*TR
+		if not gib.iwillbouncetwice
+			gib.flags = $|MF_NOCLIPHEIGHT|MF_NOCLIP
+			gib.bounced = true
+			gib.tics = 3*TR
+			L_ZLaunch(gib,
+				(gib.lessbounce and P_RandomRange(2,4) or P_RandomRange(4,9))
+				*FU+P_RandomFixed()
+			)
+		else
+			gib.iwillbouncetwice = nil
+			gib.lessbounce = true
+			L_ZLaunch(gib,P_RandomRange(6,9)*FU+P_RandomFixed())
+		end
 	end
 end,MT_TAKIS_GIB)
 
@@ -2030,9 +2073,11 @@ addHook("MobjThinker",function(gem)
 	soda.emeralddex = gem.frame & FF_FRAMEMASK
 	gem.target.player.takistable.spiritlist[soda.emeralddex] = soda
 	P_RemoveMobj(gem)
+	
 	return
 end,MT_GOTEMERALD)
 
+/*
 addHook("MobjThinker",function(rock)
 	if not (rock and rock.valid) then return end
 	
@@ -2040,6 +2085,59 @@ addHook("MobjThinker",function(rock)
 	local topspeed = FixedMul(rock.info.speed,rock.scale)
 	
 end,MT_ROLLOUTROCK)
+*/
+--this is way better
+mobjinfo[MT_ROLLOUTROCK].speed = 256*FU
+states[S_ROLLOUTROCK].var1 = FU
+
+addHook("MobjThinker",function(trophy)
+	if not (trophy and trophy.valid) then return end
+	if not (trophy.tracer and trophy.tracer.valid) then P_RemoveMobj(trophy); return end
+	local me = trophy.tracer
+	
+	if trophy.state == S_TAKIS_TROPHY
+		P_MoveOrigin(trophy, me.x, me.y, GetActorZ(me,trophy,2))
+		if P_MobjFlip(me) == 1
+			trophy.eflags = $ &~MFE_VERTICALFLIP
+		else
+			trophy.eflags = $|MFE_VERTICALFLIP
+		
+		end
+	elseif trophy.state == S_TAKIS_TROPHY2
+		if (trophy.flags & MF_NOGRAVITY)
+			trophy.flags = $ &~MF_NOGRAVITY
+			L_ZLaunch(trophy,10*trophy.scale)
+		end
+		local grav = P_GetMobjGravity(trophy)
+		grav = $*3/5
+		trophy.momz = $+(grav*P_MobjFlip(trophy))
+	end
+	
+end,MT_TAKIS_TROPHY)
+
+addHook("MobjThinker",function(fet)
+	if not (fet and fet.valid) then return end
+	if (P_IsObjectOnGround(fet)) then P_RemoveMobj(fet); return end
+	
+	--this is awesome CHRISPYCHARS CODE!!!
+	local flip = P_MobjFlip(fet)
+	
+	fet.momx = FixedMul($, fet.info.mass)
+	fet.momy = FixedMul($, fet.info.mass)
+	if not (fet.flags & MF_NOGRAVITY)
+		fet.momz = FixedMul($, fet.info.mass)
+		local maxfall = -FixedMul(fet.info.speed, fet.scale)
+		if flip*fet.momz < maxfall
+			fet.momz = flip*FixedMul(flip*$, fet.info.mass)
+			if flip*fet.momz > maxfall
+				fet.momz = flip*maxfall
+				fet.flags = $ | MF_NOGRAVITY
+			end
+		end
+	end
+	fet.angle = $+(ANG15*fet.rngspin)
+	fet.rollangle = $+(ANG15*fet.rngspin)
+end,MT_TAKIS_FETTI)
 
 filesdone = $+1
 

@@ -444,7 +444,7 @@ local function drawface(v,p)
 		scale,
 		headpatch,
 		V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER|eflags,
-		v.getColormap((me.colorized) and TC_RAINBOW or nil,headcolor)
+		v.getColormap((me and me.valid and me.colorized) and TC_RAINBOW or nil,headcolor)
 	)
 
 end
@@ -545,9 +545,8 @@ local function drawbossface(v,p)
 		27*FU,
 		scale,
 		headpatch,
-		V_SNAPTORIGHT|V_SNAPTOTOP|eflags
-		--er, this kinda looks like shit..
-		--v.getColormap((bosscards.mo.flags2 & MF2_FRET) and TC_BOSS or nil)
+		V_SNAPTORIGHT|V_SNAPTOTOP|eflags,
+		v.getColormap((bosscards.mo.flags2 & MF2_FRET and (leveltime % 2)) and TC_BOSS or nil)
 	)
 
 end
@@ -1115,6 +1114,7 @@ local function drawlivesarea(v,p)
 	end
 	
 	if (takis.nocontrol and takis.taunttime)
+	and (takis.tauntid ~= 6)
 		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
 			(hudinfo[HUD_LIVES].y+disp)*FU,
 			(FU/2)+(FU/12),
@@ -2499,25 +2499,67 @@ local function drawcosmenu(v,p)
 				
 				local x = pos.x*FU+((140*FU)*(i%2))
 				local y = pos.y*FU+10*FU+(17*FU*(i/2))
+				
 				v.drawScaled(x,
 					y,
 					ach.scale or FU,
-					(number & (1<<i)) and v.cachePatch(ach.icon) or v.cachePatch("ACH_PLACEHOLDER"),
+					(number & (1<<i)) and v.cachePatch(ach.icon) or ((ach.secret and has) and v.cachePatch("ACH_SPLACEHOLDER") or v.cachePatch("ACH_PLACEHOLDER")),
 					V_SNAPTOLEFT|V_SNAPTOTOP|has
 				)
 				v.drawString(x+FU+(v.cachePatch(ach.icon).width*(ach.scale or FU)),
 					y,
-					ach.name or "Ach. Enum "..(1<<i),
+					(ach.secret and has) and "Secret Achievement" or (ach.name or "Ach. Enum "..(1<<i)),
 					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
 					"thin-fixed"
 				)
 				v.drawString(x+FU+(v.cachePatch(ach.icon).width*(ach.scale or FU)),
 					y+(8*FU),
-					ach.text or "Flavor text goes here",
+					(ach.secret and has) and " " or (ach.text or "Flavor text goes here"),
 					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
 					"small-fixed"
 				)
+				
 			end
+			--draw a bigger version so you can see the icon
+			local x = pos.x*FU
+			local y = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))
+			
+			local t = TAKIS_ACHIEVEMENTINFO
+			local num = menu.achcur
+			local ach = t[1<<num]
+			local has = V_60TRANS
+			if (number & (1<<num))
+				has = 0
+			end
+		
+			local curx = pos.x*FU+((140*FU)*(num%2))
+			local cury = pos.y*FU+10*FU+(17*FU*(num/2))
+			v.drawScaled(curx,cury,FU,
+				v.cachePatch("TA_MENUACHCUR"),
+				V_SNAPTOLEFT|V_SNAPTOTOP,
+				v.getColormap(nil,SKINCOLOR_SUPERGOLD4)
+			)
+			
+			--ok draw the ach
+			v.drawScaled(x,
+				y,
+				(ach.scale or FU)*2,
+				(number & (1<<num)) and v.cachePatch(ach.icon) or ((ach.secret and has) and v.cachePatch("ACH_SPLACEHOLDER") or v.cachePatch("ACH_PLACEHOLDER")),
+				V_SNAPTOLEFT|V_SNAPTOTOP|has
+			)
+			v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
+				y,
+				(ach.secret and has) and "Secret Achievement" or (ach.name or "Ach. Enum "..(1<<i)),
+				V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+				"fixed"
+			)
+			v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
+				y+(8*FU),
+				(ach.secret and has) and " " or (ach.text or "Flavor text goes here"),
+				V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+				"thin-fixed"
+			)
+			
 		end
 	end
 	
@@ -3031,6 +3073,23 @@ local getdmg = {
 	[133] = "DMG_SPECTATOR",
 }
 
+local getcarry = {
+	[0] = "none",
+	[1] = "generic",
+	[2] = "player",
+	[3] = "nightsmode",
+	[4] = "nightsfall",
+	[5] = "brakgoop",
+	[6] = "zoomtube",
+	[7] = "ropehang",
+	[8] = "macespin",
+	[9] = "minecart",
+	[10] = "rollout",
+	[11] = "pterabyte",
+	[12] = "dustdevil",
+	[13] = "fan", 
+}
+
 local function drawflag(v,x,y,string,flags,onmap,offmap,align,flag)
 	local map = offmap
 	if flag
@@ -3062,6 +3121,10 @@ local function drawdebug(v,p)
 		DrawButton(v, p, x+66, y, flags, color, color2, takis.fire,'F', 'left')
 		DrawButton(v, p, x+77, y, flags, color, color2, takis.firenormal,'FN', 'thin')
 		DrawButton(v, p, x+88, y, flags, color, color2, takis.weaponmasktime,takis.weaponmask, 'left')
+		
+		--these arent really flags so it wouldnt make sense to draw them like they are
+		v.drawString(x,y-128,"pw_carry",flags,"thin")
+		v.drawString(x,y-120,getcarry[p.powers[pw_carry]] or "Unknown",flags,"thin")
 		
 		v.drawString(x,y-108,"pw_strong",flags,"thin")
 		drawflag(v,x+00,y-100,"NN",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_NONE))
@@ -3100,6 +3163,7 @@ local function drawdebug(v,p)
 		drawflag(v,x+75,y-50,"SG",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHOTGUN))
 		drawflag(v,x+90,y-50,"SH",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHIELD))
 		drawflag(v,x+105,y-50,"TH",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_THOK))
+		drawflag(v,x+120,y-50,"AI",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_AFTERIMAGE))
 		
 		v.drawString(x,y-38,"FSTASIS",flags|V_GREENMAP,"thin")
 		v.drawString(x,y-30,takis.stasistic,flags,"thin")
@@ -3138,7 +3202,7 @@ local function drawdebug(v,p)
 		local work = 0
 		for p2 in players.iterate
 			v.drawString(290,30+(work*8),
-				"["..#p2.."] "..p2.name.." - "..p2.takistable.achfile,
+				"[#"..#p2.."] "..p2.name.." - "..p2.takistable.achfile,
 				V_HUDTRANS|V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE|
 				((p2 == p) and V_YELLOWMAP or 0),
 				"thin-right"
@@ -3551,20 +3615,26 @@ addHook("HUD", function(v,p,cam)
 				
 			end
 			
+			local hasstat = CV_FindVar("perfstats").value
+			
 			--drawwareffect(v,p)
 			drawclutches(v,p,cam)
 			drawnadocount(v,p,cam)
 			--drawbubbles(v,p,cam)
-			drawrings(v,p)
-			drawtimer(v,p)
+			if not hasstat
+				drawrings(v,p)
+				drawtimer(v,p)
+			end
 			drawlivesarea(v,p)
 			drawcombostuff(v,p)
-			drawbonuses(v,p)
-			drawheartcards(v,p)
-			drawbosscards(v,p)
-			drawscore(v,p)
-			drawface(v,p)
-			drawbossface(v,p)
+			if not hasstat
+				drawheartcards(v,p)
+				drawbosscards(v,p)
+				drawface(v,p)
+				drawbossface(v,p)
+				drawscore(v,p)
+				drawbonuses(v,p)
+			end
 			drawtauntmenu(v,p)
 			drawpizzatips(v,p)
 			drawpizzatimer(v,p)
@@ -3595,7 +3665,6 @@ addHook("HUD", function(v,p,cam)
 			drawbosstitles(v,p)
 			drawhappyhour(v,p)
 			
-			
 			if (takis.shotguntuttic)
 				local string = ''
 				if (takis.tossflag)
@@ -3612,7 +3681,7 @@ addHook("HUD", function(v,p,cam)
 				end
 				
 				v.drawString(160,200-25,string.."\x82TOSSFLAG\x80: Shotgun Tutorial",
-					V_ALLOWLOWERCASE|V_HUDTRANSHALF|V_SNAPTOBOTTOM,
+					V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM,
 					"thin-center"
 				)
 			end

@@ -13,6 +13,7 @@
 	-Unmatched Bracket - waterslide pain -> sliding code, compiling code
 	-katsy - bounce sector detection
 	-Banddy - metal sonic boss portrait
+	-Marilyn - final demo cutscene i used lol
 	
 */
 
@@ -39,7 +40,6 @@ local dbgflags = {
 	"BLOCKMAP",
 	"DEATH",
 	"SPEEDOMETER",
-	"TRANSFO",
 	"HURTMSG",
 }
 for k,v in ipairs(dbgflags)
@@ -169,6 +169,7 @@ local noabflags = {
 	"SHOTGUN",		--generally for anything shotgunned
 	"SHIELD",
 	"THOK",
+	"AFTERIMAGE",	--i wouldnt really call afterimages an ability
 }
 for k,v in ipairs(noabflags)
 	local val = 1<<(k-1)
@@ -251,6 +252,7 @@ rawset(_G, "TAKIS_NET", {
 		["creds"] = true,
 		["_conga"] = true,
 		["_gover"] = true,
+		["blstcl"] = true,
 		--spice runers
 		["ovrtme"] = true,
 		["ovrtm2"] = true,
@@ -508,6 +510,7 @@ rawset(_G, "TakisInitTable", function(p)
 		prevz = 0,
 		ballretain = 0,
 		timeshit = 0,
+		totalshit = 0,
 		spiritlist = {},
 		--always assume a specialstage was failed unless
 		--we're exiting with a spirit in hand
@@ -517,6 +520,7 @@ rawset(_G, "TakisInitTable", function(p)
 		fireballtime = 0,
 		starman = false,
 		coyote = 5,
+		trophy = 0,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -606,6 +610,7 @@ rawset(_G, "TakisInitTable", function(p)
 				[3] = "Conga",
 				[4] = "Home-run\n     Bat",
 				[5] = "Bird\nWord!",
+				[6] = "Yeah!",
 			},
 			--1-7 x pos
 			cursor = 1,
@@ -618,6 +623,7 @@ rawset(_G, "TakisInitTable", function(p)
 					[3] = "TAUNTPIX_CONG",	
 					[4] = "TAUNTPIX_HRBT",	
 					[5] = "TAUNTPIX_BIRD",	
+					[6] = "TAUNTPIX_BIRD",	
 				},
 				--fixed point scales
 				scales = {
@@ -626,6 +632,7 @@ rawset(_G, "TakisInitTable", function(p)
 					[3] = FU/2,
 					[4] = FU/2,
 					[5] = FU/2,
+					[6] = FU/2,
 				},
 			},
 			--text x offsets
@@ -650,7 +657,7 @@ rawset(_G, "TakisInitTable", function(p)
 			right = 0,
 			jump = 0,
 			
-			achscroll = 0,
+			achcur = 0,
 			
 			hintfade = 3*TR+18,
 		},
@@ -917,6 +924,7 @@ rawset(_G, "TakisInitTable", function(p)
 
 	CONS_Printf(p, "\n \x83Made by luigi budd")
 	takis_printwarning(p)
+	takis_printdebuginfo(p)
 	
 	if P_RandomChance(FU/2)
 		CONS_Printf(p, "\n"+"\x82"+"Look for the Gummy Bear album in stores on November 13th. ")
@@ -941,27 +949,28 @@ sfxinfo[sfx_cltch2].caption = "Clutch Boost"
 freeslot("sfx_taksld")
 sfxinfo[sfx_taksld].caption = "Slide"
 
+--takis vox
 freeslot("sfx_eeugh")
-sfxinfo[sfx_eeugh].caption = '\x86"Ehh!"\x80'
+sfxinfo[sfx_eeugh].caption = '\x8F"Ehh!"\x80'
 freeslot("sfx_antow1")
-sfxinfo[sfx_antow1].caption = '\x86"Aah!!"\x80'
+sfxinfo[sfx_antow1].caption = '\x8F"Aah!!"\x80'
 freeslot("sfx_antow2")
-sfxinfo[sfx_antow2].caption = '\x86"Eargh!"\x80'
+sfxinfo[sfx_antow2].caption = '\x8F"Eargh!"\x80'
 freeslot("sfx_antow3")
-sfxinfo[sfx_antow3].caption = '\x86"Grr!"\x80'
+sfxinfo[sfx_antow3].caption = '\x8F"Grr!"\x80'
 freeslot("sfx_antow4")
-sfxinfo[sfx_antow4].caption = '\x86"Hey, hey!"\x80'
+sfxinfo[sfx_antow4].caption = '\x8F"Hey, hey!"\x80'
 freeslot("sfx_antow5")
-sfxinfo[sfx_antow5].caption = '\x86"Oh boy!"\x80'
+sfxinfo[sfx_antow5].caption = '\x8F"Oh boy!"\x80'
 freeslot("sfx_antow6")
-sfxinfo[sfx_antow6].caption = '\x86"WOW! Eheh!"\x80'
+sfxinfo[sfx_antow6].caption = '\x8F"WOW! Eheh!"\x80'
 freeslot("sfx_antow7")
-sfxinfo[sfx_antow7].caption = '\x86"W-w-w-w I\'m good!"\x80'
-
+sfxinfo[sfx_antow7].caption = '\x8F"W-w-w-w I\'m good!"\x80'
 freeslot("sfx_tayeah")
-sfxinfo[sfx_tayeah].caption = '\x86"Yyyeahh!"\x80'
+sfxinfo[sfx_tayeah].caption = '\x8F"Yyyeahh!"\x80'
 freeslot("sfx_hapyhr")
-sfxinfo[sfx_hapyhr].caption = '\x86'.."IT'S HAPPY HOUR!!"..'\x80'
+sfxinfo[sfx_hapyhr].caption = '\x8F'.."IT'S HAPPY HOUR!!"..'\x80'
+--
 
 freeslot("sfx_takdiv")
 sfxinfo[sfx_takdiv].caption = 'Dive'
@@ -1039,13 +1048,13 @@ sfxinfo[sfx_rakdnc].caption = "/"
 SafeFreeslot("sfx_rakdnd")
 sfxinfo[sfx_rakdnd].caption = "/"
 SafeFreeslot("sfx_tactic")
-sfxinfo[sfx_tactic].caption = "\x86...Tick\x80"
+sfxinfo[sfx_tactic].caption = "\x86Tick...\x80"
 SafeFreeslot("sfx_tactoc")
-sfxinfo[sfx_tactoc].caption = "\x86Tock...\x80"
+sfxinfo[sfx_tactoc].caption = "\x86..Tock\x80"
 SafeFreeslot("sfx_homrun")
 sfxinfo[sfx_homrun] = {
 	caption = "\x82HOMERUN!!!\x80",
-	flags = SF_X4AWAYSOUND
+	flags = SF_X4AWAYSOUND|SF_TOTALLYSINGLE,
 }
 
 SafeFreeslot("sfx_shgnl")
@@ -1059,7 +1068,7 @@ SafeFreeslot("sfx_tsplat")
 sfxinfo[sfx_tsplat].caption = "\x82Splat!\x80"
 SafeFreeslot("sfx_achern")
 sfxinfo[sfx_achern] = {
-	flags = SF_NOMULTIPLESOUND|SF_TOTALLYSINGLE,
+	singular = true,
 	caption = "/"
 }
 SafeFreeslot("sfx_ptchkp")
@@ -1153,6 +1162,7 @@ SafeFreeslot("SPR_THND")
 SafeFreeslot("SPR_TVSG")
 SafeFreeslot("SPR_TGIB")
 SafeFreeslot("SPR_TSPR")
+SafeFreeslot("SPR_TKFT")
 
 --
 
@@ -1327,6 +1337,21 @@ states[S_TAKIS_TAUNT_JOIN] = {
 	nextstate = S_NULL
 }
 
+freeslot("S_TAKIS_TROPHY")
+freeslot("S_TAKIS_TROPHY2")
+states[S_TAKIS_TROPHY] = {
+	sprite = SPR_TKFT,
+	frame = E|FF_FULLBRIGHT,
+	tics = 3*TR,
+	nextstate = S_TAKIS_TROPHY2
+}
+states[S_TAKIS_TROPHY2] = {
+	sprite = SPR_TKFT,
+	frame = E|FF_FULLBRIGHT,
+	tics = 3*TR,
+	nextstate = S_NULL
+}
+
 freeslot("S_PLAY_TAKIS_CONGA")
 states[S_PLAY_TAKIS_CONGA] = {
     sprite = SPR_PLAY,
@@ -1493,6 +1518,17 @@ mobjinfo[MT_TAKIS_TAUNT_JOIN] = {
 
 }
 
+freeslot("MT_TAKIS_TROPHY")
+mobjinfo[MT_TAKIS_TROPHY] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_TROPHY,
+	height = 5*FRACUNIT,
+	radius = 5*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
+
+}
+
+
 SafeFreeslot("MT_SOAP_SUPERTAUNT_FLYINGBOLT")
 mobjinfo[MT_SOAP_SUPERTAUNT_FLYINGBOLT] = {
 	doomednum = -1,
@@ -1652,6 +1688,23 @@ mobjinfo[MT_TAKIS_GIB] = {
 	flags = MF_SLIDEME|MF_NOCLIPTHING,
 	height = 4*FRACUNIT,
 	radius = 4*FRACUNIT,
+}
+
+freeslot("S_TAKIS_FETTI")
+freeslot("MT_TAKIS_FETTI")
+states[S_TAKIS_FETTI] = {
+	sprite = SPR_TKFT,
+	frame = A|FF_PAPERSPRITE,
+	tics = -1,
+}
+mobjinfo[MT_TAKIS_FETTI] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_FETTI,
+	flags = MF_NOCLIP|MF_NOCLIPTHING,
+	height = 4*FRACUNIT,
+	radius = 4*FRACUNIT,
+	speed = 2*FRACUNIT,
+	mass = FU*60/63,
 }
 
 freeslot("S_TAKIS_SPIRIT","MT_TAKIS_SPIRIT")

@@ -58,6 +58,7 @@ local filelist = {
 	"hud",
 	"misc",
 	"MOTD",
+	"finaldemo",
 }
 --
 
@@ -80,9 +81,7 @@ rawset(_G, "takis_printdebuginfo",function(p)
 			"\x8D".."Build Date (MM/DD/YYYY) = \x80"..TAKIS_BUILDDATE.."\n"..
 			"\x8D".."Build Time = \x80"..TAKIS_BUILDTIME.."\n"..
 			*/
-			"\x8D".."# of files done = \x80"..filesdone.."/"..NUMFILES.."\n"..
-			
-			"\n".."\x8D".."Used a Player for this".."\n"
+			"\x8D".."# of files done = \x80"..filesdone.."/"..NUMFILES.."\n"
 		)	
 	end
 end)
@@ -90,12 +89,12 @@ end)
 rawset(_G, "takis_printwarning",function(p)
 	if not p
 		print("\x82This is free for anyone to host!\n"..
-			"Please send feedback and bug reports to \x83luigibudd\x82 on Discord, or the Github!\nhttps://github.com/luigi-budd/takis-the-fox"
+			"Please send feedback and bug reports to \x83@gerald55555\x82 on Discord, or the Github!\nhttps://github.com/luigi-budd/takis-the-fox"
 			
 		)	
 	else
 		CONS_Printf(p,"\x82This is free for anyone to host!\n"..
-			"Please send feedback and bug reports to \x83luigibudd\x82 on Discord, or the Github!\nhttps://github.com/luigi-budd/takis-the-fox"
+			"Please send feedback and bug reports to \x83@gerald55555\x82 on Discord, or the Github!\nhttps://github.com/luigi-budd/takis-the-fox"
 		)	
 	end
 	

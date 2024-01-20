@@ -63,10 +63,10 @@ COM_AddCommand("takis_morehappyhour", function(p)
 	
 	if p.takistable.io.morehappyhour == 1
 		p.takistable.io.morehappyhour = 0
-		prn(p,"Only "..skins[TAKIS_SKIN].realname.." will have Happy Hour in Jisk's Pizza Time.")
+		prn(p,"Only "..skins[TAKIS_SKIN].realname.." will have Happy Hour in Pizza Time Spice Runners.")
 	else
 		p.takistable.io.morehappyhour = 1
-		prn(p,"Other characters will have Happy Hour in Jisk's Pizza Time.")
+		prn(p,"Other characters will have Happy Hour in Pizza Time Spice Runners.")
 	end
 	
 	TakisSaveStuff(p)
@@ -117,7 +117,7 @@ COM_AddCommand("takis_dojumpscare", function(p,node,wega)
 	end
 
 	if not node
-		prn(p,"Forces Takis' jumpscare on someone. Type @random to choose a random person in the server")
+		prn(p,"Forces Takis' jumpscare on someone. Type @random to choose a random person in the server. @self for yourself.")
 		return
 	end
 	
@@ -136,6 +136,7 @@ COM_AddCommand("takis_dojumpscare", function(p,node,wega)
 		end
 		
 		node = choose(unpack(plist))
+	elseif node == "@self"
 	end
 	
 	local p2 = GetPlayer(p,node)

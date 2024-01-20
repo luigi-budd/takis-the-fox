@@ -183,6 +183,7 @@ addHook("ThinkFrame", do
 	end
 	
 	t.inttic = 0
+	t.inbossmap = $ or (mapheaderinfo[gamemap].bonustype == 1)
 	
 	livesCount()
 	

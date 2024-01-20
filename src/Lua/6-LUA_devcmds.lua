@@ -415,11 +415,6 @@ COM_AddCommand("invuln", function(p,tics,flags)
 	p.powers[pw_invulnerability] = tics
 end,COM_ADMIN)
 
-local boolean = {
-	["true"] = true,
-	["false"] = false,
-}
-
 COM_AddCommand("freeroam",NiGHTSFreeroam,COM_ADMIN)
 
 COM_AddCommand("spheres", function(p, num)
@@ -433,6 +428,32 @@ COM_AddCommand("spheres", function(p, num)
 	num = tonumber($)
 	
 	p.spheres = num
+end,COM_ADMIN)
+
+COM_AddCommand("setach", function(p, num)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if tonumber(num) == nil 
+		if num == "all"
+			for i = 0,NUMACHIEVEMENTS-1
+				TakisAwardAchievement(p,1<<i)
+			end
+		end
+		return
+	end
+	
+	local file = p.takistable.achfile
+	local enum = 1<<tonumber(num)
+	
+	if file & enum
+		file = $ &~enum
+	else
+		TakisAwardAchievement(p,enum)
+	end
+	
 end,COM_ADMIN)
 
 /*

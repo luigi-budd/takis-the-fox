@@ -824,6 +824,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 		else
 			me.color = p.skincolor
 			me.colorized = false
+			me.state = S_PLAY_WALK
 			P_MovePlayer(p)
 			takis.transfo = $ &~TRANSFO_ELEC
 		end
@@ -1126,6 +1127,13 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 		end
 		
 		takis.fireasstime = $-1
+	else
+		if takis.fireasstime
+			me.color = p.skincolor
+			me.colorized = false
+			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor
+			takis.fireasstime = 0
+		end
 	end
 end)
 
@@ -1144,6 +1152,7 @@ rawset(_G, "TakisTransfo", function(p,me,takis)
 			S_StartSound(me,sfx_trnsfo)
 			me.state = S_PLAY_ROLL
 			takis.transfo = $|TRANSFO_BALL
+			TakisAwardAchievement(p,ACHIEVEMENT_BOWLINGBALL)
 		end
 	end
 	
@@ -1382,6 +1391,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 
 	if me.sprite2 == SPR2_THUP
+	and (takis.tauntid ~= 6)
 		takis.tauntid = 0
 		takis.taunttime = 0
 		
@@ -1850,6 +1860,14 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	elseif takis.starman
 		me.color = (p.powers[pw_shield] & SH_FIREFLOWER) and SKINCOLOR_WHITE or p.skincolor
 		me.colorized = false
+		takis.starman = false
+	end
+	
+	if (p.pflags & PF_SPINNING)
+	or (takis.accspeed < 30*FU and takis.clutchingtime > 10)
+	or (p.powers[pw_carry] and p.powers[pw_carry] ~= CR_ROLLOUT)
+	or (p.playerstate ~= PST_LIVE or not me.health)
+		takis.noability = $|NOABIL_AFTERIMAGE
 	end
 	
 	p.alreadyhascombometer = 2
@@ -2556,6 +2574,12 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 	
 	if add == true
 		takis.combo.count = $+1
+		local cc = takis.combo.count
+		if (HAPPY_HOUR.othergt)
+			takis.combo.score = ((cc*cc)/2)+(10*cc)
+		else
+			takis.combo.score = ((cc*cc)/2)+(17*cc)
+		end
 		
 		if takis.combo.count == 1
 			S_StartSound(nil,sfx_kc3c,p)
@@ -2566,10 +2590,6 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 					TakisAwardAchievement(p,ACHIEVEMENT_COMBOALMOST)
 				end
 				takis.combo.outrotics = 0
-			end
-		elseif takis.combo.count >= 50
-			if (takis.combo.time <= TAKIS_MAX_COMBOTIME/4)
-				TakisAwardAchievement(p,ACHIEVEMENT_COMBOCLOSE)
 			end
 		end
 		
@@ -2724,18 +2744,21 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 	if takis.saveddmgt
 		takis.altdisfx = 0
 		if takis.saveddmgt == DMG_CRUSHED
+			if me.momz*takis.gravflip > 0 then me.momz = 0 end
+			
 			if p.deadtimer == 1
 			and takis.onGround
 				S_StartSound(me,sfx_slam)
 			end
 			
 			me.flags = $ &~MF_NOCLIPHEIGHT
-			me.height = 0
+			me.state = S_PLAY_STND
 			
-			local div = (TR/8)
-			me.spriteyscale = FU/div
-			me.spritexscale = FU*div
-					
+			local crush = FU/3
+	
+			me.spriteyscale = FixedMul(FU,crush)
+			me.spritexscale = FixedDiv(FU,crush)				
+			
 			TakisSpawnDeadBody(p,me,takis)
 			return
 		elseif takis.saveddmgt == DMG_ELECTRIC
@@ -3411,6 +3434,7 @@ rawset(_G,"TakisMenuThinker",function(p)
 	
 	
 	if menu.left == 1
+	or menu.left >= TR/2
 		if menu.page > 0
 			menu.y = 0
 			menu.page = $-1
@@ -3418,6 +3442,7 @@ rawset(_G,"TakisMenuThinker",function(p)
 		end		
 	end
 	if menu.right == 1
+	or menu.right >= TR/2
 		if menu.page ~= #TAKIS_MENU.entries
 			menu.y = 0
 			menu.page = $+1
@@ -3428,15 +3453,15 @@ rawset(_G,"TakisMenuThinker",function(p)
 	if menu.page == 1
 		if menu.up == 1
 		or menu.up >= TR/2
-			if menu.achscroll ~= 0
-				menu.achscroll = $-1
+			if menu.achcur ~= 0
+				menu.achcur = $-1
 				S_StartSound(nil,sfx_menu1,p)
 			end
 		end
 		if menu.down == 1
 		or menu.down >= TR/2
-			if menu.achscroll ~= NUMACHIEVEMENTS-5
-				menu.achscroll = $+1
+			if menu.achcur ~= NUMACHIEVEMENTS-1
+				menu.achcur = $+1
 				S_StartSound(nil,sfx_menu1,p)
 			end
 		end
@@ -3613,12 +3638,6 @@ rawset(_G, "TakisShotgunify", function(p)
 		return
 	end
 	
-	if (takis.transfo ~= 0)
-		S_StartSound(me,sfx_shgnk)
-		takis.transfo = 0
-		P_MovePlayer(p)
-	end
-	
 	takis.transfo = $|TRANSFO_SHOTGUN
 	takis.shotgunned = true
 	if ultimatemode
@@ -3771,7 +3790,7 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 end)
 
 --t is the thing causing, tm is the thing gibbing
-rawset(_G,"SpawnEnemyGibs",function(t,tm,ang)
+rawset(_G,"SpawnEnemyGibs",function(t,tm,ang,fromdoor)
 	if (tm.flags & MF_MONITOR) then return end
 	
 	local speed
@@ -3800,18 +3819,26 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang)
 	for i = 0,P_RandomRange(5,16)
 		local gib = P_SpawnMobj(x,y,z,MT_TAKIS_GIB)
 		gib.scale = mo.scale
+		gib.iwillbouncetwice = P_RandomChance(FU/2)
 		
 		gib.frame = P_RandomRange(A,I)
 		if (mo and mo.valid)
-			if (mo.flags & MF_ENEMY)
-			or (mo.type == MT_TAKIS_BADNIK_RAGDOLL)
-				if (TAKIS_NET.isretro)
-					gib.frame = choosething(A,B,E,G,H,I)
+			if not fromdoor
+				if (mo.flags & MF_ENEMY)
+				or (mo.type == MT_TAKIS_BADNIK_RAGDOLL)
+					if (TAKIS_NET.isretro)
+						gib.frame = choosething(A,B,E,G,H,I)
+					end
+				elseif (mo.type == MT_PLAYER)
+					if not (mo.player.charflags & SF_MACHINE)
+						gib.frame = choosething(A,B,E,G,H,I)
+					end
 				end
-			elseif (mo.type == MT_PLAYER)
-				if not (mo.player.charflags & SF_MACHINE)
-					gib.frame = choosething(A,B,E,G,H,I)
-				end
+			else
+				gib.frame = A
+				gib.sprite = states[S_WOODDEBRIS].sprite
+				gib.radius = 10*gib.scale
+				gib.height = 10*gib.scale
 			end
 		end
 		gib.flags2 = $|(mo.flags2 & MF2_OBJECTFLIP)
@@ -3879,6 +3906,212 @@ rawset(_G,"TakisJumpscare",function(p,wega)
 		end
 	end
 	S_StartSound(nil,sfx_jumpsc,p)
+end)
+
+rawset(_G,"TakisSpawnConfetti",function(mo)
+	if not (mo and mo.valid) then return end
+	
+	local spawner = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
+	spawner.flags2 = $|MF2_DONTDRAW
+	spawner.angle = mo.angle
+	
+	for i = 0, P_RandomRange(10,17)
+		spawner.angle = $+FixedAngle(P_RandomRange(-130,130)*FU+P_RandomFixed())
+		
+		local x,y = ReturnTrigAngles(spawner.angle)
+		local fet = P_SpawnMobjFromMobj(spawner,
+			P_RandomRange(4,15)*x+(mo.momx),
+			P_RandomRange(4,15)*y+(mo.momy),
+			mo.momz,
+			MT_TAKIS_FETTI
+		)
+		P_SetOrigin(fet,fet.x,fet.y,GetActorZ(mo,fet,2))
+		fet.scale = mo.scale+((P_RandomFixed()*(P_RandomRange(0,1) and 1 or -1))/2)
+		fet.angle = spawner.angle
+		
+		P_Thrust(fet,fet.angle,P_RandomRange(0,3)*fet.scale+P_RandomFixed())
+		P_SetObjectMomZ(fet,P_RandomRange(2,5)*FU+P_RandomFixed())
+		
+		fet.rngspin = P_RandomRange(0,1) and 1 or -1
+		fet.rollangle = FixedAngle(P_RandomRange(0,130)*FU+P_RandomFixed()*fet.rngspin)
+		
+		local salmon = ColorOpposite(mo.color or SKINCOLOR_FOREST)
+		local minsal = max(salmon-3,1)
+		local maxsal = min(salmon+3,#skincolors)
+		local colortobe = P_RandomRange(minsal,maxsal)
+		
+		fet.color = colortobe
+		
+		fet.frame = P_RandomRange(A,D)
+		
+	end
+end)
+
+rawset(_G,"TakisDoClutch",function(p)
+	local me = p.mo
+	local takis = p.takistable
+
+	local ccombo = min(takis.clutchcombo,3)
+	
+	if ccombo >= 3
+		if me.friction < FU
+			me.friction = FU
+		end
+	end
+	
+	if takis.io.nostrafe == 1
+		local ang = GetControlAngle(p)
+		p.drawangle = ang
+	end
+	
+	S_StartSoundAtVolume(me,sfx_clutch,255/2)
+	if not takis.clutchingtime
+		S_StartSoundAtVolume(me,sfx_cltch2,255*4/5)
+	end
+	
+	p.pflags = $ &~PF_SPINNING
+	takis.clutchingtime = 1
+	--print(takis.clutchtime)
+	
+	local thrust = FixedMul( (4*FU), (ccombo*FU)/2 )
+	
+	--not too fast, now
+	if thrust >= 13*FU
+	--and not (p.powers[pw_sneakers])
+		thrust = 13*FU
+	end
+	
+	--clutch boost
+	if (takis.clutchtime > 0)
+		if (takis.clutchtime <= 11)
+			--if takis.clutchcombo > 1
+			
+				takis.clutchcombo = $+1
+				takis.clutchcombotime = 2*TR
+				
+				S_StartSoundAtVolume(me,sfx_kc5b,255/3)
+				if ccombo >= 3
+					S_StartSoundAtVolume(me,sfx_cltch2,255/2)
+				end
+				
+				--effect
+				local ghost = P_SpawnGhostMobj(me)
+				ghost.scale = 3*me.scale/2
+				ghost.destscale = FixedMul(me.scale,2)
+				ghost.colorized = true
+				ghost.frame = $|TR_TRANS10
+				ghost.blendmode = AST_ADD
+				for i = 0, 4 do
+					P_SpawnSkidDust(p,25*me.scale)
+				end
+				
+				P_Thrust(me,p.drawangle,3*me.scale/2)
+				thrust = $+(3*FU/2)+FU
+			--end
+		--dont thrust too early, now!
+		elseif takis.clutchtime > 16
+			
+			takis.clutchspamcount = $+1
+			takis.clutchcombo = 0
+			takis.clutchcombotime = 0
+			thrust = FU/5
+			if takis.clutchspamcount >= 3
+				thrust = 0
+			end
+			
+		end
+	end
+	
+	/*
+	for i = 0, 10 do
+		P_SpawnSkidDust(p,15*me.scale)
+	end
+	*/
+	
+	if p.powers[pw_sneakers]
+		thrust = $*9/5
+	end
+	
+	if p.gotflag
+		thrust = $/6
+	end
+	
+	--stop that stupid momentum mod from givin
+	--us super speed for spamming
+	if thrust == 0
+	and not p.powers[pw_sneakers]
+	and (takis.clutchspamcount >= 3)
+		P_InstaThrust(me,ang,FixedDiv(
+				FixedMul(takis.accspeed,me.scale),
+				3*FU
+			)
+		)
+	end
+	
+	if (takis.accspeed > 55*FU)
+	and not (p.powers[pw_sneakers] or takis.isSuper)
+		me.friction = FU
+		thrust = 0
+	end
+	
+	if (me.flags2 & MF2_TWOD
+	or twodlevel)
+		thrust = $/4
+	end
+	
+	local ang = takis.io.nostrafe and GetControlAngle(p) or me.angle
+	
+	local mo = (p.powers[pw_carry] == CR_ROLLOUT) and me.tracer or me
+	if mo ~= me then ang = me.angle end
+	thrust = FixedMul(thrust,me.scale)
+	
+	if mo == me
+		P_Thrust(mo,ang,thrust)
+	else
+		P_InstaThrust(mo,ang,
+			FixedHypot(mo.momx,mo.momy)+thrust
+		)
+		p.drawangle = FixedAngle(AngleFixed(ang)+180*FU)
+	end
+	
+	--xmom code
+	if takis.notCarried
+		local d1 = P_SpawnMobjFromMobj(me, -20*cos(ang + ANGLE_45), -20*sin(p.drawangle + ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
+		local d2 = P_SpawnMobjFromMobj(me, -20*cos(ang - ANGLE_45), -20*sin(p.drawangle - ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
+		d1.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d1.x, d1.y) --- ANG5
+		d2.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d2.x, d2.y) --+ ANG5
+	end
+	
+	local speedmul = FU
+	if (me.flags2 & MF2_TWOD
+	or twodlevel)
+		speedmul = $*3/4
+	end
+	if (takis.inWater)
+		speedmul = $*3/4
+	end
+	
+	local runspeed = FixedMul(skins[TAKIS_SKIN].runspeed,speedmul)
+	if takis.accspeed < runspeed
+		P_Thrust(mo,ang,FixedMul(runspeed-takis.accspeed,me.scale))
+	end
+	
+	--TODO replace with clutchstart
+	if takis.onGround
+		me.state = S_PLAY_RUN
+		P_MovePlayer(p)
+	end
+	takis.clutchtime = 23
+	takis.clutchspamtime = 23
+	
+	if takis.clutchspamcount == 5
+		TakisAwardAchievement(p,ACHIEVEMENT_CLUTCHSPAM)
+	end
+	
+	p.jp = 2
+	p.jt = -5
+	takis.coyote = 0
+
 end)
 
 filesdone = $+1
