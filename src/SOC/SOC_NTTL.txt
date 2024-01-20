@@ -1,0 +1,19 @@
+Level 1
+Levelname = Greenflower
+Act = 1
+Keywords = GFZ1
+Music = GFZ1
+TypeOfLevel = Singleplayer,Co-op,Competition,Race
+NextLevel = Z1
+SkyNum = 1
+RecordAttack = true
+LevelSelect = 1
+SaveGame = true
+SkyboxScale = 64
+FlickyList = Bluebird,Chipmunk
+#Flicky selection is final.
+
+#Finaldemo speech room
+Level Z1
+Music = _INTER
+NoTitlecard = true

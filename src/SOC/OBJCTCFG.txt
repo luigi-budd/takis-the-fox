@@ -1,0 +1,9 @@
+Character
+SkinName = takisthefox
+DisplayName = Takis
+TagTextColor = SKINCOLOR_FOREST
+TagOutlineColor = SKINCOLOR_RED
+OppositeColor = SKINCOLOR_SALMON
+PlayerText = Placing the holder!
+
+#
