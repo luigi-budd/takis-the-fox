@@ -15,6 +15,23 @@
 	-Banddy - metal sonic boss portrait
 	-Marilyn - final demo cutscene i used lol
 	
+	CODE I STOLE (from reusable mods)
+	-SMSReborn - IO code
+	-CustomHud Lib - customhud lib duhhh
+	-Clone Fighter's Textbox Engine - slightly modified to be more
+									  banjo kazooie
+	-NiGHTS Freeroam - ok this isnt reusable but buggie asked me to put it in
+	-ChrispyChars - some code used for confetti
+	
+	SOME MORE STUFF I STOLE
+	-AntonBlast - sound effects, music, sprites
+	-Pizza Tower - sound effects
+	-Team Fortress 2 - sound effects, music
+	
+	some functions were also taken from here
+	https://wiki.srb2.org/wiki/User:Clairebun/Sandbox/Common_Lua_Functions
+	
+	shhhhooould be all, if i missed any LET ME KNOW SO I CAN CREDIT THEM!!!
 */
 
 local constlist = {}
@@ -77,14 +94,6 @@ rawset(_G, "DEBUG_print",function(p,enum)
 end)
 
 rawset(_G, "TAKIS_SKIN", "takisthefox")
-
-local setname = false
-addHook("ThinkFrame",do
-	if OLDC and not setname
-		OLDC.SetSkinFullName(TAKIS_SKIN,"Takis the Fox")
-		setname = true
-	end
-end)
 
 rawset(_G, "TAKIS_MAX_HEARTCARDS", 6)
 
@@ -286,7 +295,7 @@ rawset(_G, "TAKIS_NET", {
 		["spiral hill pizza"] = true,
 	},
 	
-	heartcardmo = {},
+	cheatedgame = false,
 	
 	--titlecard stuff
 	bossnames = {
@@ -623,7 +632,7 @@ rawset(_G, "TakisInitTable", function(p)
 					[3] = "TAUNTPIX_CONG",	
 					[4] = "TAUNTPIX_HRBT",	
 					[5] = "TAUNTPIX_BIRD",	
-					[6] = "TAUNTPIX_BIRD",	
+					[6] = "TAUNTPIX_YEAH",	
 				},
 				--fixed point scales
 				scales = {
@@ -695,6 +704,17 @@ rawset(_G, "TakisInitTable", function(p)
 			}
 			*/
 		},
+		/*
+		hitlag = {
+			tics = 0,
+			speed = 0,
+			momz = 0,
+			angle = 0,
+			frame = 0,
+			sprite2 = 0,
+			pflags = 0,
+		},
+		*/
 		
 		shotgunned = false,
 		--the shotgun mobj
@@ -781,6 +801,8 @@ rawset(_G, "TakisInitTable", function(p)
 				int = {117, 43}
 			},
 			--timer has 2 different sets for spectator and when finished
+			--you can tell this was way before i knew how to align
+			--hud stuff....
 			timer = {
 				text = 14,
 				int = {117, 60},		
@@ -966,6 +988,10 @@ freeslot("sfx_antow6")
 sfxinfo[sfx_antow6].caption = '\x8F"WOW! Eheh!"\x80'
 freeslot("sfx_antow7")
 sfxinfo[sfx_antow7].caption = '\x8F"W-w-w-w I\'m good!"\x80'
+freeslot("sfx_antwi1")
+sfxinfo[sfx_antwi1].caption = "Strange laughing"
+freeslot("sfx_antwi2")
+sfxinfo[sfx_antwi2].caption = '\x8F"Ha!"\x80'
 freeslot("sfx_tayeah")
 sfxinfo[sfx_tayeah].caption = '\x8F"Yyyeahh!"\x80'
 freeslot("sfx_hapyhr")
@@ -1002,7 +1028,7 @@ sfxinfo[sfx_takst0].caption = "Step"
 
 freeslot("sfx_tkapow")
 sfxinfo[sfx_tkapow] = {
-	flags = SF_X2AWAYSOUND|SF_NOMULTIPLESOUND|SF_TOTALLYSINGLE,
+	flags = SF_X2AWAYSOUND,
 	caption = "\x82KaPOW!!!\x80"
 }
 freeslot("sfx_tacrit")
@@ -1139,6 +1165,9 @@ SafeFreeslot("sfx_takhmb")
 sfxinfo[sfx_takhmb].caption = "/"
 SafeFreeslot("sfx_sptclt")
 sfxinfo[sfx_sptclt].caption = "Collect Spirit"
+SafeFreeslot("sfx_sdmkil")
+sfxinfo[sfx_sdmkil].caption = "/"
+
 
 --spr_ freeslot
 
@@ -1163,6 +1192,7 @@ SafeFreeslot("SPR_TVSG")
 SafeFreeslot("SPR_TGIB")
 SafeFreeslot("SPR_TSPR")
 SafeFreeslot("SPR_TKFT")
+SafeFreeslot("SPR_MTLD")
 
 --
 
@@ -1432,7 +1462,9 @@ mobjinfo[MT_TAKIS_HEARTCARD] = {
 	--$Name Heartcard
 	--$Sprite HTCDALAR
 	--$Category Takis Stuff
+	--$Flags4Text Respawn in SP
 	--$Flags8Text No Gravity
+	--$ParameterText Respawn
 	doomednum = 3003,
 	spawnstate = S_TAKIS_HEARTCARD_SPIN,
 	spawnhealth = 1000,
@@ -1574,6 +1606,7 @@ mobjinfo[MT_TAKIS_BADNIK_RAGDOLL_A] = {
 	radius = 5*FRACUNIT,
 }
 
+freeslot("MT_SHOTGUN_GOLDBOX")
 function A_ShotgunBox(mo)
 	local gun = P_SpawnMobjFromMobj(mo,0,0,0,MT_TAKIS_SHOTGUN)
 	gun.dropped = true
@@ -1623,6 +1656,7 @@ mobjinfo[MT_SHOTGUN_BOX] = {
 	--$Name Shotgun Box
 	--$Sprite TVSGA0
 	--$Category Takis Stuff
+	--$Flags8Text Golden
 	doomednum = 3002,
 	spawnstate = S_SHOTGUN_BOX,
 	painstate = S_SHOTGUN_BOX,
@@ -1647,6 +1681,30 @@ mobjinfo[MT_SHOTGUN_ICON] = {
 	flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_SCENERY|MF_NOGRAVITY|MF_BOXICON,
 	height = 14*FRACUNIT,
 	radius = 8*FRACUNIT,
+}
+
+freeslot("S_SHOTGUN_GOLDBOX")
+states[S_SHOTGUN_GOLDBOX] = {
+	sprite = SPR_TVSG,
+	frame = B,
+	tics = 2,
+	nextstate = S_GOLDBOX_FLICKER,
+	action = A_GoldMonitorSparkle,
+}
+mobjinfo[MT_SHOTGUN_GOLDBOX] = {
+	doomednum = -1,
+	spawnstate = S_SHOTGUN_GOLDBOX,
+	painstate = S_SHOTGUN_GOLDBOX,
+	deathstate = S_GOLDBOX_OFF1,
+	attacksound = sfx_monton,
+	deathsound = sfx_pop,
+	reactiontime = 8,
+	speed = 1,
+	damage = MT_SHOTGUN_ICON,
+	mass = 100,
+	flags = MF_SOLID|MF_SHOOTABLE|MF_MONITOR|MF_GRENADEBOUNCE,
+	height = 44*FRACUNIT,
+	radius = 20*FRACUNIT,
 }
 
 /*
@@ -1713,13 +1771,35 @@ states[S_TAKIS_SPIRIT] = {
 	frame = A,
 	tics = -1,
 }
---TODO: make this a collectable
 mobjinfo[MT_TAKIS_SPIRIT] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_SPIRIT,
 	flags = MF_SLIDEME|MF_NOCLIPTHING|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY,
 	height = 4*FRACUNIT,
 	radius = 4*FRACUNIT,
+}
+
+freeslot("MT_TAKIS_METALDETECTOR")
+freeslot("S_TAKIS_METALDETECTOR")
+states[S_TAKIS_METALDETECTOR] = {
+	sprite = SPR_RING,
+	frame = A,
+	tics = -1,
+	nextstate = S_TAKIS_METALDETECTOR,
+}
+
+mobjinfo[MT_TAKIS_METALDETECTOR] = {
+	--$Name Metal Detector
+	--$Sprite SHGNC0
+	--$Category Takis Stuff
+	doomednum = 3004,
+	spawnstate = S_TAKIS_METALDETECTOR,
+	deathstate = S_TAKIS_METALDETECTOR,
+	spawnhealth = 1000,
+	activesound = sfx_gbeep,
+	height = 140*FRACUNIT,
+	radius = 32*FRACUNIT,
+	flags = MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY
 }
 
 addHook("NetVars",function(n)
@@ -1760,5 +1840,19 @@ addHook("ThinkFrame",do
 		end
 	end
 end)
+
+local setname = false
+local addedskip = false
+addHook("ThinkFrame",do
+	if (OLDC and OLDC.SetSkinFullName) and not setname
+		OLDC.SetSkinFullName(TAKIS_SKIN,"Takis the Fox")
+		setname = true
+	end
+	if (AddSkipMonitor) and not addedskip
+		AddSkipMonitor(MT_SHOTGUN_BOX,35,"Time to kick ass!","")
+		addedskip = true
+	end
+end)
+
 
 filesdone = $+1

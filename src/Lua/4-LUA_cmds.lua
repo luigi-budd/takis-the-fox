@@ -137,6 +137,7 @@ COM_AddCommand("takis_dojumpscare", function(p,node,wega)
 		
 		node = choose(unpack(plist))
 	elseif node == "@self"
+		node = #p
 	end
 	
 	local p2 = GetPlayer(p,node)

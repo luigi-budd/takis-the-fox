@@ -193,9 +193,11 @@ end)
 
 rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	if (TAKIS_NET.noachs and netgame) then return end
+	if (TAKIS_NET.cheatedgame) then return end
 	
 	if p.bot == BOT_2PAI
 	or p.bot == BOT_MPAI
+	or (p.takis_noabil)
 		return
 	end
 	

@@ -86,7 +86,7 @@ local function drawheartcards(v,p)
 		
 		if TAKIS_MAX_HEARTCARDS == 1
 			add = 0
-		--	j = 0
+			j = 0
 		end
 		
 		--shake
@@ -270,6 +270,7 @@ local function calcstatusface(p,takis)
 	
 	if (takis.heartcards <= (TAKIS_MAX_HEARTCARDS/TAKIS_MAX_HEARTCARDS or 1))
 	and not (takis.fakeexiting)
+	and (takis.HUD.statusface.state == "IDLE")
 		takis.HUD.statusface.state = "PTIM"
 		takis.HUD.statusface.frame = (2*leveltime/3)%2
 		takis.HUD.statusface.priority = 0	
@@ -584,9 +585,11 @@ local function drawrings(v,p)
 	flash = (flash and ((leveltime%(2*TR)) < 30*TR) and (leveltime/5 & 1))
 	
 	if (p.takis_noabil ~= nil)
-	and (takis.heartcards == TAKIS_MAX_HEARTCARDS)
-		ringFy = 28*FU
-		ringy = 15
+		ringx = 102
+		if (takis.heartcards == TAKIS_MAX_HEARTCARDS)
+			ringFy = 28*FU
+			ringy = 15
+		end
 	end
 	
 	if flash
@@ -597,6 +600,8 @@ local function drawrings(v,p)
 	if p.spectator then eflag = V_HUDTRANSHALF end
 	
 	local val = p.rings
+	
+	--classic x = 102
 	v.drawScaled(ringFx, ringFy, FU/2,v.getSpritePatch(ringpatch, A, 0, 0), V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER,v.getColormap(nil,SKINCOLOR_RED))
 	v.drawNum(ringx, ringy, val, V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER)
 	
@@ -786,11 +791,13 @@ local function drawscore(v,p)
 	if not prevw then prevw = 0 end
 	
 	--alignment stuff
-	local x,y = 300-15,15
+	--14 pixels away from edge like timer
+	local x,y = 300-2+(v.cachePatch(scorenum.."1").width*4/10),15
 	
 	if takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid
 	and not (takis.HUD.bosscards.nocards)
 		y = $+30
+		x = 300-15
 	end
 	
 	local snap = V_SNAPTORIGHT|V_SNAPTOTOP
@@ -799,7 +806,7 @@ local function drawscore(v,p)
 		y = 55
 	end
 	
-	local width = (string.len(score))*(v.cachePatch(scorenum.."1").width*4/10)
+	local width = string.len(score)*(v.cachePatch(scorenum.."1").width*4/10)
 	if align == "center"
 		width = $/2
 	elseif align ~= "right"
@@ -807,6 +814,7 @@ local function drawscore(v,p)
 	end
 	--
 	
+	--correct for width-1
 	fs.scorex, fs.scorey = x,y
 	fs.scorea = align
 	fs.scores = snap
@@ -2487,7 +2495,7 @@ local function drawcosmenu(v,p)
 			end
 		--achs page
 		else
-			local number = takis.achfile
+			local number = consoleplayer.takistable.achfile
 			for i = 0,NUMACHIEVEMENTS-1
 				local has = V_60TRANS
 				local t = TAKIS_ACHIEVEMENTINFO
@@ -2509,13 +2517,13 @@ local function drawcosmenu(v,p)
 				v.drawString(x+FU+(v.cachePatch(ach.icon).width*(ach.scale or FU)),
 					y,
 					(ach.secret and has) and "Secret Achievement" or (ach.name or "Ach. Enum "..(1<<i)),
-					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+					(V_GRAYMAP and has or 0)|V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
 					"thin-fixed"
 				)
 				v.drawString(x+FU+(v.cachePatch(ach.icon).width*(ach.scale or FU)),
 					y+(8*FU),
 					(ach.secret and has) and " " or (ach.text or "Flavor text goes here"),
-					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+					(V_GRAYMAP and has or 0)|V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
 					"small-fixed"
 				)
 				
@@ -2735,6 +2743,22 @@ local function drawtutbuttons(v,p)
 	local me = p.mo
 	
 	local disp = 0
+	
+	if (takis.transfo & TRANSFO_SHOTGUN)
+		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
+			(hudinfo[HUD_LIVES].y+disp)*FU,
+			(FU/2)+(FU/12),
+			v.cachePatch("TB_C3"),
+			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS
+		)
+		v.drawString(hudinfo[HUD_LIVES].x+20,
+			hudinfo[HUD_LIVES].y+(disp+5),
+			"De-Shotgun",
+			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
+			"thin"
+		)	
+		disp = $-20
+	end
 	
 	if not (p.takis_noabil & NOABIL_DIVE)
 		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
@@ -3913,12 +3937,11 @@ addHook("HUD", function(v)
 			
 			local flash,timetic,extratext,extrafunc,type = howtotimer(p)
 			
-			if not (type == "regular"
+			if (type == "regular"
 			and (gametype == GT_COOP))
-				return
+				drawtimer(v,p,true)
 			end
 			
-			drawtimer(v,p,true)
 		end
 		
 		drawjumpscarelol(v,p)

@@ -113,12 +113,9 @@ addHook("MapChange", function(mapid)
 	end
 	
 	t.ideyadrones = {}
-	HH_Reset()
 end)
---should these 2 HH_Resets be here?
+
 addHook("MapLoad", function(mapid)
-	HH_Reset()
-	
 	t.inbossmap = false
 	
 	t.numdestroyables = 0
@@ -157,6 +154,15 @@ end)
 addHook("ThinkFrame", do
 	
 	CVtoNET()
+	
+	if usedCheats
+	and not t.cheatedgame
+		print("\x83NOTICE:\x80 Achievements cannot be earned in cheated games.")
+		S_StartSound(nil,sfx_menu1)
+	end
+	
+	--you cant turn this off!
+	t.cheatedgame = $ or usedCheats
 	
 	if gamestate == GS_TITLESCREEN
 		TAKIS_TITLETIME = $+1
@@ -256,8 +262,17 @@ addHook("IntermissionThinker",function(stagefailed)
 					S_StartSound(nil,sfx_altdi1,p)
 				end
 			elseif t.inttic == TR+(TR*4/5)
-			and All7Emeralds(emeralds)
-				S_StartSound(nil,sfx_tayeah,p)
+				if All7Emeralds(emeralds)
+					S_StartSound(nil,sfx_tayeah,p)
+				elseif not stagefailed
+					if string.lower(G_BuildMapTitle(takis.lastmap)) == "black hole zone"
+						S_StartSound(nil,sfx_takoww,p)
+					else
+						S_StartAntonLaugh(nil,p)
+					end
+				else
+					S_StartSound(nil,sfx_antow3,p)
+				end
 			end
 		end
 	end

@@ -96,7 +96,7 @@
 	-[done]happy hour is weird when it is synched
 	-replace hud items only when switching, like engi
 	-cosmenu scrolling if text goes past hints
-	-sometimes the PTSR bar doesnt show with nohappyhour?
+	-[done?]sometimes the PTSR bar doesnt show with nohappyhour?
 	-[done]synch happy hour for joining players
 	-[done]transformations
 	-[scrapped]bat taunt keeps colorization if interuppted
@@ -114,6 +114,11 @@
 	-[done?]2d mode is SHIT!! fix weird state bugs
 	-SHIT IS STILL RESYNCHING!!
 	-[done]fireass in nights freeroam
+	-hitlag?
+	-clutch speed adjustmensts fro 2d & underwater
+	-killing blow sfx when clutching into
+	-ambush makes shotgun boxes gold
+	-metal detector to remove shotgun
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -121,6 +126,7 @@
 	-the tail on roll frames doesnt point the right way
 	-redo walk 4th angle
 	-retro faces for the new faces
+	-redo tailees dead
 	
 	--PLANNED MAPHEADERS
 	-[done]Takis_HH_Music - regular happyhour mus, ignore styles
@@ -130,6 +136,7 @@
 	-[done]Takis_HH_Timelimit - timelimit (in tics)
 	-[done]Takis_HH_NoInter - disable the intermission screen
 	-[done]Takis_HH_NoHappyHour - disable allhappyhour from doin the lvl
+	-Takis_HH_NoClang - disable mysterious clanging
 	
 */
 
@@ -428,6 +435,7 @@ addHook("PlayerThink", function(p)
 						
 						if (p.exiting <= 45)
 						and (me.health)
+						and not ultimatemode
 							P_KillMobj(me)
 							S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSPLDET4])
 							me.frame = A
@@ -716,6 +724,7 @@ addHook("PlayerThink", function(p)
 				
 				if ((takis.tossflag) and (takis.c1))
 				and not ((takis.yeahed) or (takis.taunttime))
+				and not p.spectator
 					menu.yadd = 500*FU
 					menu.open = true
 				end
@@ -1337,6 +1346,7 @@ addHook("PlayerThink", function(p)
 								and (found.health)
 									if CanFlingThing(found)
 										spawnragthing(found,me)
+										S_StartSound(found,sfx_sdmkil)
 									elseif (found.type == MT_PLAYER)
 										if CanPlayerHurtPlayer(p,found.player)
 											TakisAddHurtMsg(found.player,HURTMSG_HAMMERQUAKE)
@@ -1646,6 +1656,12 @@ addHook("PlayerThink", function(p)
 						if not takis.crushtime
 						and (takis.saveddmgt ~= DMG_CRUSHED)
 							DoTakisSquashAndStretch(p,me,takis)
+						else
+							p.jt = 0
+							p.jp = 0
+							p.sp = 0
+							p.tk = 0
+							p.tr = 0
 						end
 						P_SetOrigin(me,me.x,me.y,me.z)
 						for i = 0, 8
@@ -1671,6 +1687,10 @@ addHook("PlayerThink", function(p)
 					P_Thrust(me,me.angle,takis.prevspeed)
 				end
 			else
+				if me.eflags & MFE_SPRUNG
+					takis.coyote = 0
+				end
+				
 				if takis.coyote
 					takis.coyote = $-1
 					if takis.jump == 1
@@ -1716,7 +1736,10 @@ addHook("PlayerThink", function(p)
 				
 				--keep increasing this until it reaches
 				--2*TR, kill if then
-				takis.timescrushed = $+1
+				--but this isnt a zone map?
+				if G_BuildMapTitle(gamemap) ~= "Red Room Zone"
+					takis.timescrushed = $+1
+				end
 				takis.crushscale = FU/3
 				
 				if not takis.crushtime
@@ -1746,6 +1769,11 @@ addHook("PlayerThink", function(p)
 					
 					me.spriteyscale = FixedMul(FU,takis.crushscale)
 					me.spritexscale = FixedDiv(FU,takis.crushscale)				
+					p.jt = 0
+					p.jp = 0
+					p.sp = 0
+					p.tk = 0
+					p.tr = 0
 				end
 			end
 			
@@ -2074,12 +2102,12 @@ addHook("PlayerThink", function(p)
 					takis.HUD.rank.score = p.score
 				elseif (rank == "C")
 					takis.HUD.rank.score = p.score-(per)
+					takis.HUD.rank.percent = $/2
 				elseif (rank == "B")
 					takis.HUD.rank.score = p.score-(per*2)
-					takis.HUD.rank.percent = $*2
 				elseif (rank == "A")
 					takis.HUD.rank.score = p.score-(per*3)
-					takis.HUD.rank.percent = $*4
+					takis.HUD.rank.percent = $*5/2
 				elseif (rank == "S")
 					takis.HUD.rank.score = p.score-(per*8)
 					takis.HUD.rank.percent = $*4
@@ -2189,9 +2217,7 @@ addHook("PlayerThink", function(p)
 		
 		--outside of shorts (and skin check!!!!) to check for
 		--last rank
-		if (p.ptsr_rank)
-			takis.lastrank = ranktonum[p.ptsr_rank or "D"]
-		end
+		takis.lastrank = ranktonum[p.ptsr_rank or "D"]
 
 		for i = 0,#takis.hurtmsg
 			if takis.hurtmsg[i].tics > 0
@@ -2208,6 +2234,7 @@ addHook("PlayerThink", function(p)
 		end
 		
 		if me.battime then me.battime = $-1 end
+		if me.touchingdetector then me.touchingdetector = $-1 end
 		
 		takis.combo.lastcount = takis.combo.count
 		takis.lastmap = gamemap
@@ -2250,8 +2277,8 @@ addHook("PlayerSpawn", function(p)
 		if (mapheaderinfo[gamemap].lvlttl == "Tutorial")
 			CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.tutexit)
 		elseif (mapheaderinfo[gamemap].lvlttl == "Red Room")
-			if p.takis_noabil ~= NOABIL_ALL|NOABIL_THOK
-				p.takis_noabil = NOABIL_ALL|NOABIL_THOK
+			if p.takis_noabil ~= (NOABIL_ALL|NOABIL_THOK) &~NOABIL_SHOTGUN
+				p.takis_noabil = (NOABIL_ALL|NOABIL_THOK) &~NOABIL_SHOTGUN
 			end
 			CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"][1])
 		else
@@ -2407,6 +2434,7 @@ addHook("PlayerCanDamage", function(player, mobj)
 				if (takis.transfo & TRANSFO_BALL)
 					S_StartSound(me,sfx_bowl)
 				end
+				S_StartSound(me,sfx_sdmkil)
 				
 				return true
 				
@@ -2462,6 +2490,8 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	and (takis.tauntcanparry)
 		local me = mo
 		local p = p
+		
+		TakisResetTauntStuff(p)
 		
 		S_StartSound(me,sfx_sparry)
 		if (inf.player and inf.player.valid)
@@ -2560,6 +2590,8 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	
 	if takis.heartcards > 0
 		
+		TakisResetTauntStuff(p)
+		
 		if (p.takis_noabil ~= nil)
 			if (takis.heartcards ~= 1)
 				if (takis.timeshit == 0)
@@ -2610,7 +2642,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		--p.powers[pw_flashing] = TR
 		takis.ticsforpain = TR
 		S_StartSound(mo,sfx_shldls)
-		if (dmgt & DMG_SPIKE)
+		if (dmgt == DMG_SPIKE)
 			S_StartSound(mo,sfx_spkdth)
 		end
 		
@@ -2706,6 +2738,15 @@ local function stopmom(takis,me,ang)
 		L_ZLaunch(me,6*me.scale)
 		P_Thrust(me,ang,-6*me.scale)
 	end
+	/*
+	takis.hitlag.tics = TR/4
+	takis.hitlag.speed = takis.accspeed
+	takis.hitlag.momz = me.momz*takis.gravflip
+	takis.hitlag.angle = me.player.drawangle
+	takis.hitlag.frame = me.frame
+	takis.hitlag.sprite2 = me.sprite2
+	takis.hitlag.pflags = me.player.pflags
+	*/
 end
 
 local function clutchhurt(t,tm)
@@ -2721,7 +2762,7 @@ local function clutchhurt(t,tm)
 		P_DamageMobj(tm,t,t,4)
 		
 		SpawnEnemyGibs(t,tm)
-		SpawnBam(tm)
+		SpawnBam(tm,{me.momx,me.momy})
 
 		S_StartSound(tm,sfx_smack)
 		
@@ -2841,6 +2882,7 @@ local function knockbacklolll(t,tm)
 			
 			--if not (p.pflags & PF_SPINNING)
 				S_StartSound(tm,sfx_smack)
+				S_StartSound(tm,sfx_sdmkil)
 				SpawnEnemyGibs(t,tm,ang)
 				SpawnBam(tm)
 				
@@ -2923,7 +2965,7 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		takis.ticsforpain = TR
 
 		S_StartSound(mo,sfx_shldls)
-		if (dmgt & DMG_SPIKE)
+		if (dmgt == DMG_SPIKE)
 			S_StartSound(mo,sfx_spkdth)
 		end
 		
@@ -3326,6 +3368,8 @@ local function hurtbytakis(mo,inf,sor)
 			
 			if mo.type == MT_PLAYER
 				if (not mo.health)
+				--not if we killed ourselves though
+				and (mo ~= sor)
 					sor.player.takistable.HUD.statusface.evilgrintic = 2*TR
 				end
 				if mo.player.takistable.tauntjoinable
@@ -3415,6 +3459,7 @@ addHook("AbilitySpecial", function(p)
 	
 	if p.takistable.thokked
 	or (p.takistable.noability & NOABIL_THOK)
+	or (p.pflags & PF_JUMPSTASIS)
 		return true
 	end
 	if ((p.takistable.inPain) or (p.takistable.inFakePain))
@@ -3473,7 +3518,7 @@ addHook("JumpSpecial", function(p)
 	
 	if not takis then return end
 	
-	if takis.jump then return end
+	if takis.jump > 1 then return end
 	if (takis.thokked or p.pflags & PF_THOKKED) then return end
 	if (takis.jumptime > 0) then return end
 	

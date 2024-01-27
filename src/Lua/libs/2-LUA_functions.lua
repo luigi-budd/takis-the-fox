@@ -482,7 +482,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 		
 		hud.flyingscore.x = ease.inexpo(( FU / expectedtime )*tics,
 		backx+5*FU+hud.combo.patchx, 
-		285*FU
+		298*FU
 		)
 		hud.flyingscore.y = ease.inexpo(( FU / expectedtime )*tics,
 		backy+7*FU, 
@@ -1716,8 +1716,10 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if (takis.wavedashcapable)
-	or (p.gotflag)
 		takis.noability = $|NOABIL_HAMMER
+	end
+	if (p.gotflag)
+		takis.noability = $|NOABIL_HAMMER|NOABIL_AFTERIMAGE
 	end
 	
 	if (takis.shotguntuttic)
@@ -1810,10 +1812,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		
 	end
 	
-	if (p.takis_noabil ~= nil)
-		takis.noability = $|p.takis_noabil
-	end
-	
 	if takis.pittime then takis.pittime = $-1 end
 	
 	if takis.fireasssmoke
@@ -1869,6 +1867,45 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	or (p.playerstate ~= PST_LIVE or not me.health)
 		takis.noability = $|NOABIL_AFTERIMAGE
 	end
+	
+	/*
+	if takis.hitlag.tics
+		local lag = takis.hitlag
+		me.momx,me.momy,me.momz = 0,0,0
+		me.flags = $|MF_NOGRAVITY
+		me.frame = A
+		me.sprite2 = lag.sprite2
+		me.frame = lag.frame
+		takis.stasistic = 2
+		
+		lag.tics = $-1
+		if lag.tics == 1
+			p.drawangle = lag.angle
+			P_InstaThrust(me,lag.angle,FixedMul(lag.speed,me.scale))
+			me.momz = lag.momz*takis.gravflip
+			me.flags = $ &~MF_NOGRAVITY
+			p.pflags = lag.pflags
+			P_MovePlayer(p)
+			lag.tics = 0
+			takis.stasistic = 0
+		end
+		takis.accspeed = lag.speed
+		
+	else
+		takis.hitlag.speed = 0
+		takis.hitlag.momz = 0
+		takis.hitlag.angle = 0
+	end
+	*/
+	
+	/*
+	if leveltime % TR == 0
+		takis.hitlag.tics = TR/3
+		takis.hitlag.speed = takis.accspeed
+		takis.hitlag.momz = me.momz*takis.gravflip
+		takis.hitlag.angle = p.drawangle
+	end
+	*/
 	
 	p.alreadyhascombometer = 2
 	
@@ -2093,11 +2130,14 @@ rawset(_G, "DoFlash", function(p, pal, tic)
 	end
 end)
 
-rawset(_G, "S_StartAntonOw", function(source)
+rawset(_G, "S_StartAntonOw", function(source,p)
 	if source == nil
 		return
 	end
-	S_StartSound(source, P_RandomRange(sfx_antow1,sfx_antow7))
+	S_StartSound(source, P_RandomRange(sfx_antow1,sfx_antow7),p)
+end)
+rawset(_G, "S_StartAntonLaugh", function(source,p)
+	S_StartSound(source, P_RandomRange(sfx_antwi1,sfx_antwi2),p)
 end)
 
 local function collide2(me,mob)
@@ -2106,6 +2146,7 @@ local function collide2(me,mob)
 	return true
 end
 
+--can @p1 damage @p2?
 rawset(_G, "CanPlayerHurtPlayer", function(p1,p2,nobs)
 
 	local ff = CV_FindVar("friendlyfire").value
@@ -2448,9 +2489,15 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 			local ragdoll = P_SpawnMobjFromMobj(tm,0,0,0,MT_TAKIS_BADNIK_RAGDOLL)
 			tm.tics = -1
 			ragdoll.sprite = tm.sprite
+			if tm.sprite == SPR_PLAY
+				ragdoll.skin = tm.skin
+				ragdoll.frame = A
+				ragdoll.sprite2 = SPR2_PAIN
+			else
+				ragdoll.frame = tm.frame
+			end
 			ragdoll.color = tm.color
 			ragdoll.angle = t.angle
-			ragdoll.frame = tm.frame
 			ragdoll.height = tm.height
 			ragdoll.radius = tm.radius
 			ragdoll.scale = tm.scale
@@ -2549,6 +2596,7 @@ local getcomnum = {
 }
 rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 	if (p.takis_noabil ~= nil)
+	and (p.takis_noabil & NOABIL_WAVEDASH)
 		return
 	end
 	
@@ -2871,6 +2919,15 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 		DoFlash(p,PAL_NUKE,5)
 		S_StartSound(me,sfx_slam)
 		DoQuake(p,10*FU,5)
+	--fell back down again
+	elseif not (takis.justHitFloor
+	or takis.onGround)
+	and p.deadtimer > 3
+	and takis.deathfloored
+		me.state = S_PLAY_DEAD
+		me.frame = A
+		me.sprite2 = SPR2_TDD2
+		takis.deathfloored = false
 	end
 	
 end)
@@ -3307,6 +3364,7 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 			shot.momz = $*2
 			shot.shotbytakis = true
 			P_Thrust(shot,shot.angle,takis.accspeed)
+			S_StopSound(shot)
 			
 		end
 		
@@ -3346,6 +3404,7 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 					shot.momz = $*2
 					shot.shotbytakis = true
 					P_Thrust(shot,shot.angle,takis.accspeed)
+					S_StopSound(shot)
 					
 				end
 				
@@ -3361,6 +3420,7 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 			shot.momy = $*2
 			shot.momz = $*2
 			shot.shotbytakis = true
+			S_StopSound(shot)
 			
 		end
 	end
@@ -3824,13 +3884,17 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang,fromdoor)
 		gib.frame = P_RandomRange(A,I)
 		if (mo and mo.valid)
 			if not fromdoor
-				if (mo.flags & MF_ENEMY)
-				or (mo.type == MT_TAKIS_BADNIK_RAGDOLL)
+				if ( ((mo.flags & MF_ENEMY)
+				or (mo.type == MT_TAKIS_BADNIK_RAGDOLL))
+				and mo.sprite ~= SPR_PLAY)
 					if (TAKIS_NET.isretro)
 						gib.frame = choosething(A,B,E,G,H,I)
 					end
-				elseif (mo.type == MT_PLAYER)
-					if not (mo.player.charflags & SF_MACHINE)
+				elseif (mo.type == MT_PLAYER or mo.sprite == SPR_PLAY)
+					if not (
+					(mo.player and (mo.player.charflags & SF_MACHINE))
+					or
+					(skins[mo.skin].flags & SF_MACHINE))
 						gib.frame = choosething(A,B,E,G,H,I)
 					end
 				end
@@ -3980,6 +4044,7 @@ rawset(_G,"TakisDoClutch",function(p)
 	--and not (p.powers[pw_sneakers])
 		thrust = 13*FU
 	end
+	local maxthrust = thrust
 	
 	--clutch boost
 	if (takis.clutchtime > 0)
@@ -4041,7 +4106,7 @@ rawset(_G,"TakisDoClutch",function(p)
 	if thrust == 0
 	and not p.powers[pw_sneakers]
 	and (takis.clutchspamcount >= 3)
-		P_InstaThrust(me,ang,FixedDiv(
+		P_InstaThrust(me,GetControlAngle(p),FixedDiv(
 				FixedMul(takis.accspeed,me.scale),
 				3*FU
 			)
@@ -4054,16 +4119,30 @@ rawset(_G,"TakisDoClutch",function(p)
 		thrust = 0
 	end
 	
-	if (me.flags2 & MF2_TWOD
-	or twodlevel)
-		thrust = $/4
-	end
 	
 	local ang = takis.io.nostrafe and GetControlAngle(p) or me.angle
 	
 	local mo = (p.powers[pw_carry] == CR_ROLLOUT) and me.tracer or me
 	if mo ~= me then ang = me.angle end
 	thrust = FixedMul(thrust,me.scale)
+	
+	if (mo.flags2 & MF2_TWOD
+	or twodlevel)
+		thrust = $/4
+	end
+	
+	local speedmul = FU
+	if (mo.flags2 & MF2_TWOD
+	or twodlevel)
+		speedmul = $*3/4
+	end
+	if (takis.inWater)
+		speedmul = $/2
+	end
+	if (p.gotflag)
+		speedmul = $*7/10
+	end
+	thrust = FixedMul($,speedmul)
 	
 	if mo == me
 		P_Thrust(mo,ang,thrust)
@@ -4074,26 +4153,17 @@ rawset(_G,"TakisDoClutch",function(p)
 		p.drawangle = FixedAngle(AngleFixed(ang)+180*FU)
 	end
 	
+	local runspeed = FixedMul(skins[TAKIS_SKIN].runspeed,speedmul)
+	if takis.accspeed < runspeed
+		P_Thrust(mo,ang,FixedMul(runspeed-takis.accspeed,me.scale))
+	end
+	
 	--xmom code
 	if takis.notCarried
 		local d1 = P_SpawnMobjFromMobj(me, -20*cos(ang + ANGLE_45), -20*sin(p.drawangle + ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
 		local d2 = P_SpawnMobjFromMobj(me, -20*cos(ang - ANGLE_45), -20*sin(p.drawangle - ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
 		d1.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d1.x, d1.y) --- ANG5
 		d2.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d2.x, d2.y) --+ ANG5
-	end
-	
-	local speedmul = FU
-	if (me.flags2 & MF2_TWOD
-	or twodlevel)
-		speedmul = $*3/4
-	end
-	if (takis.inWater)
-		speedmul = $*3/4
-	end
-	
-	local runspeed = FixedMul(skins[TAKIS_SKIN].runspeed,speedmul)
-	if takis.accspeed < runspeed
-		P_Thrust(mo,ang,FixedMul(runspeed-takis.accspeed,me.scale))
 	end
 	
 	--TODO replace with clutchstart

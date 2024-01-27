@@ -52,3 +52,10 @@ Soundtestpage = 1
 Soundtestcond = 0
 BPM = 115
 
+
+Lump BLSTCL
+Title = Elevator
+Authors = Tony_Grayson,_Summitsphere
+Soundtestpage = 1
+Soundtestcond = 0
+BPM = 0

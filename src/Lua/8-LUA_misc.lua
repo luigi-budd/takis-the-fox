@@ -93,9 +93,9 @@ addHook("MobjThinker", function(ai)
 		--only dontdraw afterimages that are too close to the player
 		local dist = TAKIS_TAUNT_DIST*3
 		
-		local dx = me.x-ai.x
-		local dy = me.y-ai.y
-		local dz = me.z-ai.z
+		local dx = (displayplayer.realmo.x)-ai.x
+		local dy = (displayplayer.realmo.y)-ai.y
+		local dz = (displayplayer.realmo.z)-ai.z
 		if FixedHypot(FixedHypot(dx,dy),dz) < dist
 			ai.flags2 = $|MF2_DONTDRAW
 		else
@@ -277,6 +277,23 @@ addHook("MobjThinker", function(rag)
 		f.flags2 = $|MF2_DONTDRAW
 		f.fuse = 2*TR
 		S_StartSound(f,sfx_tkapow)
+		--wtfsonic
+		if (f.sprite == SPR_PLAY)
+			local dead = P_SpawnMobjFromMobj(f,0,0,0,MT_THOK)
+			
+			dead.fuse = -1
+			dead.tics = 3*TR
+			dead.flags = MF_NOCLIP|MF_NOCLIPHEIGHT
+			
+			dead.sprite = SPR_PLAY
+			dead.skin = f.skin
+			dead.color = f.color
+			dead.frame = A
+			dead.sprite2 = SPR2_DEAD
+			dead.isFUCKINGdead = true
+			P_SetObjectMomZ(dead,14*FU)
+
+		end
 		P_RemoveMobj(rag)
 		
 	end
@@ -679,10 +696,8 @@ addHook("MobjThinker",function(mo)
 	end
 	
 	if (mo.dropped)
-		if not mo.set
-			mo.flags = MF_SPECIAL
-			mo.set = true
-		end
+		mo.flags = MF_SPECIAL|MF_NOGRAVITY
+		mo.momz = $*70/71
 		
 		local grounded = P_IsObjectOnGround(mo)
 		if mo.groundtime == nil
@@ -795,12 +810,33 @@ addHook("MobjMoveCollide",function(shot,mo)
 		P_KillMobj(mo,shot,shot.tracer)
 	end
 	
-	if CanFlingThing(mo)
+	if (CanFlingThing(mo)
+	or (
+		mo.type == MT_PLAYER 
+		and CanPlayerHurtPlayer(shot.tracer.player,mo.player)
+		--dont kill ourselves though
+		and (mo ~= shot.tracer)
+	))
 	and (mo.health)
+		S_StartSound(mo,sfx_sdmkil)
 		SpawnEnemyGibs(shot,mo)
-		SpawnRagThing(mo,shot,shot.tracer)
 		SpawnBam(mo)
-		if (mo.flags & MF_BOSS)
+		if (mo.type ~= MT_PLAYER)
+			SpawnRagThing(mo,shot,shot.tracer)
+			if (mo.flags & MF_BOSS)
+				local boom = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
+				boom.flags2 = $|MF2_DONTDRAW
+				boom.radius,boom.height = mo.radius,mo.height
+				
+				S_StartSound(mo,sfx_tkapow)
+				for i = 0,P_RandomRange(10,20)
+					A_BossScream(boom,1,MT_SONIC3KBOSSEXPLODE)
+				end
+				DoFlash(shot.tracer.player,PAL_WHITE,3)
+			end
+		else
+			P_KillMobj(mo,shot,shot.tracer)
+			P_InstaThrust(mo,R_PointToAngle2(shot.x,shot.y, mo.x,mo.y),-50*shot.scale)
 			local boom = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
 			boom.flags2 = $|MF2_DONTDRAW
 			boom.radius,boom.height = mo.radius,mo.height
@@ -809,7 +845,7 @@ addHook("MobjMoveCollide",function(shot,mo)
 			for i = 0,P_RandomRange(10,20)
 				A_BossScream(boom,1,MT_SONIC3KBOSSEXPLODE)
 			end
-			DoFlash(shot.tracer.player,PAL_WHITE,3)
+			DoFlash(mo.player,PAL_NUKE,3)
 		end
 		return true
 	end
@@ -863,11 +899,15 @@ addHook("MobjDeath",function(gun,i,s)
 		and (s.player and s.player.valid)
 			if (s.skin == TAKIS_SKIN)
 				if (s.player.takistable.transfo & TRANSFO_SHOTGUN)
+					gun.flags = MF_SPECIAL|MF_NOGRAVITY
+					gun.dropped = true
 					return true
 				end
 				TakisShotgunify(s.player)
 				TakisGiveCombo(s.player,s.player.takistable,false,true)
 			else
+				gun.dropped = true
+				gun.flags = MF_SPECIAL|MF_NOGRAVITY
 				return true
 				--gunragdoll(gun,s)
 			end
@@ -880,6 +920,7 @@ addHook("MobjThinker",function(shot)
 		return
 	end
 	
+	S_StopSound(shot)
 	TakisBreakAndBust(nil,shot)
 	
 end,MT_THROWNSCATTER)
@@ -960,6 +1001,10 @@ addHook("PreThinkFrame",function()
 		if takis.noability
 			takis.noability = 0
 		end
+		if (p.takis_noabil ~= nil)
+			takis.noability = $|p.takis_noabil
+		end
+	
 		
 		TakisButtonStuff(p,takis)
 		
@@ -1450,7 +1495,7 @@ for k,type in pairs(flinglist)
 end
 
 --heartcards mt
-local function cardspawn(card,spawnedfrommt,hasambush)
+local function cardspawn(card,spawnedfrommt,hasambush,hasspecial,rtime)
 	local cardscale = 2*FU
 	
 	if not card
@@ -1465,13 +1510,27 @@ local function cardspawn(card,spawnedfrommt,hasambush)
 		card.cardhadambush = true
 	end
 	
+	if (hasspecial)
+	or (card.cardhadspecial)
+		card.cardhadspecial = true
+	end
+	
+	--TODO: udmf
+	if rtime ~= nil
+		card.cardtime = rtime*TR
+	end
 	card.spritexscale,card.spriteyscale = cardscale,cardscale
 	card.spawnedfrommt = spawnedfrommt
 end
 
 addHook("MapThingSpawn",function(mo,mt)
 	if not (mo and mo.valid) then return end
-	cardspawn(mo,true,mt.options & MTF_AMBUSH)
+	cardspawn(mo,
+		true,
+		mt.options & MTF_AMBUSH,
+		mt.options & MTF_OBJECTSPECIAL,
+		mt.extrainfo
+	)
 end,MT_TAKIS_HEARTCARD)
 addHook("MobjSpawn",cardspawn,MT_TAKIS_HEARTCARD)
 
@@ -1487,6 +1546,7 @@ addHook("MobjThinker",function(card)
 	card.angle = $+FixedAngle(5*FU)
 	card.spawnflags = mobjinfo[card.type].flags
 	if (card.flags2 & MF2_AMBUSH)
+	or (card.cardhadambush)
 		card.spawnflags = $|MF_NOGRAVITY
 	end
 	if card.groundtime == nil
@@ -1587,12 +1647,16 @@ addHook("MobjDeath",function(card,_,sor)
 			--make a thok do our bidding (respawn the card)
 			if (card.spawnedfrommt)
 			and (CV_FindVar("respawnitem").value
-			and (splitscreen or multiplayer))
+			and (splitscreen or multiplayer or card.cardhadspecial))
 				local new = P_SpawnMobjFromMobj(card,0,0,0,MT_THOK)
 				new.camefromcard = true
-				new.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
+				new.respawntime = (card.cardhadspecial and card.cardtime) or CV_FindVar("respawnitemtime").value * TICRATE
 				new.cardflags = card.spawnflags or mobjinfo[card.type].flags
 				new.cardhadambush = card.cardhadambush
+				new.cardhadspecial = card.cardhadspecial
+				if card.cardtime ~= nil
+					new.cardtime = card.cardtime
+				end
 			end
 			return
 		end
@@ -1618,6 +1682,7 @@ addHook("MobjThinker",function(th)
 		--tic respawn timer
 		if (th.respawntime)
 			if th.respawntime > CV_FindVar("respawnitemtime").value * TICRATE
+			and not th.cardhadspecial
 				th.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
 			end
 			th.tics,th.fuse = -1,-1
@@ -1629,6 +1694,12 @@ addHook("MobjThinker",function(th)
 			if th.cardhadambush
 				card.cardhadambush = th.cardhadambush
 				card.flags = $|MF_NOGRAVITY
+			end
+			if th.cardhadspecial
+				card.cardhadspecial = th.cardhadspecial
+			end
+			if th.cardtime ~= nil
+				card.cardtime = th.cardtime
 			end
 			P_RemoveMobj(th)
 		end
@@ -1662,6 +1733,10 @@ addHook("MobjThinker",function(th)
 			
 			P_RemoveMobj(th)
 		end	
+	elseif th.isFUCKINGdead
+		local grav = P_GetMobjGravity(th)
+		grav = $
+		th.momz = $+(grav*P_MobjFlip(th))
 	else
 		return
 	end
@@ -2005,22 +2080,63 @@ addHook("MobjThinker",function(gem)
 	
 	if not (me and me.valid) then P_RemoveMobj(gem) return end
 	
-	local die = false
-	if HAPPY_HOUR.gameover
-	or not me.health
-		die = true
-	end
-	
-	if not die
-		--assume we've just spawned
+	if not gem.camefromemerald
+		local die = false
+		if HAPPY_HOUR.gameover
+		or not me.health
+			die = true
+		end
+		
+		if not die
+			--assume we've just spawned
+			if not gem.emeraldcolor
+				gem.emeraldcolor = emeraldslist[gem.emeralddex]
+				--never let spirits overlap
+				if gem.emeralddex ~= 0
+				and (me.player.takistable.spiritlist and
+				me.player.takistable.spiritlist[gem.emeralddex-1])
+					gem.timealive = me.player.takistable.spiritlist[gem.emeralddex-1].timealive--+((360/7)*gem.emeralddex)
+				end
+			end
+			gem.color = gem.emeraldcolor
+			if gem.timealive == nil
+				gem.timealive = 0
+			else
+				gem.timealive = $+1
+			end
+			local extraang = 0
+			if me.player.powers[pw_carry] == CR_NIGHTSMODE
+				extraang = R_PointToAngle(gem.x,gem.y)
+			end
+			gem.circle = extraang+FixedAngle( ((2*FU)*3/2)*gem.timealive )
+			gem.circle = $+(FixedAngle(FixedDiv(333*FU,7*FU)*gem.emeralddex+1))
+			
+			local x,y = ReturnTrigAngles(gem.circle)
+			local z = sin(gem.circle)*12
+			P_MoveOrigin(gem,
+				me.x + 30*x,
+				me.y + 30*y,
+				GetActorZ(me,gem,1) + z + (7*gem.scale)
+			)
+			
+			gem.angle = gem.circle+ANGLE_90
+			if not camera.chase
+				gem.flags2 = $|MF2_DONTDRAW
+			else
+				gem.flags2 = $ &~MF2_DONTDRAW
+			end
+			
+		else
+			if gem.flags & MF_NOGRAVITY
+				S_StartSound(gem,sfx_shldls)
+				P_SetObjectMomZ(gem,6*FU)
+				P_Thrust(gem,gem.circle+ANGLE_90,2*gem.scale)
+				gem.flags = $ &~MF_NOGRAVITY
+			end
+		end
+	else
 		if not gem.emeraldcolor
 			gem.emeraldcolor = emeraldslist[gem.emeralddex]
-			--never let spirits overlap
-			if gem.emeralddex ~= 0
-			and (me.player.takistable.spiritlist and
-			me.player.takistable.spiritlist[gem.emeralddex-1])
-				gem.timealive = me.player.takistable.spiritlist[gem.emeralddex-1].timealive--+((360/7)*gem.emeralddex)
-			end
 		end
 		gem.color = gem.emeraldcolor
 		if gem.timealive == nil
@@ -2028,34 +2144,24 @@ addHook("MobjThinker",function(gem)
 		else
 			gem.timealive = $+1
 		end
-		local extraang = 0
-		if me.player.powers[pw_carry] == CR_NIGHTSMODE
-			extraang = R_PointToAngle(gem.x,gem.y)
-		end
-		gem.circle = extraang+FixedAngle( ((2*FU)*3/2)*gem.timealive )
-		gem.circle = $+(FixedAngle(FixedDiv(333*FU,7*FU)*gem.emeralddex+1))
 		
-		local x,y = ReturnTrigAngles(gem.circle)
+		gem.circle = FixedAngle( ((2*FU)*3/2)*gem.timealive )
+		
+		local waveforce = FU
 		local z = sin(gem.circle)*12
-		P_MoveOrigin(gem,
-			me.x + 30*x,
-			me.y + 30*y,
-			GetActorZ(me,gem,1) + z + (7*gem.scale)
-		)
+		gem.spriteyoffset = 3*FU+z
 		
-		gem.angle = gem.circle+ANGLE_90
-		if not camera.chase
-			gem.flags2 = $|MF2_DONTDRAW
-		else
-			gem.flags2 = $ &~MF2_DONTDRAW
-		end
-		
-	else
-		if gem.flags & MF_NOGRAVITY
-			S_StartSound(gem,sfx_shldls)
-			P_SetObjectMomZ(gem,6*FU)
-			P_Thrust(gem,gem.circle+ANGLE_90,2*gem.scale)
-			gem.flags = $ &~MF_NOGRAVITY
+		if (displayplayer
+		and displayplayer.valid)
+			if skins[displayplayer.skin].name == TAKIS_SKIN
+				gem.flags2 = $ &~MF2_DONTDRAW
+				gem.angle = R_PointToAngle2(gem.x,gem.y,
+					displayplayer.realmo.x,
+					displayplayer.realmo.y
+				)
+			else
+				gem.flags2 = $|MF2_DONTDRAW
+			end
 		end
 	end
 end,MT_TAKIS_SPIRIT)
@@ -2077,6 +2183,80 @@ addHook("MobjThinker",function(gem)
 	return
 end,MT_GOTEMERALD)
 
+--collectable emeralds change into spirits and back
+local function emeraldcollectspirit(gem)
+	if not (gem and gem.valid) then return end
+	if emeraldslist[gem.frame & FF_FRAMEMASK] == nil then return end
+	
+	if not gem.emeraldcolor
+		gem.emeraldcolor = emeraldslist[gem.frame & FF_FRAMEMASK]
+	end
+	if not (gem.soda and gem.soda.valid)
+	and (gem.health)
+		gem.soda = P_SpawnMobjFromMobj(gem,0,0,5*gem.scale*P_MobjFlip(gem),MT_TAKIS_SPIRIT)
+		local soda = gem.soda
+		soda.tracer = gem
+		soda.emeralddex = gem.frame & FF_FRAMEMASK
+		soda.camefromemerald = true
+	elseif (gem.soda and gem.soda.valid)
+		if (displayplayer
+		and displayplayer.valid
+		and skins[displayplayer.skin].name == TAKIS_SKIN)
+			gem.flags2 = $|MF2_DONTDRAW
+		else
+			gem.flags2 = $ &~MF2_DONTDRAW
+		end
+		
+		if not gem.health
+			gem.soda.tracer = nil
+		end
+	end
+end
+
+local emeraldtypes = {
+	MT_EMERALD1,
+	MT_EMERALD2,
+	MT_EMERALD3,
+	MT_EMERALD4,
+	MT_EMERALD5,
+	MT_EMERALD6,
+	MT_EMERALD7
+}
+for _,type in ipairs(emeraldtypes)
+	addHook("MobjThinker",emeraldcollectspirit,type)
+end
+
+local laughingtypes = {
+	MT_EMERALD1,
+	MT_EMERALD2,
+	MT_EMERALD3,
+	MT_EMERALD4,
+	MT_EMERALD5,
+	MT_EMERALD6,
+	MT_EMERALD7,
+	MT_TOKEN,
+	
+	MT_BLUEFLAG,
+	MT_REDFLAG,
+	
+	MT_EMBLEM,
+	
+	MT_1UP_BOX,
+	MT_SCORE10K_BOX,
+	
+}
+local function laughondeath(gem,_,tak)
+	if not (gem and gem.valid) then return end
+	if not (tak and tak.valid) then return end
+	if (tak.skin == TAKIS_SKIN)
+		S_StartAntonLaugh(tak)
+	end
+end
+
+for _,type in ipairs(laughingtypes)
+	addHook("MobjDeath",laughondeath,type)
+end
+
 /*
 addHook("MobjThinker",function(rock)
 	if not (rock and rock.valid) then return end
@@ -2087,7 +2267,7 @@ addHook("MobjThinker",function(rock)
 end,MT_ROLLOUTROCK)
 */
 --this is way better
-mobjinfo[MT_ROLLOUTROCK].speed = 256*FU
+mobjinfo[MT_ROLLOUTROCK].speed = 60*FU
 states[S_ROLLOUTROCK].var1 = FU
 
 addHook("MobjThinker",function(trophy)
@@ -2138,6 +2318,267 @@ addHook("MobjThinker",function(fet)
 	fet.angle = $+(ANG15*fet.rngspin)
 	fet.rollangle = $+(ANG15*fet.rngspin)
 end,MT_TAKIS_FETTI)
+
+addHook("MapThingSpawn",function(mo,mt)
+	if mt.options & MTF_AMBUSH
+		mo.type = MT_SHOTGUN_GOLDBOX
+	end
+end,MT_SHOTGUN_BOX)
+
+addHook("TouchSpecial",function(door,mo)
+	if not (mo and mo.valid) then return true end
+	if not (door and door.valid) then return true end
+	
+	local p = mo.player
+	local takis = p.takistable
+	
+	if not takis then return true end
+	
+	local hasit = (takis.transfo & TRANSFO_SHOTGUN) or (p.charflags & SF_MACHINE)
+	
+	if (mo.touchingdetector and not hasit) then mo.touchingdetector = 3; return true end
+	
+	if hasit
+		S_StartSound(door,door.info.activesound)
+		TakisDeShotgunify(p)
+		mo.touchingdetector = 3
+		door.flashing = 10
+	end
+	return true
+end,MT_TAKIS_METALDETECTOR)
+
+addHook("MobjThinker",function(door)
+	if not (door and door.valid) then return end
+	
+	if not door.made3d
+		local list
+		local flip = P_MobjFlip(door)
+		door.flags2 = $|MF2_DONTDRAW
+		
+		door.topblock = {}
+		list = door.topblock
+		
+		--flipgrav is really PISSING me off
+		local height = ((flip == 1) and door.height or 0)
+		local base = 0
+		if (flip == -1) then base = door.height end
+		
+		--spawn the splats
+		list[1] = P_SpawnMobjFromMobj(door,0,0,0,MT_THOK)
+		list[1].frame = A
+		list[1].sprite = SPR_MTLD
+		list[1].tics,list[1].fuse = -1,-1
+		list[1].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+		list[1].renderflags = $|RF_FLOORSPRITE|RF_NOSPLATBILLBOARD
+		list[1].angle = door.angle
+		list[1].height = 0
+		P_SetOrigin(list[1],list[1].x,list[1].y,GetActorZ(door,list[1],2))
+
+		list[2] = P_SpawnMobjFromMobj(door,0,0,0,MT_THOK)
+		list[2].frame = A
+		list[2].sprite = SPR_MTLD
+		list[2].frame = B
+		list[2].tics,list[1].fuse = -1,-1
+		list[2].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+		list[2].renderflags = $|RF_FLOORSPRITE|RF_NOSPLATBILLBOARD
+		list[2].angle = door.angle
+		list[2].height = 0
+		P_SetOrigin(list[2],
+			list[2].x,
+			list[2].y,
+			GetActorZ(door,list[2],2)-(flip*30*door.scale)
+		)
+		--
+		
+		--spawn the papersprites
+		for i = 1,4
+			local angle = door.angle+(FixedAngle(90*FU*(i-1)))
+			local x,y = ReturnTrigAngles(angle)
+			list[2+i] = P_SpawnMobjFromMobj(door,32*x,32*y,0,MT_THOK)
+			list[2+i].frame = C
+			list[2+i].sprite = SPR_MTLD
+			list[2+i].tics,list[1].fuse = -1,-1
+			list[2+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+			list[2+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
+			list[2+i].angle = angle+ANGLE_90
+			list[2+i].height = 30*FU
+			list[2+i].radius = 0
+			P_SetOrigin(list[2+i],
+				list[2+i].x,
+				list[2+i].y,
+				GetActorZ(door,list[2+i],2)-(flip*30*door.scale)
+			)
+		end
+		
+		door.sideblock1 = {}
+		list = door.sideblock1
+		
+		for i = 1,2
+			local angle = door.angle+FixedAngle(90*FU)
+			local x,y = ReturnTrigAngles(angle)
+			local dist = (i == 1) and 30 or 24
+			list[0+i] = P_SpawnMobjFromMobj(door,dist*x,dist*y,0,MT_THOK)
+			list[0+i].frame = D
+			list[0+i].sprite = SPR_MTLD
+			list[0+i].tics,list[1].fuse = -1,-1
+			list[0+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+			list[0+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
+			list[0+i].angle = angle+ANGLE_90
+			list[0+i].height = 110*FU
+			list[0+i].radius = 0
+			P_SetOrigin(list[0+i],
+				list[0+i].x,
+				list[0+i].y,
+				GetActorZ(door,list[0+i],1)
+			)
+		end
+		for i = 1,2
+			local angle = door.angle+FixedAngle(90*FU)
+			angle = $+((i == 1) and FixedAngle(90*FU) or FixedAngle(270*FU))
+			
+			local x,y = ReturnTrigAngles(angle)
+			list[2+i] = P_SpawnMobjFromMobj(list[i],
+				32*x,
+				32*y,
+				0,
+				MT_THOK
+			)
+			list[2+i].frame = E
+			list[2+i].sprite = SPR_MTLD
+			list[2+i].tics,list[1].fuse = -1,-1
+			list[2+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+			list[2+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
+			list[2+i].angle = angle+ANGLE_90
+			list[2+i].height = 110*FU
+			list[2+i].radius = 0
+			P_SetOrigin(list[2+i],
+				list[2+i].x,
+				list[2+i].y,
+				GetActorZ(door,list[2+i],1)
+			)
+		end
+		local x,y = ReturnTrigAngles(door.angle+FixedAngle(90*FU))
+		list[5] = P_SpawnMobjFromMobj(door,27*x,27*y,0,MT_THOK)
+		list[5].frame = F
+		list[5].sprite = SPR_MTLD
+		list[5].tics,list[1].fuse = -1,-1
+		list[5].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+		list[5].renderflags = $|RF_FLOORSPRITE|RF_NOSPLATBILLBOARD
+		list[5].angle = door.angle+FixedAngle(90*FU)
+		list[5].height = 0
+		list[5].radius = 0
+		P_SetOrigin(list[5],
+			list[5].x,
+			list[5].y,
+			GetActorZ(door,list[5],1)
+		)
+		
+		door.sideblock2 = {}
+		list = door.sideblock2
+		
+		for i = 1,2
+			local angle = door.angle-FixedAngle(90*FU)
+			local x,y = ReturnTrigAngles(angle)
+			local dist = (i == 1) and 30 or 24
+			list[0+i] = P_SpawnMobjFromMobj(door,dist*x,dist*y,0,MT_THOK)
+			list[0+i].frame = D
+			list[0+i].sprite = SPR_MTLD
+			list[0+i].tics,list[1].fuse = -1,-1
+			list[0+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+			list[0+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
+			list[0+i].angle = angle+ANGLE_90
+			list[0+i].height = 110*FU
+			list[0+i].radius = 0
+			P_SetOrigin(list[0+i],
+				list[0+i].x,
+				list[0+i].y,
+				GetActorZ(door,list[0+i],1)
+			)
+		end
+		for i = 1,2
+			local angle = door.angle-FixedAngle(90*FU)
+			angle = $+((i == 1) and FixedAngle(90*FU) or FixedAngle(270*FU))
+			
+			local x,y = ReturnTrigAngles(angle)
+			list[2+i] = P_SpawnMobjFromMobj(list[i],
+				32*x,
+				32*y,
+				0,
+				MT_THOK
+			)
+			list[2+i].frame = E
+			list[2+i].sprite = SPR_MTLD
+			list[2+i].tics,list[1].fuse = -1,-1
+			list[2+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+			list[2+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
+			list[2+i].angle = angle+ANGLE_90
+			list[2+i].height = 110*FU
+			list[2+i].radius = 0
+			P_SetOrigin(list[2+i],
+				list[2+i].x,
+				list[2+i].y,
+				GetActorZ(door,list[2+i],1)
+			)
+		end
+		local x,y = ReturnTrigAngles(door.angle-FixedAngle(90*FU))
+		list[5] = P_SpawnMobjFromMobj(door,27*x,27*y,0,MT_THOK)
+		list[5].frame = F
+		list[5].sprite = SPR_MTLD
+		list[5].tics,list[1].fuse = -1,-1
+		list[5].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+		list[5].renderflags = $|RF_FLOORSPRITE|RF_NOSPLATBILLBOARD
+		list[5].angle = door.angle-FixedAngle(90*FU)
+		list[5].height = 0
+		list[5].radius = 0
+		P_SetOrigin(list[5],
+			list[5].x,
+			list[5].y,
+			GetActorZ(door,list[5],1)
+		)
+		
+		door.nosign = {}
+		list = door.nosign
+		list[1] = P_SpawnMobjFromMobj(door,0,0,0,MT_THOK)
+		list[1].frame = G
+		list[1].sprite = SPR_MTLD
+		list[1].tics,list[1].fuse = -1,-1
+		list[1].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+		list[1].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
+		list[1].angle = door.angle+FixedAngle(90*FU)
+		list[1].height = 140*FU
+		list[1].radius = 0
+		P_SetOrigin(list[1],
+			list[1].x,
+			list[1].y,
+			GetActorZ(door,list[1],1)
+		)
+		
+		door.alarm = {}
+		list = door.alarm
+		list[1] = P_SpawnMobjFromMobj(door,0,0,height,MT_THOK)
+		list[1].frame = H
+		list[1].sprite = SPR_MTLD
+		list[1].tics,list[1].fuse = -1,-1
+		list[1].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+		list[1].angle = door.angle
+		list[1].height = 16*FU
+		list[1].radius = 16*FU
+		P_SetOrigin(list[1],
+			list[1].x,
+			list[1].y,
+			GetActorZ(door,list[1],2)
+		)
+		
+		door.made3d = true
+	else
+		if (door.flashing)
+			door.alarm[1].frame = I
+			door.flashing = $-1
+		else
+			door.alarm[1].frame = H
+		end
+	end
+end,MT_TAKIS_METALDETECTOR)
 
 filesdone = $+1
 

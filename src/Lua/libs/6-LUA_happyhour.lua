@@ -36,7 +36,7 @@ local hh = HAPPY_HOUR
 
 rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 	if not hh.happyhour
-	
+		
 		if timelimit == nil
 			timelimit = 3*60*TR
 		end
@@ -49,7 +49,7 @@ rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 		end
 		
 		hh.happyhour = true
-		hh.time = 1
+		--hh.time = 1
 		hh.gameover = false
 		hh.gameovertics = 0
 		
@@ -119,6 +119,8 @@ rawset(_G,"HH_Reset",function()
 	end
 end)
 
+addHook("MapChange",HH_Reset)
+
 addHook("ThinkFrame",do
 
 	local nomus = string.lower(mapheaderinfo[gamemap].takis_hh_nomusic or '') == "true"
@@ -143,7 +145,7 @@ addHook("ThinkFrame",do
 		hh.overtime = hh.timeleft <= 0 and hh.happyhour
 		hh.gameover = PTSR.gameover
 	else
-	
+		
 		if hh.happyhour
 			
 			if not hh.gameover
@@ -255,7 +257,7 @@ addHook("ThinkFrame",do
 				
 			end
 			
-			if (hh.timelimit ~= nil or hh.timelimit ~= 0)
+			if not (hh.timelimit == nil or hh.timelimit == 0)
 				if hh.timelimit < 0
 					hh.timelimit = 3*60*TR
 				end
@@ -378,37 +380,29 @@ addHook("MobjThinker",function(trig)
 end,MT_HHTRIGGER)
 
 addHook("MobjCollide",function(trig,mo)
-	if (HAPPY_HOUR.othergt) then return end
+	if (hh.othergt) then return end
 	
 	if not mo
 	or not mo.valid
 		return
 	end
 	
+	--funny bug where a crawla in crumbling collab wouldve triggered
+	
 	if (mo.type ~= MT_PLAYER) then return end
 	
-	if HAPPY_HOUR.happyhour
-		if L_ZCollide(trig,mo)
-			return --true
-		end
+	if hh.happyhour
 		return
 	end
 	
 	if not trig.health
-		if L_ZCollide(trig,mo)
-			return --true
-		end
 		return
 	end
 	
-	--TODO: flipped grav
 	if P_MobjFlip(trig) == 1
 		local myz = trig.z+trig.height
 		if not (mo.z <= myz+trig.scale and mo.z >= myz-trig.scale)
-			if L_ZCollide(trig,mo)
-				return --true
-			end
-		return
+			return
 		end
 		if (mo.momz)
 			return --true
@@ -435,6 +429,36 @@ addHook("MobjCollide",function(trig,mo)
 		takis.HUD.flyingscore.scorenum = $+5000
 		return --true
 		
+	else
+		local myz = trig.z
+		local otherz = mo.z+mo.height
+		if not (otherz <= myz+trig.scale and otherz >= myz-trig.scale)
+			return
+		end
+		if (mo.momz*P_MobjFlip(trig))
+			return --true
+		end
+		
+		local tl = tonumber(mapheaderinfo[gamemap].takis_hh_timelimit or 3*60)*TR
+		if mapheaderinfo[gamemap].takis_hh_timelimit ~= nil
+		and string.lower(tostring(mapheaderinfo[gamemap].takis_hh_timelimit)) == "none"
+			tl = 0
+		end
+		HH_Trigger(trig,mo.player,tl)
+		
+		S_StartSound(trig,trig.info.deathsound)
+		trig.state = trig.info.deathstate
+		
+		trig.spritexscaleadd = 2*FU
+		trig.spriteyscaleadd = -FU*3/2
+		
+		P_AddPlayerScore(mo.player,5000)
+		
+		local takis = mo.player.takistable
+		takis.bonuses["happyhour"].tics = 3*TR+18
+		takis.bonuses["happyhour"].score = 5000
+		takis.HUD.flyingscore.scorenum = $+5000
+		return --true
 	end
 	
 end,MT_HHTRIGGER)
@@ -648,7 +672,7 @@ addHook("MapLoad", function(mapid)
 	--this seems REALLY bad, iterating all of this x3 on load
 	for mt in mapthings.iterate
 		--exit
-		if mt.type == MT_HHEXIT
+		if mt.type == mobjinfo[MT_HHEXIT].doomednum
 			hasdoor = true
 		end
 	end	
@@ -668,7 +692,7 @@ addHook("MapLoad", function(mapid)
 	
 	for mt in mapthings.iterate
 		--trigger
-		if mt.type == 501
+		if mt.type == mobjinfo[MT_SIGN].doomednum
 		and hasdoor
 			local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
 			local trig = P_SpawnMobj(
@@ -699,6 +723,7 @@ addHook("MapLoad", function(mapid)
 	end
 	
 end)
+
 --
 
 filesdone = $+1

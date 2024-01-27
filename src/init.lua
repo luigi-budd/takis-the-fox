@@ -4,6 +4,7 @@
 
 -- "Terrible Character..."
 
+--TODO: rewrite this
 if (VERSION == 202) and (SUBVERSION < 12)
 	local special = P_RandomChance(FRACUNIT/13)
 
@@ -89,7 +90,7 @@ end)
 rawset(_G, "takis_printwarning",function(p)
 	if not p
 		print("\x82This is free for anyone to host!\n"..
-			"Please send feedback and bug reports to \x83@gerald55555\x82 on Discord, or the Github!\nhttps://github.com/luigi-budd/takis-the-fox"
+			"Please send feedback and bug reports to \x83@luigibudd\x82 on Discord, or the Github!\nhttps://github.com/luigi-budd/takis-the-fox"
 			
 		)	
 	else

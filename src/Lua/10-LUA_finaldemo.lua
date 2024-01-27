@@ -8,7 +8,9 @@ local dehand3
 local deblink1
 local deblink2
 
-local timetonext 
+local animtimer = 0
+
+local timetonext
 
 local finalestage
 local finalecount
@@ -17,6 +19,8 @@ local finaletextcount
 local mouthtic = 0
 
 local textstep = 1
+local textdowait = true
+local textwait = 0
 local textdex = 1
 local textlimit = 6
 local textlist = {
@@ -42,7 +46,15 @@ local textlist = {
 	[16] = "discord.gg/b3BGb8A",
 	--phase5
 	[17] = ' ',
-	[18] = "Returning to GFZ2...", 
+	[18] = "Well, now you're being sent to GFZ2.", 
+}
+local punct = {
+    ["."] = true,
+    [","] = true,
+    [";"] = true,
+    [":"] = true,
+    ["?"] = true,
+    ["!"] = true,
 }
 
 local taksfx = {sfx_s_tak1,sfx_s_tak2,sfx_s_tak3}
@@ -50,14 +62,23 @@ local taksfx = {sfx_s_tak1,sfx_s_tak2,sfx_s_tak3}
 local demomap = 1001
 
 local function F_DemoEndTicker()
+	if(animtimer) then
+		animtimer = $ - 1
+	end
+
 	if (timetonext > 0) then
 		local score = textlist[textdex]
+		
+		if textwait then textwait = $-1 end
+		
 		if not (textdex == textlimit
 		and textstep == string.len(score)+1)
+		and (textwait == 0)
+		
 			textstep = $+1
 			if P_RandomChance(FU/4)
 				S_StartSound(nil,taksfx[P_RandomRange(1,3)])
-				mouthtic = 6
+				mouthtic = 6+P_RandomRange(-1,1)
 			end
 			
 			if textstep >= string.len(score)+1
@@ -65,6 +86,12 @@ local function F_DemoEndTicker()
 				textstep = 1
 				textdex = $+1
 			end
+			
+			if punct[string.sub(score,textstep,textstep)] == true
+			and (textdowait == true)
+				textwait = 7
+			end
+			
 		end
 		
 		timetonext = $ - 1
@@ -76,24 +103,28 @@ local function F_DemoEndTicker()
 			textdex = 7
 			textlimit = 10
 			timetonext = 3*TICRATE
+			textdowait = false
 		elseif finalestage == 3 then
 			finalecount = 0
 			textstep = 1
 			textdex = 11
 			textlimit = 13
 			timetonext = 3*TICRATE
+			textdowait = true
 		elseif finalestage == 4 then
 			finalecount = 0
 			textstep = 1
 			textdex = 14
 			textlimit = 16
 			timetonext = (3*TICRATE)
+			textdowait = false
 		elseif finalestage == 5 then
 			finalecount = 0
 			textstep = 1
 			textdex = 17
 			textlimit = 18
 			timetonext = 3*TICRATE
+			textdowait = true
 		elseif finalestage == 6 then
 			finalecount = 0
 			timetonext = TICRATE
@@ -186,19 +217,15 @@ local function F_DemoEndDrawer(v)
 	v.draw(takisx, takisy, desonic, V_SNAPTORIGHT,takiscolor) // Sonic
 
 	// Have Sonic blink every so often. (animtimer is used for this)
-	if(animtimer) then
-		animtimer = $ - 1
-	end
-
-	if(v.RandomByte() == 255 and animtimer == 0 and timetonext & 1)
-		animtimer = 3
+	if (v.RandomChance(FU/50) and animtimer == 0)
+		animtimer = 3*2
 	end
 	
-	if animtimer == 3 then
+	if animtimer/2 == 3 then
 		v.draw(takisx, takisy, deblink1, V_SNAPTORIGHT,takiscolor)
-	elseif animtimer == 1 then
+	elseif animtimer/2 == 1 then
 		v.draw(takisx, takisy, deblink1, V_SNAPTORIGHT,takiscolor)
-	elseif animtimer == 2 then
+	elseif animtimer/2 == 2 then
 		v.draw(takisx, takisy, deblink2, V_SNAPTORIGHT,takiscolor)
 	end
 	v.draw(takisx, takisy, v.cachePatch("DEHAIR"), V_SNAPTORIGHT,takiscolor)

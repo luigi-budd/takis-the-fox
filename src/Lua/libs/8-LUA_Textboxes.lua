@@ -893,7 +893,7 @@ TAKIS_TEXTBOXES.gmap1000 = {
 	},
 	[12] = {							
 		[1] = {
-			text = "Great work. You'll be using one of the Hammer Blast's actions to progress.",
+			text = "You'll be using one of the Hammer Blast's actions to progress.",
 			soundchance = 0,
 			delay = 2*TICRATE,
 			move = true,
@@ -919,7 +919,7 @@ TAKIS_TEXTBOXES.gmap1000 = {
 	},
 	[14] = {							
 		[1] = {
-			text = "Awesome! Let's try out the other action, called the Hammer Blast. Holding |esc\x82[SPIN]|esc\x80 before landing will launch you forward. Don't rely on it too much, as it will stale and take away your speed.",
+			text = "Awesome! Let's try out the other action, called the Hammer Boost. Holding |esc\x82[SPIN]|esc\x80 before landing will launch you forward. It will also stale and take away your speed.",
 			soundchance = 0,
 			delay = 4*TICRATE,
 			advancescript = function(p)
@@ -1011,27 +1011,50 @@ TAKIS_TEXTBOXES.gmap1000 = {
 	},
 	[24] = {
 		[1] = {
-			text = "Ok, awesome whatever.",
+			text = "Ok, lets move onto the Transformations.",
 			soundchance = 0,
 			delay = 2*TICRATE,
 			next = 2,
 		},
 		[2] = {
-			text = "This is where the Dive comes in handy. Pressing |esc\x82[CUSTOM1]|esc\x80 midair will thrust you forward a bit in the direction of your inputs and remove your downwards momentum.",
+			text = "This first one is the Fireass Transformation. Get hurt by lava and you'll become invulnerable to fire damage, and you'll be able to shoot fireballs!",
 			soundchance = 0,
 			delay = 3*TICRATE,
 			next = 3,
 		},
 		[3] = {
-			text = "Use this to jump around the wall and to the goal!",
+			text = "It expires after 10 seconds, after 7, a hissing sound will play, indicating to go back into lava to extend the timer.",
 			soundchance = 0,
-			delay = TICRATE*3/2,
+			delay = TICRATE*3,
 			next = 0,
-			closescript = function(p)
-				if p.takis_noabil
-					p.takis_noabil = $ &~(NOABIL_DIVE)
-				end
-			end
+		},
+	},
+	[39] = {
+		[1] = {
+			text = "Let's check out the Shotgun. The shotgun is an |esc\x89Ultimate Mode|esc\x80 exclusive. Break open the Shotgun Monitor in front of you, Takis will tell you how to use it.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			next = 2,
+		},
+		[2] = {
+			text = "Shoot the targets to the right to progress.",
+			soundchance = 0,
+			delay = 3*TICRATE,
+			next = 0,
+		},
+	},
+	[42] = {
+		[1] = {
+			text = "Getting crushed isn't fatal in small doses. It'll also squish you into a pancake.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			next = 2,
+		},
+		[2] = {
+			text = "The pancake lasts for 10 seconds, allowing you to fit under small gaps and float by holding jump.",
+			soundchance = 0,
+			delay = 3*TICRATE,
+			next = 0,
 		},
 	},
 	[9999] = {
