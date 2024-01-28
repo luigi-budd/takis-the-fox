@@ -249,7 +249,9 @@ rawset(_G, "TakisHappyHourThinker", function(p)
 		local tics = HAPPY_HOUR.time
 		
 		if (tics == 1)
-			S_StartSound(nil,sfx_mclang)
+			if (HAPPY_HOUR.othergt)
+				S_StartSound(nil,sfx_mclang)
+			end
 			TakisGiveCombo(p,takis,false,true)
 		end
 		
@@ -334,6 +336,12 @@ rawset(_G, "TakisHUDStuff", function(p)
 	
 	if hud.cfgnotifstuff
 		if takis.c3 then hud.cfgnotifstuff = 1 end
+		if (not multiplayer) and takis.c2
+			--wtf??? this isnt hudstuff
+			G_SetCustomExitVars(1000,2)
+			G_ExitLevel()
+			hud.cfgnotifstuff = 1
+		end
 		hud.cfgnotifstuff = $-1
 	end
 	
@@ -477,16 +485,19 @@ rawset(_G, "TakisHUDStuff", function(p)
 		local expectedtime = 2*TR
 		local tics = ((2*TR)+1)-hud.flyingscore.tics
 		
+		--this is the combo pos and whatnot
 		local backx = 15*FU
 		local backy = 70*FU
 		
-		hud.flyingscore.x = ease.inexpo(( FU / expectedtime )*tics,
-		backx+5*FU+hud.combo.patchx, 
-		298*FU
+		hud.flyingscore.x = ease.inexpo(
+			( FU / expectedtime )*tics,
+			backx+5*FU+hud.combo.patchx, 
+			hud.flyingscore.scorex*FU
 		)
-		hud.flyingscore.y = ease.inexpo(( FU / expectedtime )*tics,
-		backy+7*FU, 
-		15*FU
+		hud.flyingscore.y = ease.inexpo(
+			( FU / expectedtime )*tics,
+			backy+7*FU, 
+			hud.flyingscore.scorey*FU
 		)
 		
 		hud.flyingscore.tics = $-1
@@ -1867,6 +1878,9 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	or (p.playerstate ~= PST_LIVE or not me.health)
 		takis.noability = $|NOABIL_AFTERIMAGE
 	end
+	if p.powers[pw_carry] == CR_NIGHTSMODE
+		takis.noability = $ &~NOABIL_AFTERIMAGE
+	end
 	
 	/*
 	if takis.hitlag.tics
@@ -2474,7 +2488,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 		local takis = p.takistable
 		
 		speed = takis.accspeed
-		DoQuake(p,t.scale*10+(speed/4),10)
+		DoQuake(p,t.scale*25+(speed/4),10)
 		
 		if (takis.inChaos)
 			P_DamageMobj(tm,t,t,1)

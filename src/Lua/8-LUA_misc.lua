@@ -589,17 +589,8 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 	and dohhmus
 	
 		local hh = HAPPY_HOUR
-		local nomus = hh.nosong
-		local noendmus = hh.noendsong
 		
-		local song = hh.song
-		local songend = hh.songend
-		
-		/*
-		print("New music change:","HH Music: "..song,
-			"HH End Music: "..songend
-		)
-		*/
+		local nomus,noendmus,song,songend = GetHappyHourMusic()
 		
 		newname = string.lower(newname)
 		
@@ -610,10 +601,19 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		end
 		
 		oldname = string.lower($)
-		/*
-		print("Changing from "..oldname,"to "..newname,"")
-		print("Spec "..tostring(not isspecsong))
-		*/
+		
+		if TAKIS_DEBUGFLAG & DEBUG_HAPPYHOUR
+			CONS_Printf(consoleplayer,"New music change:",
+				"HH Music: "..song,
+				"HH End Music: "..songend
+			)
+			CONS_Printf(consoleplayer,"Nomus",
+				nomus,
+				noendmus
+			)
+			CONS_Printf(consoleplayer,"Changing from "..oldname,"to "..newname,"")
+			CONS_Printf(consoleplayer,"Spec "..tostring(not isspecsong))
+		end
 		
 		--stop any lap music
 		if (not isspecsong)
@@ -2336,7 +2336,7 @@ addHook("TouchSpecial",function(door,mo)
 	
 	local hasit = (takis.transfo & TRANSFO_SHOTGUN) or (p.charflags & SF_MACHINE)
 	
-	if (mo.touchingdetector and not hasit) then mo.touchingdetector = 3; return true end
+	if (mo.touchingdetector and not (takis.transfo & TRANSFO_SHOTGUN)) then mo.touchingdetector = 3; return true end
 	
 	if hasit
 		S_StartSound(door,door.info.activesound)

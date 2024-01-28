@@ -349,6 +349,7 @@ rawset(_G, "TAKIS_NET", {
 		MT_SUPERHOOD = "Robo-Hood",
 		MT_ANASTASIA = "Anastasia",
 		MT_INFINITE_318 = "Infinite",
+		
 	},
 	
 	nobosscards = {},
@@ -369,6 +370,8 @@ rawset(_G, "TAKIS_NET", {
 		MT_SUPERHOOD = true,
 		MT_ANASTASIA = true,
 		MT_INFINITE_318 = true,
+		
+		MT_PIZZA_ENEMY = true,
 	},
 	
 	bossprefix = {

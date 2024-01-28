@@ -2668,11 +2668,17 @@ local function drawcfgnotifs(v,p)
 	local ay = FixedMul(waveforce,sin(leveltime*ANG2))
 	v.drawScaled(160*FU,65*FU,FU+ay,v.cachePatch("BUBBLEBOX"),trans)
 	
-	v.drawString(160,50,"You have no Config, check",trans|V_ALLOWLOWERCASE,"thin-center")
-	v.drawString(160,60,"out the \x86takis_openmenu\x80.",trans|V_ALLOWLOWERCASE,"thin-center")
-	v.drawString(160,70,"\x86(Hold FN+C3+C2)",trans|V_ALLOWLOWERCASE,"thin-center")
-	v.drawString(160,80,"\x86".."C3 - Dismiss",trans|V_ALLOWLOWERCASE,"thin-center")
-	
+	if not multiplayer
+		v.drawString(160,50,"Would you like to play",trans|V_ALLOWLOWERCASE,"thin-center")
+		v.drawString(160,60,"the Takis Tutorial?",trans|V_ALLOWLOWERCASE,"thin-center")
+		v.drawString(160,70,"\x86".."C2 - Yes",trans|V_ALLOWLOWERCASE,"thin-center")
+		v.drawString(160,80,"\x86".."C3 - Dismiss",trans|V_ALLOWLOWERCASE,"thin-center")
+	else
+		v.drawString(160,50,"You have no Config, check",trans|V_ALLOWLOWERCASE,"thin-center")
+		v.drawString(160,60,"out the \x86takis_openmenu\x80.",trans|V_ALLOWLOWERCASE,"thin-center")
+		v.drawString(160,70,"\x86(Hold FN+C3+C2)",trans|V_ALLOWLOWERCASE,"thin-center")
+		v.drawString(160,80,"\x86".."C3 - Dismiss",trans|V_ALLOWLOWERCASE,"thin-center")
+	end
 end
 
 local function drawbonuses(v,p)
@@ -2769,7 +2775,7 @@ local function drawtutbuttons(v,p)
 		)
 		v.drawString(hudinfo[HUD_LIVES].x+20,
 			hudinfo[HUD_LIVES].y+(disp+5),
-			"Dive",
+			takis.transfo & TRANSFO_SHOTGUN and "Shoulder Bash" or "Dive",
 			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
 			"thin"
 		)	
@@ -2846,7 +2852,7 @@ local function drawtutbuttons(v,p)
 		)
 		v.drawString(hudinfo[HUD_LIVES].x+20,
 			hudinfo[HUD_LIVES].y+(disp+5),
-			"Clutch Boost",
+			takis.transfo & TRANSFO_SHOTGUN and "Shoot" or "Clutch Boost",
 			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
 			"thin"
 		)	

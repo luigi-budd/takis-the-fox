@@ -1,0 +1,15 @@
+Level Z0
+Levelname = Red Room
+Act = 0
+NoZone = true
+Music = REDROM
+NextLevel = 1
+TypeOfLevel = Singleplayer
+HideInStats = true
+Hidden = true
+SkyNum = 34
+ForceCharacter = Takisthefox
+FlickyList = None
+BonusType = None
+Lua.Takis_HH_Timelimit = 0
+Lua.Takis_HH_Tag = 9999

@@ -34,6 +34,18 @@ rawset(_G,"HAPPY_HOUR",{
 
 local hh = HAPPY_HOUR
 
+rawset(_G,"GetHappyHourMusic",function()
+	local nomus = string.lower(mapheaderinfo[gamemap].takis_hh_nomusic or '') == "true"
+	local noendmus = string.lower(mapheaderinfo[gamemap].takis_hh_noendmusic or '') == "true"
+	
+	local song = mapheaderinfo[gamemap].takis_hh_music or "hapyhr"
+	local songend = mapheaderinfo[gamemap].takis_hh_endmusic or "hpyhre"
+	
+	song,songend = string.lower($1),string.lower($2)
+		
+	return nomus,noendmus,song,songend
+end)
+
 rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 	if not hh.happyhour
 		
@@ -112,29 +124,13 @@ rawset(_G,"HH_Reset",function()
 	hh.gameover = false
 	hh.gameovertics = 0
 	
-	if (gamestate == GS_LEVEL)
-		if (mapheaderinfo[gamemap].takis_hh_nointer)
-			G_SetCustomExitVars(mapheaderinfo[gamemap].nextlevel,1)
-		end
-	end
 end)
 
 addHook("MapChange",HH_Reset)
 
 addHook("ThinkFrame",do
-
-	local nomus = string.lower(mapheaderinfo[gamemap].takis_hh_nomusic or '') == "true"
-	local noendmus = string.lower(mapheaderinfo[gamemap].takis_hh_noendmusic or '') == "true"
 	
-	local song = mapheaderinfo[gamemap].takis_hh_music or "hapyhr"
-	local songend = mapheaderinfo[gamemap].takis_hh_endmusic or "hpyhre"
-	
-	song,songend = string.lower($1),string.lower($2)
-	
-	hh.song = song
-	hh.songend = songend
-	hh.nosong = nomus
-	hh.noendsong = noendmus
+	hh.nosong,hh.noendsong,hh.song,hh.songend = GetHappyHourMusic()
 	
 	hh.othergt = (gametype == GT_PTSPICER)
 	if hh.othergt
@@ -633,8 +629,8 @@ addHook("MobjThinker",function(door)
 			
 			local sfx = P_SpawnGhostMobj(thok)
 			sfx.flags2 = $|MF2_DONTDRAW
-			sfx.tics = TR*3/4
-			sfx.fuse = TR*3/4
+			sfx.tics = TR/4
+			sfx.fuse = TR/4
 			S_StartSound(sfx,sfx_tkapow)
 		end
 	end

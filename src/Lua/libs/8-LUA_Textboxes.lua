@@ -703,9 +703,11 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			sound = takisvox,
 			soundchance = takischance,
 			delay = 2*TICRATE,
-			closescript = function()
-				G_SetCustomExitVars(1,2)
-				G_ExitLevel()
+			closescript = function(p)
+				if p.takistable.isElevated
+					G_SetCustomExitVars(1,2)
+					G_ExitLevel()
+				end
 			end,
 			next = 0
 		},
@@ -1055,6 +1057,20 @@ TAKIS_TEXTBOXES.gmap1000 = {
 			soundchance = 0,
 			delay = 3*TICRATE,
 			next = 0,
+		},
+	},
+	[44] = {
+		[1] = {
+			text = "Float across this pit with jump. There's springs at the bottom if you fall.",
+			soundchance = 0,
+			delay = 2*TICRATE,
+			next = 0,
+			closescript = function(p)
+				if p.takis_noabil
+					p.takis_noabil = $|NOABIL_CLUTCH
+				end
+			end,
+			move = true,
 		},
 	},
 	[9999] = {

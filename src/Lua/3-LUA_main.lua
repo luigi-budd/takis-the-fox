@@ -116,9 +116,11 @@
 	-[done]fireass in nights freeroam
 	-hitlag?
 	-clutch speed adjustmensts fro 2d & underwater
-	-killing blow sfx when clutching into
-	-ambush makes shotgun boxes gold
-	-metal detector to remove shotgun
+	-[done]killing blow sfx when clutching into
+	-[done]ambush makes shotgun boxes gold
+	-[done]metal detector to remove shotgun
+	-[done]happyhour mus vars arent used in musichange if hh is activated
+	 on spawn
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -137,6 +139,9 @@
 	-[done]Takis_HH_NoInter - disable the intermission screen
 	-[done]Takis_HH_NoHappyHour - disable allhappyhour from doin the lvl
 	-Takis_HH_NoClang - disable mysterious clanging
+	-Takis_HH_Exit_[x,y,z] - exit pos
+	-Takis_HH_Trig_[x,y,z] - trigger pos
+	
 	
 */
 
@@ -2882,7 +2887,7 @@ local function knockbacklolll(t,tm)
 			
 			--if not (p.pflags & PF_SPINNING)
 				S_StartSound(tm,sfx_smack)
-				S_StartSound(tm,sfx_sdmkil)
+				S_StartSound(me,sfx_sdmkil)
 				SpawnEnemyGibs(t,tm,ang)
 				SpawnBam(tm)
 				
