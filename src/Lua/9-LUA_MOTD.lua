@@ -50,6 +50,16 @@ COM_AddCommand("setinvite", function(p,link)
 	
 end, COM_ADMIN)
 
+addHook("ThinkFrame",do
+	
+	local name = string.lower(CV_FindVar("servername").string)
+	
+	if name == "zyphyr's pt #1"
+	or name == "zyphyr's pt #2"
+		TAKIS_INVITELINK = "Join us! https://discord.gg/jdfGxhM2am"
+	end
+end)
+
 addHook("NetVars",function(n)
 	TAKIS_INVITELINK = n($)
 end)

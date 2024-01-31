@@ -112,7 +112,7 @@
 	-[done]bubbles reset state and stuff
 	-[done]use takis.HUD.flyingscore to align all the rank stuff
 	-[done?]2d mode is SHIT!! fix weird state bugs
-	-SHIT IS STILL RESYNCHING!!
+	-[done?]SHIT IS STILL RESYNCHING!!
 	-[done]fireass in nights freeroam
 	-hitlag?
 	-clutch speed adjustmensts fro 2d & underwater
@@ -121,6 +121,8 @@
 	-[done]metal detector to remove shotgun
 	-[done]happyhour mus vars arent used in musichange if hh is activated
 	 on spawn
+	-battlemod stuff
+	-[done]you can still clutch in waterslides
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -128,7 +130,7 @@
 	-the tail on roll frames doesnt point the right way
 	-redo walk 4th angle
 	-retro faces for the new faces
-	-redo tailees dead
+	-[done]redo tailees dead
 	
 	--PLANNED MAPHEADERS
 	-[done]Takis_HH_Music - regular happyhour mus, ignore styles
@@ -408,8 +410,6 @@ addHook("PlayerThink", function(p)
 						--fancy explosions for HH
 						if takis.nightsexplode
 							
-							takis.ssfailed = false
-							
 							--exiting starts at 99
 							print("a")
 							print(p.exiting)
@@ -629,6 +629,7 @@ addHook("PlayerThink", function(p)
 					and not (takis.hammerblastdown)
 					and (me.state ~= S_PLAY_TAKIS_SLIDE)
 					and not (takis.noability & NOABIL_SHOTGUN)
+					and (takis.notCarried)
 						local ang = GetControlAngle(p)
 						if ((me.flags2 & MF2_TWOD)
 						or (twodlevel))
@@ -1742,7 +1743,7 @@ addHook("PlayerThink", function(p)
 				--keep increasing this until it reaches
 				--2*TR, kill if then
 				--but this isnt a zone map?
-				if G_BuildMapTitle(gamemap) ~= "Red Room Zone"
+				if G_BuildMapTitle(gamemap) ~= "Red Room"
 					takis.timescrushed = $+1
 				end
 				takis.crushscale = FU/3
@@ -1903,11 +1904,17 @@ addHook("PlayerThink", function(p)
 				
 				if takis.combo.count
 					takis.combo.failcount = takis.combo.count
+					takis.combo.failtics = 4*TR
+					takis.combo.failrank = takis.combo.rank
+					
 					takis.combo.count = 0
 					S_StartSound(nil,sfx_kc59,p)
+					
 					takis.combo.outrotointro = 0
 					takis.combo.outrotics = 7*TR/5
 					takis.HUD.flyingscore.lastscore = takis.combo.score
+					takis.HUD.combo.momy = 3*FU
+					takis.HUD.combo.momx = 3*FU
 					
 					S_StartSound(nil,sfx_chchng,p)
 					P_AddPlayerScore(p,takis.combo.score)
@@ -2307,12 +2314,19 @@ addHook("PlayerSpawn", function(p)
 	if takis
 		local me = p.realmo
 		
+		if takis.cosmenu.menuinaction
+			TakisMenuOpenClose(p)
+		end
+		
 		if All7Emeralds(emeralds)
 		and not All7Emeralds(takis.lastemeralds)
 			TakisAwardAchievement(p,ACHIEVEMENT_SPIRIT)
 		end
 		
-		takis.ssfailed = true
+		if takis.gotemeralds ~= emeralds
+			takis.emeraldcutscene = 3*TR
+		end
+		
 		takis.lastemeralds = emeralds
 		takis.spiritlist = {}
 		
@@ -2363,6 +2377,8 @@ addHook("PlayerSpawn", function(p)
 		takis.stasistic = 0
 		
 		takis.timeshit = p.timeshit
+		
+		takis.combo.outrotics = 0
 		
 		TakisResetTauntStuff(takis,true)
 		

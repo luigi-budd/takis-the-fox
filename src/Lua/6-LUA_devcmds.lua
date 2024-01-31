@@ -1,4 +1,5 @@
 if not TAKIS_ISDEBUG
+	filesdone = $+1
 	return
 end
 

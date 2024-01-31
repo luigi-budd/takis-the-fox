@@ -19,7 +19,8 @@
 	-SMSReborn - IO code
 	-CustomHud Lib - customhud lib duhhh
 	-Clone Fighter's Textbox Engine - slightly modified to be more
-									  banjo kazooie
+									  banjo kazooie (also linedef
+									  triggers)
 	-NiGHTS Freeroam - ok this isnt reusable but buggie asked me to put it in
 	-ChrispyChars - some code used for confetti
 	
@@ -244,6 +245,8 @@ rawset(_G, "TAKIS_NET", {
 	
 	inttic = 0,
 	stagefailed = true,
+	cheatedgame = false,
+	cardbump = 0,
 	
 	--DONT change to happy hour if the song is any one of these
 	specsongs = {
@@ -293,9 +296,10 @@ rawset(_G, "TAKIS_NET", {
 		--of its own
 		["festung oder so"] = true,
 		["spiral hill pizza"] = true,
+		
+		--stage locks you out of any backtracking routes
+		["eruption conduit 2"] = true,
 	},
-	
-	cheatedgame = false,
 	
 	--titlecard stuff
 	bossnames = {
@@ -524,15 +528,14 @@ rawset(_G, "TakisInitTable", function(p)
 		timeshit = 0,
 		totalshit = 0,
 		spiritlist = {},
-		--always assume a specialstage was failed unless
-		--we're exiting with a spirit in hand
-		ssfailed = true,
 		fireasssmoke = 0,
 		fireasstime = 0,
 		fireballtime = 0,
 		starman = false,
 		coyote = 5,
 		trophy = 0,
+		gotemeralds = 0,
+		emeraldcutscene = 0,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -581,13 +584,18 @@ rawset(_G, "TakisInitTable", function(p)
 			cashable = false,
 			dropped = false,
 			awardable = false,
+			
 			failcount = 0,
+			failtics = 0,
+			failrank = 0,
 			
 			--anim stuff
 			introtics = 0,
 			outrotics = 0,
 			outrotointro = 0,
 			frozen = false,
+			slidein = 0,
+			slidetime = 0,
 		},
 		io = {
 			hasfile = false,
@@ -728,6 +736,7 @@ rawset(_G, "TakisInitTable", function(p)
 		shotguntuttic = 0,
 		
 		--bools
+		--booleans
 		onGround = false,
 		inPain = false,
 		isTakis = false,
@@ -744,6 +753,8 @@ rawset(_G, "TakisInitTable", function(p)
 		inSRBZ = false,
 		inChaos = false,
 		isSuper = false,
+		isAngry = false,
+		inBattle = false,
 		
 		--fake powers
 		fakeflashing = 0,
@@ -813,8 +824,11 @@ rawset(_G, "TakisInitTable", function(p)
 				finished = {90-(13*6)+75+15 +15,(62-6)+20},
 			},
 			combo = {
+				basex = 15*FU,
+				x = 15*FU,
 				basey = 70*FU,
 				y = 70*FU,
+				momx = 0,
 				momy = 0,
 				scale = FU,
 				shake = 0,

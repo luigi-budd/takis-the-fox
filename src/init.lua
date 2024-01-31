@@ -95,7 +95,7 @@ rawset(_G, "takis_printwarning",function(p)
 		)	
 	else
 		CONS_Printf(p,"\x82This is free for anyone to host!\n"..
-			"Please send feedback and bug reports to \x83@gerald55555\x82 on Discord, or the Github!\nhttps://github.com/luigi-budd/takis-the-fox"
+			"Please send feedback and bug reports to \x83@luigibudd\x82 on Discord, or the Github!\nhttps://github.com/luigi-budd/takis-the-fox"
 		)	
 	end
 	

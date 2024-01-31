@@ -927,7 +927,7 @@ end,MT_THROWNSCATTER)
 
 addHook("MobjDeath",function(shot,i,s)
 	if ((i == shot.tracer) or (s == shot.tracer))
-	or ((shot.timealive < 10) and (i.valid or s.valid))
+	or ((shot.timealive < 10) and (i and i.valid or s and s.valid))
 	and (shot.shotbytakis)
 		return true
 	end
@@ -1268,11 +1268,6 @@ addHook("MobjThinker",function(me)
 end,MT_STARPOST)
 
 addHook("BossThinker", function(mo)
-	if (not TAKIS_NET.inbossmap)
-	and (mapheaderinfo[gamemap].bonustype == 1)
-		TAKIS_NET.inbossmap = true
-	end
-	
 	if (mo.target and mo.target.valid)
 	and (mo.target.player and mo.target.player.valid)
 		mo.p_target = mo.target
@@ -1424,6 +1419,28 @@ addHook("PostThinkFrame", function ()
 		
 		if p.powers[pw_nocontrol] then takis.nocontrol = p.powers[pw_nocontrol] end
 		
+		takis.quakeint = 0
+		for k,v in ipairs(takis.quake)
+			if v == nil
+				continue
+			end
+			
+			local q = takis.quake
+			
+			if v.tics
+				v.intensity = $-v.minus
+				takis.quakeint = $+v.intensity
+				v.tics = $-1
+			else
+				table.remove(q,k)
+			end
+		end
+		if takis.quakeint
+		and displayplayer == p
+		and takis.io.quakes
+			P_StartQuake(takis.quakeint,1)
+		end
+	
 		if takis.inwaterslide
 			
             takis.resettingtoslide = true
@@ -2579,6 +2596,20 @@ addHook("MobjThinker",function(door)
 		end
 	end
 end,MT_TAKIS_METALDETECTOR)
+
+local gibbinglist = {
+	MT_FANG,
+}
+local function regulargib(mo)
+	if not (mo and mo.valid) then return end
+	mo.takis_metalgibs = false
+	print("ASDSAD "..tostring(mo.takis_metalgibs))
+end
+
+for _,type in ipairs(gibbinglist)
+	addHook("MobjSpawn",regulargib,type)
+end
+
 
 filesdone = $+1
 

@@ -151,6 +151,14 @@ addHook("MapLoad", function(mapid)
 	
 end)
 
+local bumpinterval = {
+	["vsboss"] = 18,
+	["vsalt"] = 13,
+	["vsmetl"] = 11,
+	["vsbrak"] = 10,
+	["vsfang"] = 15
+}
+
 addHook("ThinkFrame", do
 	
 	CVtoNET()
@@ -239,6 +247,14 @@ addHook("ThinkFrame", do
 		end
 	end
 	
+	if t.inbossmap
+		local bump = bumpinterval[string.lower(mapheaderinfo[gamemap].musname or '')] or TR
+		if (leveltime % bump) == 0
+			t.cardbump = 10*FU
+		end
+	end
+	
+	if t.cardbump ~= 0 then t.cardbump = $*5/6 end
 end)
 
 --didnt know stagefailed was passed onto IntermissionThinker

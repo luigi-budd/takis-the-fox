@@ -372,6 +372,31 @@ COM_AddCommand("takis_sharecombos", function(p)
 	
 	TakisSaveStuff(p)
 end)
+COM_AddCommand("takis_takistutorial", function(p)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if not (p.takistable)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	if (mulitplayer or netgame)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	if G_BuildMapTitle(1000) ~= "Red Room"
+		prn(p,"Tutorial map has been replaced, cannot teleport.")
+		return	
+	end
+	
+	G_SetCustomExitVars(1000,2)
+	G_ExitLevel()
+	
+end,COM_ADMIN)
 
 
 filesdone = $+1

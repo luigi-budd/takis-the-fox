@@ -92,14 +92,7 @@ rawset(_G, "TakisBooleans", function(p,me,takis,SKIN)
 	if (p.powers[pw_carry] == CR_ROLLOUT) then takis.onGround = true end
 	takis.inPain = P_PlayerInPain(p)
 	takis.isTakis = (me.skin == SKIN) or (skins[p.skin].name == SKIN)
-	
-	if (not netgame)
-	and (not splitscreen)
-		takis.isSinglePlayer = true
-	else
-		takis.isSinglePlayer = false
-	end
-	
+	takis.isSinglePlayer = ((not netgame) and (not splitscreen))
 	takis.inWater = (me.eflags&MFE_UNDERWATER) and not (me.eflags & MFE_TOUCHLAVA)
 	takis.inGoop = P_IsObjectInGoop(me)
 	takis.notCarried = ((p.powers[pw_carry] == CR_NONE) and not (takis.inwaterslide))
@@ -111,6 +104,8 @@ rawset(_G, "TakisBooleans", function(p,me,takis,SKIN)
 	takis.inSRBZ = gametype == GT_SRBZ
 	takis.inChaos = (CBW_Chaos_Library and CBW_Chaos_Library.Gametypes[gametype])
 	takis.isSuper = p.powers[pw_super] > 0
+	takis.isAngry = (me.health or p.playerstate == PST_LIVE) and (takis.combo.count >= 10)
+	takis.inBattle = (CBW_Battle and CBW_Battle.BattleGametype())
 end)
 
 local function dorandom()
@@ -221,8 +216,12 @@ rawset(_G, "TakisAnimateHappyHour", function(p)
 	
 	else
 		hud.happyhour.doingit = false
-		hud.happyhour.scale = FU/20
 		hud.happyhour.falldown = false
+		
+		hud.happyhour.its.scale = FU/20
+		hud.happyhour.happy.scale = FU/20
+		hud.happyhour.hour.scale = FU/20
+		
 		hud.happyhour.its.yadd = -200*FU
 		hud.happyhour.happy.yadd = -100*FU
 		hud.happyhour.hour.yadd = -100*FU
@@ -677,6 +676,8 @@ rawset(_G, "TakisHUDStuff", function(p)
 		hud.combo.tokengrow = $/2
 	end
 	
+	if takis.combo.slidetime then takis.combo.slidetime = $-1 end
+	if takis.combo.failtics then takis.combo.failtics = $-1 end
 	
 --hud stuff end
 --hudstuff end
@@ -1278,16 +1279,25 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.combo.outrotics = $-1
 		takis.HUD.combo.momy = $-(FU/2)
 		takis.HUD.combo.y = $-takis.HUD.combo.momy
+		takis.HUD.combo.x = $+takis.HUD.combo.momx
 	else
 		if not takis.combo.outrotointro
 			if (takis.HUD.combo.y ~= takis.HUD.combo.basey)
 				takis.HUD.combo.y = takis.HUD.combo.basey
 				takis.HUD.combo.momy = 0
 			end
+			if (takis.HUD.combo.x ~= takis.HUD.combo.basex)
+				takis.HUD.combo.x = takis.HUD.combo.basex
+				takis.HUD.combo.momx = 0
+			end
 		else
 			if (takis.HUD.combo.y ~= takis.HUD.combo.basey)
 				takis.HUD.combo.y = takis.HUD.combo.basey
 				takis.HUD.combo.momy = 0
+			end
+			if (takis.HUD.combo.x ~= takis.HUD.combo.basex)
+				takis.HUD.combo.x = takis.HUD.combo.basex
+				takis.HUD.combo.momx = 0
 			end
 			takis.combo.outrotointro = $*4/5
 			takis.HUD.combo.y = $-takis.combo.outrotointro
@@ -1717,15 +1727,14 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.heartcards = TAKIS_MAX_HEARTCARDS
 	end
 	
-	if takis.inSRBZ
-		takis.noability = NOABIL_SPIN|NOABIL_DIVE
-	end
-	
 	if (takis.afterimaging
 	and takis.shotgunned)
 		takis.afterimaging = false
 	end
 	
+	if takis.inSRBZ
+		takis.noability = NOABIL_SPIN|NOABIL_DIVE
+	end
 	if (takis.wavedashcapable)
 		takis.noability = $|NOABIL_HAMMER
 	end
@@ -1810,7 +1819,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if (takis.resettingtoslide)
 	or (takis.inwaterslide)
-		takis.noability = $|NOABIL_SLIDE
+		takis.noability = $|NOABIL_SLIDE|NOABIL_CLUTCH
 	end
 	
 	if (me.state == S_PLAY_MELEE)
@@ -1920,6 +1929,15 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.hitlag.angle = p.drawangle
 	end
 	*/
+	
+	if takis.emeraldcutscene
+		print(takis.emeraldcutscene)
+		takis.emeraldcutscene = $-1
+		
+		if takis.emeraldcutscene == 0
+			takis.gotemeralds = emeralds
+		end
+	end
 	
 	p.alreadyhascombometer = 2
 	
@@ -2645,13 +2663,15 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 		
 		if takis.combo.count == 1
 			S_StartSound(nil,sfx_kc3c,p)
-			takis.HUD.combo.scale = $+(FU/5)
 			if takis.combo.outrotics
 				takis.combo.outrotointro = takis.HUD.combo.basey - takis.HUD.combo.y
 				if takis.combo.failcount >= 50 --TAKIS_NET.partdestoy
 					TakisAwardAchievement(p,ACHIEVEMENT_COMBOALMOST)
 				end
 				takis.combo.outrotics = 0
+			--started a new combo?
+			else
+				takis.combo.slidetime = TR/2
 			end
 		end
 		
@@ -3863,6 +3883,29 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	end
 end)
 
+local function metalorreggib(mo)
+	local spawnmetal = true
+	
+	if ( ((mo.flags & MF_ENEMY)
+	or (mo.type == MT_TAKIS_BADNIK_RAGDOLL))
+	and mo.sprite ~= SPR_PLAY)
+		if (TAKIS_NET.isretro)
+			spawnmetal = false
+		end
+		if mo.takis_metalgibs ~= nil
+			spawnmetal = mo.takis_metalgibs
+		end
+	elseif (mo.type == MT_PLAYER or mo.sprite == SPR_PLAY)
+		if not (
+		(mo.player and (mo.player.charflags & SF_MACHINE))
+		or
+		(skins[mo.skin].flags & SF_MACHINE))
+			spawnmetal = false
+		end
+	end
+	return spawnmetal
+end
+
 --t is the thing causing, tm is the thing gibbing
 rawset(_G,"SpawnEnemyGibs",function(t,tm,ang,fromdoor)
 	if (tm.flags & MF_MONITOR) then return end
@@ -3898,19 +3941,9 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang,fromdoor)
 		gib.frame = P_RandomRange(A,I)
 		if (mo and mo.valid)
 			if not fromdoor
-				if ( ((mo.flags & MF_ENEMY)
-				or (mo.type == MT_TAKIS_BADNIK_RAGDOLL))
-				and mo.sprite ~= SPR_PLAY)
-					if (TAKIS_NET.isretro)
-						gib.frame = choosething(A,B,E,G,H,I)
-					end
-				elseif (mo.type == MT_PLAYER or mo.sprite == SPR_PLAY)
-					if not (
-					(mo.player and (mo.player.charflags & SF_MACHINE))
-					or
-					(skins[mo.skin].flags & SF_MACHINE))
-						gib.frame = choosething(A,B,E,G,H,I)
-					end
+				--TODO: test thsi
+				if not metalorreggib(mo)
+					gib.frame = choosething(A,B,E,G,H,I)
 				end
 			else
 				gib.frame = A
@@ -4151,12 +4184,11 @@ rawset(_G,"TakisDoClutch",function(p)
 		speedmul = $*3/4
 	end
 	if (takis.inWater)
-		speedmul = $/2
+		speedmul = $*3/4
 	end
 	if (p.gotflag)
 		speedmul = $*7/10
 	end
-	thrust = FixedMul($,speedmul)
 	
 	if mo == me
 		P_Thrust(mo,ang,thrust)

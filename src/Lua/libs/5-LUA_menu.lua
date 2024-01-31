@@ -8,16 +8,19 @@ tm.entries = {
 		text = {
 			"Menu Help",
 			"Takis Manual",
+			"Takis Tutorial",
 			'Important Letter',
 		},
 		commands = {
 			"showmenuhints",
 			"instructions",
+			"takistutorial",
 			"importantletter",
 		},
 		hints = {
 			"Show the controls.",
 			"Print the manual URL in console.",
+			"Warp to the Tutorial level. Singleplayer only.",
 			"..."
 		}
 	},

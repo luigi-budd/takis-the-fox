@@ -1,5 +1,26 @@
 if not (rawget(_G, "customhud")) return end
 local modname = "takisthefox"
+local battleoffset = 15
+
+local function happyshakelol(v)
+	local s = 5
+	local shakex,shakey = v.RandomFixed()/2,v.RandomFixed()/2
+	
+	local d1 = v.RandomRange(-1,1)
+	local d2 = v.RandomRange(-1,1)
+	if d1 == 0
+		d1 = v.RandomRange(-1,1)
+	end
+	if d2 == 0
+		d2 = v.RandomRange(-1,1)
+	end
+
+	shakex = $*s*d1
+	shakey = $*s*d2
+	
+	return shakex,shakey
+end
+
 
 --if TAKIS_ISDEBUG then return end
 
@@ -40,7 +61,12 @@ local function drawheartcards(v,p)
 	end
 	
 	--space allocated for all the cards
-	local maxspace = 90*FU
+	local bump = 0
+	if (TAKIS_NET.inbossmap)
+	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
+		bump = TAKIS_NET.cardbump
+	end
+	local maxspace = 90*FU+bump
 	
 	--position of the first card
 	local maxx = maxspace
@@ -51,6 +77,10 @@ local function drawheartcards(v,p)
 		local j = i
 		
 		local eflag = V_HUDTRANS
+		if (TAKIS_NET.inbossmap)
+		and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
+			eflag = $ &~V_HUDTRANS
+		end
 		
 		--patch
 		local patch = v.cachePatch("HEARTCARD1")
@@ -120,6 +150,8 @@ local function drawheartcards(v,p)
 			)
 		)
 		
+		if (takis.inBattle) then add = $+battleoffset*FU end
+
 		--draw from last to first
 		local flags = V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER|eflag
 		v.drawScaled(maxx-(incre)+xoff+shakex,
@@ -160,12 +192,16 @@ local function drawbosscards(v,p)
 	end
 	
 	--space allocated for all the cards
-	local maxspace = 110*FU
+	local bump = 0
+	if (bosscards.mo.health)
+		bump = TAKIS_NET.cardbump
+	end
+	local maxspace = 110*FU+bump
 	
 	--position of the first card
 	local maxx = maxspace
 	
-	if TAKIS_NET.bossprefix[bosscards.mo.type] ~= nil then xoff = 15*FU end
+	if TAKIS_NET.bossprefix[bosscards.mo.type] ~= nil then xoff = 4*FU end
 	
 	--boss cards
 	for i = 1, bosscards.maxcards do
@@ -173,6 +209,10 @@ local function drawbosscards(v,p)
 		local j = i
 		
 		local eflag = V_HUDTRANS
+		if (TAKIS_NET.inbossmap)
+		and (bosscards.mo and bosscards.mo.health)
+			eflag = $ &~V_HUDTRANS
+		end
 		
 		--patch
 		local patch = v.cachePatch("HEARTCARD3")
@@ -243,12 +283,17 @@ local function calcstatusface(p,takis)
 	--idle
 	if not HAPPY_HOUR.happyhour
 	and not ((p.pizzaface) or ultimatemode)
-		takis.HUD.statusface.state = "IDLE"
-		takis.HUD.statusface.frame = (leveltime/3)%2
-		takis.HUD.statusface.priority = 0
+			takis.HUD.statusface.state = "IDLE"
+			takis.HUD.statusface.frame = (leveltime/3)%2
+			takis.HUD.statusface.priority = 0
 	else
 		takis.HUD.statusface.state = "PTIM"
 		takis.HUD.statusface.frame = (2*leveltime/3)%2
+		takis.HUD.statusface.priority = 0
+	end
+	if takis.isAngry
+		takis.HUD.statusface.state = "AGRY"
+		takis.HUD.statusface.frame = (leveltime/3)%4
 		takis.HUD.statusface.priority = 0
 	end
 	if (takis.transfo & TRANSFO_SHOTGUN)
@@ -440,6 +485,13 @@ local function drawface(v,p)
 		end
 	end
 	
+	if (TAKIS_NET.inbossmap)
+	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
+		eflags = $ &~(V_HUDTRANS|V_HUDTRANSHALF)
+	end
+	
+	if (takis.inBattle) then y2 = $+battleoffset*FU end
+	
 	if flip == true then eflags = $|V_FLIP end
 	v.drawScaled(20*FU+x,27*FU+y+y2,
 		scale,
@@ -524,7 +576,7 @@ local function drawbossface(v,p)
 	if not (bosscards.name) then return end
 	if (bosscards.dontdrawcards) then return end
 	
-	local eflags = V_HUDTRANS
+	local eflags = 0
 	
 	local pre = TAKIS_NET.bossprefix[bosscards.mo.type]
 	local scale = 2*FU/5
@@ -542,7 +594,7 @@ local function drawbossface(v,p)
 	
 	headpatch = v.cachePatch(headstring)
 	
-	v.drawScaled((300-20)*FU,
+	v.drawScaled((300-5)*FU,
 		27*FU,
 		scale,
 		headpatch,
@@ -600,6 +652,11 @@ local function drawrings(v,p)
 	if p.spectator then eflag = V_HUDTRANSHALF end
 	
 	local val = p.rings
+	
+	if (takis.inBattle)
+		ringFy = $+battleoffset*FU	
+		ringy = $+battleoffset	
+	end
 	
 	--classic x = 102
 	v.drawScaled(ringFx, ringFy, FU/2,v.getSpritePatch(ringpatch, A, 0, 0), V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER,v.getColormap(nil,SKINCOLOR_RED))
@@ -739,6 +796,9 @@ local function drawtimer(v,p,altpos)
 			timey = 184
 		end
 	end
+	if (takis.inBattle)
+		timey = $+battleoffset
+	end
 	
 	v.drawString(timex, timey, hours..extrac..minutes..":"..spad..seconds.."."..tictrn..tpad,flag,"thin-right")
 	v.drawString(timetx, timey, "Time"..extra,flag,"thin")
@@ -767,7 +827,14 @@ local function drawscore(v,p)
 		or (PTSR:inVoteScreen())
 			return
 		end
-	end	
+	end
+	
+	if (gametype == GT_TEAMARENA)
+	or (gametype == GT_SURVIVAL)
+	or (gametype == GT_TEAMSURVIVAL)
+	and (takis.inBattle)
+		return
+	end
 	
 	local takis = p.takistable
 	
@@ -797,13 +864,19 @@ local function drawscore(v,p)
 	if takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid
 	and not (takis.HUD.bosscards.nocards)
 		y = $+30
-		x = 300-15
 	end
 	
 	local snap = V_SNAPTORIGHT|V_SNAPTOTOP
 	if takis.inChaos
 		x = 303
 		y = 55
+	end
+	
+	if (gametype == GT_ARENA)
+		x = 160
+		y = 25
+		align = "center"
+		snap = V_SNAPTOTOP
 	end
 	
 	local width = string.len(score)*(v.cachePatch(scorenum.."1").width*4/10)
@@ -1450,19 +1523,94 @@ local function drawcombostuff(v,p)
 	local takis = p.takistable
 	local me = p.mo
 
+	if (takis.combo.failtics)
+		local meter = v.cachePatch("TAKCOBACK")
+		local offy = 0
+		if (takis.combo.count)
+			offy = meter.height*FU+5*FU
+		end
+		
+		v.drawString(15*FU+(meter.width*FU/2),
+			takis.HUD.combo.basey+offy,
+			"That combo was",
+			V_HUDTRANS|V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
+			"thin-fixed-center"
+		)
+		local length = #TAKIS_COMBO_RANKS
+		local xs,ys = happyshakelol(v)
+		xs,ys = $1/3,$2/3
+		v.drawString(15*FU+(meter.width*FU/2)+xs,
+			takis.HUD.combo.basey+15*FU+ys+offy,
+			TAKIS_COMBO_RANKS[ ((takis.combo.failrank-1) % length)+1 ],
+			V_HUDTRANS|V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
+			"thin-fixed-center"
+		)
+		
+		local score = takis.combo.failcount
+		local prevw = 0
+		local scorenum = "CMBCF"
+		local fontwidth = 0
+		
+		for i = 1,string.len(score)
+			local n = string.sub(score,i,i)
+			fontwidth = $+v.cachePatch(scorenum+n).width*4/10
+		end
+		fontwidth = $*FU
+		
+		for i = 1,string.len(score)
+			local n = string.sub(score,i,i)
+			v.drawScaled(15*FU+(meter.width*FU/2)+(prevw*FU)-(fontwidth/2),
+				(takis.HUD.combo.basey+25*FU+offy),--(v.cachePatch(scorenum+n).height*FixedDiv(scale-FU,4*FU)),
+				FU/2,
+				v.cachePatch(scorenum+n),
+				V_HUDTRANS|	V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER
+			)
+				
+			prevw = $+v.cachePatch(scorenum+n).width*4/10
+		end
+		
+		local verys = takis.combo.failcount/(#TAKIS_COMBO_RANKS*TAKIS_COMBO_UP)
+		if verys > 0
+			local verypatch = v.cachePatch("TAKCOVERY")
+			
+			v.drawScaled(15*FU+((verypatch.width*FU/3)/2),
+				takis.HUD.combo.basey+offy+12*FU,
+				FU/3,
+				verypatch,
+				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER
+			)
+			
+			if verys > 1
+				v.drawString(15*FU+(verypatch.width*FU/3),
+					takis.HUD.combo.basey+offy+9*FU,
+					"x"..verys,
+					V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
+					"thin-fixed"
+				)
+			end
+			
+		end
+	end
+	
 	if takis.combo.count
 	or takis.combo.outrotics
-		
+		local slide = 0
+		if (takis.combo.slidetime)
+			local et = TR/2
+			slide = ease.outback((FU/et)*((TR/2)-takis.combo.slidetime), -300*FU, 0, FU)
+		end
 		local comboscale = takis.HUD.combo.scale+FU
 		local shake = -FixedMul(takis.HUD.combo.shake,comboscale)
-		local backx = 15*FU
+		local backx = (takis.HUD.combo.x)+slide
 		local backy = takis.HUD.combo.y + shake
 		if (takis.combo.outrotointro)
-			backy = takis.HUD.combo.basey-takis.combo.outrotointro+shake
+			backy = takis.HUD.combo.y+shake---takis.combo.outrotointro+shake
 		end
 		local combonum = takis.combo.count
-		if (takis.combo.outrotics) then combonum = takis.combo.failcount end
-		
+		if (takis.combo.outrotics)
+			combonum = takis.combo.failcount
+		end
+				
 		/*
 		if ((p.pflags & PF_FINISHED) and (netgame))
 		and not p.exiting
@@ -1529,16 +1677,18 @@ local function drawcombostuff(v,p)
 		end
 		*/
 		
-		--draw combo rank
-		--this isnt patched text bnecause of issues with the
-		--color codes
-		local length = #TAKIS_COMBO_RANKS
-		v.drawString(backx+7*comboscale,
-			backy+20*comboscale,
-			TAKIS_COMBO_RANKS[ ((takis.combo.rank-1) % length)+1 ],
-			V_HUDTRANS|V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
-			"thin-fixed"
-		)
+		if not takis.combo.outrotics
+			--draw combo rank
+			--this isnt patched text bnecause of issues with the
+			--color codes
+			local length = #TAKIS_COMBO_RANKS
+			v.drawString(backx+7*comboscale,
+				backy+20*comboscale,
+				TAKIS_COMBO_RANKS[ ((takis.combo.rank-1) % length)+1 ],
+				V_HUDTRANS|V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
+				"thin-fixed"
+			)
+		end
 		
 		--font
 		local scorenum = "CMBCF"
@@ -1680,25 +1830,6 @@ local function drawjumpscarelol(v,p)
 		end
 	end
 	
-end
-
-local function happyshakelol(v)
-	local s = 5
-	local shakex,shakey = v.RandomFixed()/2,v.RandomFixed()/2
-	
-	local d1 = v.RandomRange(-1,1)
-	local d2 = v.RandomRange(-1,1)
-	if d1 == 0
-		d1 = v.RandomRange(-1,1)
-	end
-	if d2 == 0
-		d2 = v.RandomRange(-1,1)
-	end
-
-	shakex = $*s*d1
-	shakey = $*s*d2
-	
-	return shakex,shakey
 end
 
 local function drawhappyhour(v,p)
@@ -3263,6 +3394,7 @@ local function drawdebug(v,p)
 		end
 		
 	end
+	--not exactly aligned but whatever
 	if (TAKIS_DEBUGFLAG & DEBUG_ALIGNER)
 		v.draw(160,100,v.cachePatch("ALIGNER"),V_20TRANS)
 	end
@@ -3478,6 +3610,29 @@ local function drawdebug(v,p)
 			prevw = $+v.cachePatch(scorenum+n).width*4/10
 		end
 		
+		local score = L_FixedDecimal(me.friction,3)
+		prevw = 0
+		
+		for i = 1,string.len(score)
+			local n = string.sub(score,i,i)
+			--if n == "." then n = "DOT" end
+			v.drawScaled(hudinfo[HUD_LIVES].x*FU+(prevw*(scale/2)),
+				(ypos-60)*FU-(v.cachePatch(scorenum+n).height*FixedDiv(scale-FU,4*FU)),
+				FixedDiv(scale,4*FU),
+				v.cachePatch(scorenum+n),
+				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
+			)
+				
+			prevw = $+v.cachePatch(scorenum+n).width*4/10
+		end
+		v.drawString(hudinfo[HUD_LIVES].x*FU+(prevw*(scale/2)),
+			(ypos-60)*FU,
+			" friction",
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
+			"thin-fixed"
+		)
+			
+		
 		/*
 		//height debug
 		local scale = FU/10
@@ -3657,23 +3812,9 @@ addHook("HUD", function(v,p,cam)
 			end
 			drawlivesarea(v,p)
 			drawcombostuff(v,p)
-			if not hasstat
-				drawheartcards(v,p)
-				drawbosscards(v,p)
-				drawface(v,p)
-				drawbossface(v,p)
-				drawscore(v,p)
-				drawbonuses(v,p)
-			end
-			drawtauntmenu(v,p)
 			drawpizzatips(v,p)
 			drawpizzatimer(v,p)
-			drawpizzaranks(v,p)
-			drawcrosshair(v,p)
 			--drawnickranks(v,p)
-			if (takis.cosmenu.menuinaction)
-				drawcosmenu(v,p)
-			end
 			if takis.nadotuttic
 				local trans = 0
 				
@@ -3693,6 +3834,20 @@ addHook("HUD", function(v,p,cam)
 			drawcfgnotifs(v,p)
 			drawtutbuttons(v,p)
 			drawbosstitles(v,p)
+			if not hasstat
+				drawheartcards(v,p)
+				drawbosscards(v,p)
+				drawface(v,p)
+				drawbossface(v,p)
+				drawscore(v,p)
+				drawpizzaranks(v,p)
+				drawbonuses(v,p)
+			end
+			drawcrosshair(v,p)
+			drawtauntmenu(v,p)
+			if (takis.cosmenu.menuinaction)
+				drawcosmenu(v,p)
+			end
 			drawhappyhour(v,p)
 			
 			if (takis.shotguntuttic)
