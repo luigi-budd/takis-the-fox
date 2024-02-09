@@ -676,7 +676,15 @@ rawset(_G, "TakisHUDStuff", function(p)
 		hud.combo.tokengrow = $/2
 	end
 	
-	if takis.combo.slidetime then takis.combo.slidetime = $-1 end
+	if takis.combo.slidetime
+		local et = TR/2
+		takis.combo.slidein = ease.outback((FU/et)*((TR/2)-takis.combo.slidetime), -300*FU, 0, FU)
+		
+		takis.combo.slidetime = $-1
+	else
+		takis.combo.slidein = -300*FU
+	end
+	
 	if takis.combo.failtics then takis.combo.failtics = $-1 end
 	
 --hud stuff end
@@ -1153,9 +1161,9 @@ end)
 rawset(_G, "TakisTransfo", function(p,me,takis)
 	
 	if (me.standingslope)
-		if me.prevz == nil then return end
+		if takis.prevz == nil then return end
 		
-		if ((me.prevz - me.z)*takis.gravflip >= 7*me.scale)
+		if ((takis.prevz - me.z)*takis.gravflip >= 7*me.scale)
 		and (me.state == S_PLAY_TAKIS_SLIDE)
 		and (p.pflags & PF_SPINNING)
 		and not (takis.transfo & TRANSFO_BALL)
@@ -1509,14 +1517,14 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 
 	--ffoxd's smoothspintrilas
-	if not me.prevz
+	if not takis.prevz
 	or not me.prevleveltime 
 	or (me.prevleveltime ~= leveltime - 1) then
-	   me.prevz = me.z
+	   takis.prevz = me.z
 	end
 
-	local rmomz = me.z - me.prevz
-	me.prevz = me.z
+	local rmomz = me.z - takis.prevz
+	takis.prevz = me.z
 	me.prevleveltime = leveltime
 	
 	takis.rmomz = rmomz
@@ -1888,7 +1896,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.noability = $|NOABIL_AFTERIMAGE
 	end
 	if p.powers[pw_carry] == CR_NIGHTSMODE
-		takis.noability = $ &~NOABIL_AFTERIMAGE
+		takis.noability = $|NOABIL_SLIDE &~NOABIL_AFTERIMAGE
 	end
 	
 	/*
@@ -1931,11 +1939,45 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	*/
 	
 	if takis.emeraldcutscene
-		print(takis.emeraldcutscene)
+		--print(takis.emeraldcutscene)
 		takis.emeraldcutscene = $-1
+		
 		
 		if takis.emeraldcutscene == 0
 			takis.gotemeralds = emeralds
+		end
+	end
+	
+	--telegraph coyote time by removing airwalk
+	if (p.panim == PA_IDLE
+	or me.state == S_PLAY_WAIT 
+	or me.state == S_PLAY_WALK 
+	or me.state == S_PLAY_RUN 
+	or me.state == S_PLAY_DASH)
+	and not
+	((p.pflags & PF_SPINNING)
+	or (p.pflags & PF_JUMPED))
+
+		if not takis.onGround
+		and p.powers[pw_carry] != CR_ROLLOUT
+		and p.powers[pw_carry] != CR_MINECART
+		and p.powers[pw_carry] != CR_ZOOMTUBE
+		and p.powers[pw_carry] != CR_ROPEHANG
+		and p.powers[pw_carry] != CR_PLAYER
+		and p.powers[pw_carry] != CR_NIGHTSMODE
+		and not takis.coyote
+			if me.momz*takis.gravflip >= 0
+				me.state = S_PLAY_SPRING
+			else
+				me.state = S_PLAY_FALL
+			end
+		end
+		
+	end
+	
+	if takis.isAngry
+		if leveltime % 5 == 0
+			--A_BossScream(me,1,
 		end
 	end
 	
@@ -2254,75 +2296,76 @@ rawset(_G, "TakisTeamNewShields", function(player)
 	and not (player.mo.state >= 59 and player.mo.state <= 64)
 		local t = takis.attracttarg
 			
-			takis.hammerblastdown = 0
-			
-			if s & SH_FORCE
-				local me = player.mo
-				p.pflags = $|PF_THOKKED|PF_SHIELDABILITY
-				S_StartSound(me,sfx_ngskid)
-				me.momx = 0
-				me.momy = 0
-				me.momz = 0
-			end
-			if f == SH_WHIRLWIND
-			or f == SH_THUNDERCOIN
-				P_DoJumpShield(player)
-			end
-			if f == SH_ARMAGEDDON
-				player.pflags = $|PF_THOKKED|PF_SHIELDABILITY
-				TakisPowerfulArma(player)
-				player.mo.state = S_PLAY_ROLL
-			end
-			if f == SH_ATTRACT
-				player.pflags = $|PF_THOKKED|PF_SHIELDABILITY
-				player.homing = 2
-				if t and t.valid
-					P_HomingAttack(player.mo,t)
-					player.mo.angle = R_PointToAngle2(player.mo.x,player.mo.y,t.x,t.y)
-					player.mo.state = S_PLAY_ROLL
-					S_StartSound(player.mo, sfx_s3k40)
-					player.homing = 3*TR
-					player.pflags = $|PF_JUMPED &~(PF_THOKKED|PF_NOJUMPDAMAGE)
-					takis.thokked = false
-				else
-					S_StartSound(player.mo, sfx_s3ka6)
-					player.pflags = $ &~PF_THOKKED
-					takis.thokked = false
-				end
-			end
-			if f == SH_BUBBLEWRAP
-			or f == SH_ELEMENTAL
-				local elem = ((player.powers[pw_shield]&SH_NOSTACK) == SH_ELEMENTAL)
-				player.pflags = $|PF_THOKKED|PF_SHIELDABILITY
-				takis.thokked,takis.dived = true,true
-				if elem
-					player.mo.momx = 0
-					player.mo.momy = 0
-					S_StartSound(player.mo, sfx_s3k43)
-				else
-					--player.mo.momx = $-(player.mo.momx/3)
-					--player.mo.momy = $-(player.mo.momy/3)
-					P_Thrust(me,p.drawangle,2*me.scale)
-					player.pflags = $|PF_SHIELDABILITY &~(PF_NOJUMPDAMAGE)
-					player.mo.state = S_PLAY_ROLL
-					S_StartSound(player.mo,sfx_s3k44)
-				end
-				L_ZLaunch(player.mo, -24*FRACUNIT, false)
-			end
-			if f == SH_FLAMEAURA
-			and not (takis.thokked or takis.dived or p.pflags & (PF_THOKKED|PF_SHIELDABILITY))
-				player.pflags = $|PF_THOKKED|PF_SHIELDABILITY
-				takis.thokked = true
-				takis.dived = true
-				P_InstaThrust(player.mo, player.mo.angle,
-					FixedMul(takis.accspeed,me.scale)+30*me.scale
-				)
-				player.drawangle = player.mo.angle
-				player.pflags = $&~PF_NOJUMPDAMAGE
-				player.mo.state = S_PLAY_ROLL
-				S_StartSound(player.mo,sfx_s3k43)
-			end
+		takis.hammerblastdown = 0
 		
+		if s & SH_FORCE
+		and not (p.pflags & PF_SHIELDABILITY)
+			local me = player.mo
+			p.pflags = $|PF_THOKKED|PF_SHIELDABILITY
+			S_StartSound(me,sfx_ngskid)
+			me.momx = 0
+			me.momy = 0
+			me.momz = 0
+		end
+		if f == SH_WHIRLWIND
+		or f == SH_THUNDERCOIN
+			P_DoJumpShield(player)
+		end
+		if f == SH_ARMAGEDDON
+			player.pflags = $|PF_THOKKED|PF_SHIELDABILITY
+			TakisPowerfulArma(player)
+			player.mo.state = S_PLAY_ROLL
+		end
+		if f == SH_ATTRACT
+			player.pflags = $|PF_THOKKED|PF_SHIELDABILITY
+			player.homing = 2
+			if t and t.valid
+				P_HomingAttack(player.mo,t)
+				player.mo.angle = R_PointToAngle2(player.mo.x,player.mo.y,t.x,t.y)
+				player.mo.state = S_PLAY_ROLL
+				S_StartSound(player.mo, sfx_s3k40)
+				player.homing = 3*TR
+				player.pflags = $|PF_JUMPED &~(PF_THOKKED|PF_NOJUMPDAMAGE)
+				takis.thokked = false
+			else
+				S_StartSound(player.mo, sfx_s3ka6)
+				player.pflags = $ &~PF_THOKKED
+				takis.thokked = false
+			end
+		end
+		if f == SH_BUBBLEWRAP
+		or f == SH_ELEMENTAL
+		and not (takis.thokked or takis.dived or p.pflags & (PF_THOKKED|PF_SHIELDABILITY))
+			local elem = ((player.powers[pw_shield]&SH_NOSTACK) == SH_ELEMENTAL)
+			player.pflags = $|PF_THOKKED|PF_SHIELDABILITY
+			takis.thokked,takis.dived = true,true
+			if elem
+				player.mo.momx = 0
+				player.mo.momy = 0
+				S_StartSound(player.mo, sfx_s3k43)
+			else
+				--player.mo.momx = $-(player.mo.momx/3)
+				--player.mo.momy = $-(player.mo.momy/3)
+				P_Thrust(me,p.drawangle,2*me.scale)
+				player.pflags = $|PF_SHIELDABILITY &~(PF_NOJUMPDAMAGE)
+				player.mo.state = S_PLAY_ROLL
+				S_StartSound(player.mo,sfx_s3k44)
+			end
+			L_ZLaunch(player.mo, -24*FRACUNIT, false)
+		end
+		if f == SH_FLAMEAURA
+		and not (takis.thokked or takis.dived or p.pflags & (PF_THOKKED|PF_SHIELDABILITY))
+			player.pflags = $|PF_THOKKED|PF_SHIELDABILITY
+			takis.thokked = true
+			takis.dived = true
+			P_InstaThrust(player.mo, player.mo.angle,
+				FixedMul(takis.accspeed,me.scale)+30*me.scale
+			)
+			player.drawangle = player.mo.angle
+			player.pflags = $&~PF_NOJUMPDAMAGE
+			player.mo.state = S_PLAY_ROLL
+			S_StartSound(player.mo,sfx_s3k43)
+		end
 	end
 end)
 
@@ -3009,12 +3052,12 @@ rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 		local trans = 0
 		if bonus["shotgun"].tics > 3*TR+9
 			trans = (bonus["shotgun"].tics-(3*TR+9))<<V_ALPHASHIFT
-		elseif bonus["shotgun"].tics < 10
-			trans = (10-bonus["shotgun"].tics)<<V_ALPHASHIFT
+		--elseif bonus["shotgun"].tics < 10
+		--	trans = (10-bonus["shotgun"].tics)<<V_ALPHASHIFT
 		end
 		
 		v.drawString(x+lerpx, y+lerpy, 
-			"+"..bonus["shotgun"].score.." - "..bonus["shotgun"].text, 
+			bonus["shotgun"].text.."\x80 - "..bonus["shotgun"].score.."+", 
 			flags|trans, salign
 		)
 		
@@ -3029,12 +3072,12 @@ rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 		local trans = 0
 		if bonus["ultimatecombo"].tics > 3*TR+9
 			trans = (bonus["ultimatecombo"].tics-(3*TR+9))<<V_ALPHASHIFT
-		elseif bonus["ultimatecombo"].tics < 10
-			trans = (10-bonus["ultimatecombo"].tics)<<V_ALPHASHIFT
+		--elseif bonus["ultimatecombo"].tics < 10
+		--	trans = (10-bonus["ultimatecombo"].tics)<<V_ALPHASHIFT
 		end
 		
 		v.drawString(x+lerpx, y+lerpy, 
-			"+"..bonus["ultimatecombo"].score.." - "..bonus["ultimatecombo"].text, 
+			bonus["ultimatecombo"].text.."\x80 - "..bonus["ultimatecombo"].score.."+", 
 			flags|trans, salign
 		)
 		
@@ -3049,12 +3092,12 @@ rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 		local trans = 0
 		if bonus["happyhour"].tics > 3*TR+9
 			trans = (bonus["happyhour"].tics-(3*TR+9))<<V_ALPHASHIFT
-		elseif bonus["happyhour"].tics < 10
-			trans = (10-bonus["happyhour"].tics)<<V_ALPHASHIFT
+		--elseif bonus["happyhour"].tics < 10
+		--	trans = (10-bonus["happyhour"].tics)<<V_ALPHASHIFT
 		end
 		
 		v.drawString(x+lerpx, y+lerpy, 
-			"+"..bonus["happyhour"].score.." - "..bonus["happyhour"].text, 
+			bonus["happyhour"].text.."\x80 - "..bonus["happyhour"].score.."+", 
 			flags|trans, salign
 		)
 		
@@ -3070,12 +3113,12 @@ rawset(_G,"TakisDrawBonuses", function(v, p, x, y, flags, salign, dist, angle)
 			local trans = 0
 			if val.tics > TR+9
 				trans = (val.tics-(TR+9))<<V_ALPHASHIFT
-			elseif val.tics < 10
-				trans = (10-val.tics)<<V_ALPHASHIFT
+			--elseif val.tics < 10
+			--	trans = (10-val.tics)<<V_ALPHASHIFT
 			end
 			
 			v.drawString(x+lerpx, y+lerpy, 
-				"+"..val.score.." - "..val.text, 
+				val.text.."\x80 - "..val.score.."+", 
 				flags|trans, salign
 			)
 			
@@ -3241,6 +3284,11 @@ rawset(_G,"TakisPowerfulArma",function(p)
 	local takis = p.takistable
 	local rad = 2700*FU
 	
+	if (takis.inBattle)
+		CBW_Battle.ArmaCharge(p)
+		return
+	end
+	
 	if not (TAKIS_NET.nerfarma)
 		--yes powerful arma is just regular arma lol
 		P_BlackOw(p)
@@ -3397,6 +3445,7 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 			shot.momy = $*2
 			shot.momz = $*2
 			shot.shotbytakis = true
+			shot.timealive = 1
 			P_Thrust(shot,shot.angle,takis.accspeed)
 			S_StopSound(shot)
 			
@@ -3437,6 +3486,7 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 					shot.momy = $*2
 					shot.momz = $*2
 					shot.shotbytakis = true
+					shot.timealive = 1
 					P_Thrust(shot,shot.angle,takis.accspeed)
 					S_StopSound(shot)
 					
@@ -3494,6 +3544,9 @@ rawset(_G,"TakisMenuThinker",function(p)
 	end
 	
 	local menu = takis.cosmenu
+	
+	if menu.hintfade > 0 then menu.hintfade = $-1 end
+	
 	if (p.cmd.forwardmove > 19)
 		menu.up = $+1
 		menu.down = 0
@@ -3724,7 +3777,7 @@ rawset(_G, "TakisResetHammerTime", function(p)
 	takis.hammerblastgroundtime = 0
 end)
 
-rawset(_G, "TakisShotgunify", function(p)
+rawset(_G, "TakisShotgunify", function(p,forceon)
 	local takis = p.takistable
 	local me = p.mo
 	
@@ -3732,8 +3785,10 @@ rawset(_G, "TakisShotgunify", function(p)
 		return
 	end
 	
+	takis.shotgunforceon = false
 	takis.transfo = $|TRANSFO_SHOTGUN
 	takis.shotgunned = true
+	takis.shotgunforceon = (forceon == true)
 	if ultimatemode
 		S_ChangeMusic("war",true,p)
 	end
@@ -3869,6 +3924,8 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	
 	local takis = p.takistable
 	local me = p.mo
+		
+	if takis.inBattle then return end
 	
 	local livetext = me.health and "hurt" or "killed"
 	local sortext = sor.health and '' or "The late "
@@ -3883,6 +3940,7 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	end
 end)
 
+--TODO: fix this
 local function metalorreggib(mo)
 	local spawnmetal = true
 	
@@ -3921,7 +3979,6 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang,fromdoor)
 		speed = FixedHypot(tm.momx,tm.momy)
 	end
 	
-	ang = $+ANGLE_90
 	
 	local x,y,z = tm.x,tm.y,tm.z
 	
@@ -3933,8 +3990,14 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang,fromdoor)
 	end
 	
 	local mo = tm or t
+	if not (mo.flags2 & MF2_TWOD)
+		ang = $+ANGLE_90
+	else
+		ang = $+ANGLE_180
+	end
 	for i = 0,P_RandomRange(5,16)
 		local gib = P_SpawnMobj(x,y,z,MT_TAKIS_GIB)
+		gib.flags2 = $ &~MF2_TWOD
 		gib.scale = mo.scale
 		gib.iwillbouncetwice = P_RandomChance(FU/2)
 		
@@ -3973,6 +4036,10 @@ end)
 rawset(_G,"CanFlingThing",function(en,flags)
 	local flingable = false
 	flags = $ or MF_ENEMY|MF_BOSS|MF_MONITOR
+	
+	if (en.flags2 & MF2_FRET)
+		return false
+	end
 	
 	if en.flags & (flags)
 		flingable = true
@@ -4228,6 +4295,51 @@ rawset(_G,"TakisDoClutch",function(p)
 	p.jt = -5
 	takis.coyote = 0
 
+end)
+
+rawset(_G,"TakisFollowThingThink",function(follow,tracer,ztype,doscale)
+	if not (follow and follow.valid) then return end
+	if not (tracer and tracer.valid) then return true end
+	
+	if ztype ~= false
+		if ztype == nil then ztype = 1 end
+		if ztype > 2 then ztype = 2 end
+		ztype = abs($)
+	end
+	
+	if not (camera.chase)
+		follow.flags2 = $|MF2_DONTDRAW
+	else
+		follow.flags2 = $ &~MF2_DONTDRAW
+	end
+	
+	if tracer.skin ~= TAKIS_SKIN
+		follow.flags2 = $|MF2_DONTDRAW
+	end
+	
+	if tracer.flags2 & MF2_DONTDRAW
+		follow.eflags = $|MF2_DONTDRAW
+	end
+	
+	if tracer.eflags & MFE_VERTICALFLIP
+		follow.eflags = $|MFE_VERTICALFLIP
+	else
+		follow.eflags = $ &~MFE_VERTICALFLIP
+	end
+	
+	if ztype ~= false
+		P_MoveOrigin(follow,
+			tracer.x,
+			tracer.y,
+			GetActorZ(tracer,follow,ztype)
+		)
+	end
+	
+	follow.scale = tracer.scale
+	if doscale
+		follow.spritexscale,follow.spriteyscale = tracer.spritexscale,tracer.spriteyscale	
+	end
+	
 end)
 
 filesdone = $+1

@@ -8,7 +8,6 @@ local function init_ouch(p)
 	local menu = takis.tauntmenu
 	
 	takis.taunttime = 24
-	takis.tauntcanparry = true
 	S_StartAntonOw(me)
 end
 
@@ -19,7 +18,6 @@ local function init_smug(p)
 	
 	takis.taunttime = 12
 	takis.tauntspecial = P_RandomChance(FRACUNIT/10)
-	takis.tauntcanparry = true
 	S_StartSound(me,sfx_tawhip)
 end
 
@@ -47,7 +45,6 @@ local function init_bat(p)
 	
 	takis.taunttime = 3*TR
 	S_StartSound(me,sfx_spndsh)
-	takis.tauntcanparry = false
 end
 
 local function init_bird(p)

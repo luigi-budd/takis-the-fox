@@ -293,12 +293,12 @@ addHook("ThinkFrame",do
 end)
 
 ----	trigger stuff
-freeslot("SPR_HHT_")
-freeslot("S_HHTRIGGER_IDLE")
-freeslot("S_HHTRIGGER_PRESSED")
-freeslot("S_HHTRIGGER_ACTIVE")
-freeslot("MT_HHTRIGGER")
-freeslot("sfx_hhtsnd")
+SafeFreeslot("SPR_HHT_")
+SafeFreeslot("S_HHTRIGGER_IDLE")
+SafeFreeslot("S_HHTRIGGER_PRESSED")
+SafeFreeslot("S_HHTRIGGER_ACTIVE")
+SafeFreeslot("MT_HHTRIGGER")
+SafeFreeslot("sfx_hhtsnd")
 sfxinfo[sfx_hhtsnd] = {
 	flags = SF_X2AWAYSOUND,
 	caption = "/",
@@ -417,12 +417,14 @@ addHook("MobjCollide",function(trig,mo)
 		trig.spritexscaleadd = 2*FU
 		trig.spriteyscaleadd = -FU*3/2
 		
+		/*
 		P_AddPlayerScore(mo.player,5000)
 		
 		local takis = mo.player.takistable
 		takis.bonuses["happyhour"].tics = 3*TR+18
 		takis.bonuses["happyhour"].score = 5000
 		takis.HUD.flyingscore.scorenum = $+5000
+		*/
 		return --true
 		
 	else
@@ -448,12 +450,14 @@ addHook("MobjCollide",function(trig,mo)
 		trig.spritexscaleadd = 2*FU
 		trig.spriteyscaleadd = -FU*3/2
 		
+		/*
 		P_AddPlayerScore(mo.player,5000)
 		
 		local takis = mo.player.takistable
 		takis.bonuses["happyhour"].tics = 3*TR+18
 		takis.bonuses["happyhour"].score = 5000
 		takis.HUD.flyingscore.scorenum = $+5000
+		*/
 		return --true
 	end
 	
@@ -461,24 +465,24 @@ end,MT_HHTRIGGER)
 ----
 
 ----	exit stuff
-freeslot("SPR_HHE_")
-freeslot("SPR_HHF_")
-freeslot("S_HHEXIT")
+SafeFreeslot("SPR_HHE_")
+SafeFreeslot("SPR_HHF_")
+SafeFreeslot("S_HHEXIT")
 states[S_HHEXIT] = {
 	sprite = SPR_HHE_,
 	frame = A,
 	tics = -1
 } 
-freeslot("S_HHEXIT_OPEN")
+SafeFreeslot("S_HHEXIT_OPEN")
 states[S_HHEXIT_OPEN] = {
 	sprite = SPR_HHE_,
 	frame = B,
 	tics = -1
 } 
-freeslot("S_HHEXIT_CLOSE1")
-freeslot("S_HHEXIT_CLOSE2")
-freeslot("S_HHEXIT_CLOSE3")
-freeslot("S_HHEXIT_CLOSE4")
+SafeFreeslot("S_HHEXIT_CLOSE1")
+SafeFreeslot("S_HHEXIT_CLOSE2")
+SafeFreeslot("S_HHEXIT_CLOSE3")
+SafeFreeslot("S_HHEXIT_CLOSE4")
 states[S_HHEXIT_CLOSE1] = {
 	sprite = SPR_HHE_,
 	frame = P|FF_ANIMATE,
@@ -506,13 +510,13 @@ states[S_HHEXIT_CLOSE4] = {
 	frame = A,
 	tics = -1
 }
-freeslot("sfx_elebel")
+SafeFreeslot("sfx_elebel")
 sfxinfo[sfx_elebel] = {
 	flags = SF_X2AWAYSOUND,
 	caption = "Elevator bell"
 }
 
-freeslot("MT_HHEXIT")
+SafeFreeslot("MT_HHEXIT")
 mobjinfo[MT_HHEXIT] = {
 	--$Name Happy Hour Exit
 	--$Sprite HHE_A0
@@ -532,6 +536,7 @@ addHook("MobjSpawn",function(mo)
 	local scale = FU*2
 	mo.spritexscale,mo.spriteyscale = scale,scale
 	mo.boltrate = 10
+	mo.shadowscale = mo.scale*3/2
 	hh.exit = mo
 	mo.init = true
 end,MT_HHEXIT)
@@ -673,37 +678,90 @@ addHook("MapLoad", function(mapid)
 		end
 	end	
 	
-	for mt in mapthings.iterate
-		--exit
-		if mt.type == 1
-		and not hasdoor
-			--print("ASDSD")
-			--print(mt.angle,mt.angle*FU)
-			local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
-			local px,py,pz  = mt.x*FU,mt.y*FU,mt.z*FU
-			local door = P_SpawnMobj(px-(100*x),py-(100*y),pz*FU,MT_HHEXIT)
+	--TODO: test this lol
+	local doorheader = {}
+	doorheader.x = tonumber(mapheaderinfo[gamemap].takis_hh_exit_x)
+	doorheader.y = tonumber(mapheaderinfo[gamemap].takis_hh_exit_y)
+	doorheader.z = tonumber(mapheaderinfo[gamemap].takis_hh_exit_z)
+	for k,v in pairs(doorheader)
+		if v == nil
+			doorheader.valid = false
+			break
+		else
+			doorheader.valid = true
+			continue
+		end
+	end
+	
+	if (not hasdoor)
+		if not doorheader.valid
+			for mt in mapthings.iterate
+				--exit
+				if mt.type == 1
+					--print("ASDSD")
+					--print(mt.angle,mt.angle*FU)
+					--local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
+					local px,py,pz  = mt.x*FU,mt.y*FU,mt.z*FU
+					local door = P_SpawnMobj(px,py,pz,MT_HHEXIT)
+					hasdoor = true
+				end
+			end
+		else
+			local d = doorheader
+			local door = P_SpawnMobj(d.x*FU,d.y*FU,d.z*FU,MT_HHEXIT)
 			hasdoor = true
 		end
 	end
 	
-	for mt in mapthings.iterate
-		--trigger
-		if mt.type == mobjinfo[MT_SIGN].doomednum
-		and hasdoor
-			local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
+	local trigheader = {}
+	trigheader.x = tonumber(mapheaderinfo[gamemap].takis_hh_trig_x)
+	trigheader.y = tonumber(mapheaderinfo[gamemap].takis_hh_trig_y)
+	trigheader.z = tonumber(mapheaderinfo[gamemap].takis_hh_trig_z)
+	trigheader.flip = mapheaderinfo[gamemap].takis_hh_trig_flip ~= nil
+	for k,v in pairs(trigheader)
+		if type(v) == "boolean" then continue end
+		if v == nil
+			trigheader.valid = false
+			break
+		else
+			trigheader.valid = true
+			continue
+		end
+	end
+	
+	if hasdoor
+		if not trigheader.valid
+			for mt in mapthings.iterate
+				--trigger
+				if mt.type == mobjinfo[MT_SIGN].doomednum
+					local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
+					local trig = P_SpawnMobj(
+						mt.x*FU+(-10*x), 
+						mt.y*FU+(-10*y), 
+						mt.z*FU,
+						MT_HHTRIGGER
+					)
+					if mt.options & MTF_OBJECTFLIP then
+						trig.flags2 = $ | MF2_OBJECTFLIP
+					end
+					if (mt.mobj and mt.mobj.valid) then P_RemoveMobj(mt.mobj) end
+					hassign = true
+				end
+
+			end
+		else
+			local t = trigheader
 			local trig = P_SpawnMobj(
-				mt.x*FU+(-10*x), 
-				mt.y*FU+(-10*y), 
-				mt.z*FU,
+				t.x*FU, 
+				t.y*FU, 
+				t.z*FU,
 				MT_HHTRIGGER
 			)
-			if mt.options & MTF_OBJECTFLIP then
+			if t.flip
 				trig.flags2 = $ | MF2_OBJECTFLIP
 			end
-			if (mt.mobj and mt.mobj.valid) then P_RemoveMobj(mt.mobj) end
 			hassign = true
 		end
-
 	end
 	
 	--remove exitsectors

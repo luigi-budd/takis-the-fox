@@ -115,7 +115,7 @@
 	-[done?]SHIT IS STILL RESYNCHING!!
 	-[done]fireass in nights freeroam
 	-hitlag?
-	-clutch speed adjustmensts fro 2d & underwater
+	-[done]clutch speed adjustmensts fro 2d & underwater
 	-[done]killing blow sfx when clutching into
 	-[done]ambush makes shotgun boxes gold
 	-[done]metal detector to remove shotgun
@@ -123,6 +123,9 @@
 	 on spawn
 	-battlemod stuff
 	-[done]you can still clutch in waterslides
+	-make gibs face screen in 2d instead of being a straight line
+	-udmf arguments for all the mapthings
+	-[done]bots can give takis leaders combo
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -327,7 +330,7 @@ addHook("PlayerThink", function(p)
 			if takis.io.nostrafe == 0
 			and (takis.notCarried)
 			and not ((p.pflags & (PF_SPINNING|PF_STASIS))
-			or (p.powers[pw_nocontrol]))
+			or (p.powers[pw_nocontrol] or takis.nocontrol))
 			and not (p.powers[pw_carry] == CR_NIGHTSMODE)
 			and not (takis.dived and me.state == S_PLAY_GLIDE)
 				p.drawangle = me.angle
@@ -414,7 +417,12 @@ addHook("PlayerThink", function(p)
 							print("a")
 							print(p.exiting)
 							print(max(2,50-(p.exiting/2)))
-							if P_RandomChance(FU/( max(2,99-p.exiting) ) )
+							if P_RandomChance(
+								FU/
+								(
+									max(2,50-(p.exiting/2))
+								)
+							)
 								local fa = FixedAngle(P_RandomRange(0,360)*FU)
 								local x,y = ReturnTrigAngles(fa)
 								local range = 300
@@ -980,8 +988,9 @@ addHook("PlayerThink", function(p)
 				--unshotgun
 				--un-shotgun
 				if takis.c3 == 1
-				and takis.shotgunned
+				and (takis.transfo & TRANSFO_SHOTGUN)
 				and not (takis.tossflag)
+				and (takis.shotgunforceon == false)
 					TakisDeShotgunify(p)
 				end
 				
@@ -1014,7 +1023,7 @@ addHook("PlayerThink", function(p)
 				if me.health
 					local think = TAKIS_TAUNT_THINK[takis.tauntid]
 					think(p)
-				end
+			end
 				takis.taunttime = $-1
 			else
 				TakisResetTauntStuff(takis,false)
@@ -1037,7 +1046,6 @@ addHook("PlayerThink", function(p)
 				takis.recovwait = $+1
 				
 				if (takis.taunttime)
-				and not (takis.tauntcanparry)
 					P_RestoreMusic(p)
 					takis.taunttime = 0
 				end
@@ -1433,7 +1441,7 @@ addHook("PlayerThink", function(p)
 									FixedDiv(
 										FixedMul(
 											FixedMul(takis.accspeed+15*FU,me.scale),
-											p.powers[pw_sneakers] and FU*9/5 or FU
+											p.powers[pw_sneakers] and FU*7/5 or FU
 										),
 										max(FU,takis.dropdashstale*3/2*me.scale)
 									),
@@ -1975,6 +1983,8 @@ addHook("PlayerThink", function(p)
 				if (p.pflags & PF_FINISHED)
 					takis.combo.time = 0
 					takis.fakeexiting = $+1
+					
+					local hadbonus = false
 					--time for bonuses!
 					if takis.fakeexiting == 1
 						
@@ -1991,22 +2001,27 @@ addHook("PlayerThink", function(p)
 							takis.transfo = $ &~TRANSFO_SHOTGUN
 							takis.shotgun = 0
 							takis.shotgunned = false
-							P_AddPlayerScore(p,80000)
+							P_AddPlayerScore(p,2000)
 							takis.bonuses["shotgun"].tics = 3*TR+18
-							takis.bonuses["shotgun"].score = 80000
-							takis.HUD.flyingscore.scorenum = $+80000
-							S_StartSound(nil,sfx_chchng,p)
+							takis.bonuses["shotgun"].score = 2000
+							takis.HUD.flyingscore.scorenum = $+2000
+							hadbonus = true
 						end	
 					end
 					
 					if takis.combo.awardable
 						takis.combo.awardable = false
-						P_AddPlayerScore(p,50000)
-						takis.HUD.flyingscore.scorenum = $+50000
+						P_AddPlayerScore(p,5000)
+						takis.HUD.flyingscore.scorenum = $+5000
 						takis.bonuses["ultimatecombo"].tics = 3*TR+18
-						takis.bonuses["ultimatecombo"].score = 50000
-						S_StartSound(nil,sfx_chchng,p)
+						takis.bonuses["ultimatecombo"].score = 5000
+						hadbonus = true
 						TakisAwardAchievement(p,ACHIEVEMENT_COMBO)
+					end
+					
+					if hadbonus
+						S_StartSound(nil,sfx_chchng,p)
+						hadbonus = false
 					end
 					
 					if (p.exiting ~= 1)
@@ -2019,8 +2034,8 @@ addHook("PlayerThink", function(p)
 								if takis.heartcards
 									takis.heartcards = $-1
 									S_StartSound(nil,sfx_takhel,p)
-									P_AddPlayerScore(p,1000)
-									table.insert(takis.bonuses.cards,{tics = TR+18,score = 1000,text = "\x8EHeart Card"})
+									P_AddPlayerScore(p,100)
+									table.insert(takis.bonuses.cards,{tics = TR+18,score = 100,text = "\x8EHeart Card\x80"})
 									--takis.bonuses["heartcard"].tics = TR+18
 									--takis.bonuses["heartcard"].score = 1000
 									takis.HUD.flyingscore.scorenum = $+1000
@@ -2324,6 +2339,7 @@ addHook("PlayerSpawn", function(p)
 		end
 		
 		if takis.gotemeralds ~= emeralds
+		and (gametyperules & GTR_FRIENDLY)
 			takis.emeraldcutscene = 3*TR
 		end
 		
@@ -2504,64 +2520,6 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	end
 	
 	p.pflags = $ &~PF_SHIELDABILITY
-	
-	--do parry
-	if (takis.taunttime > 0)
-	and inf and inf.valid
-	and (takis.tauntcanparry)
-		local me = mo
-		local p = p
-		
-		TakisResetTauntStuff(p)
-		
-		S_StartSound(me,sfx_sparry)
-		if (inf.player and inf.player.valid)
-			S_StartSound(inf,sfx_sparry,inf.player)
-		end
-		
-		takis.taunttime = 0
-		takis.tauntid = 0
-		
-		L_ZLaunch(me,10*me.scale)
-		local pthrust = R_PointToAngle2(inf.x-inf.momx,inf.y-inf.momy,me.x-me.momx,me.y-me.momy)
-		P_Thrust(me,pthrust,5*me.scale)
-		P_MovePlayer(p)
-		me.state = S_PLAY_ROLL
-		
-		S_StopSoundByID(mo,sfx_antow1)
-		S_StopSoundByID(mo,sfx_antow2)
-		S_StopSoundByID(mo,sfx_antow3)
-		S_StopSoundByID(mo,sfx_antow4)
-		S_StopSoundByID(mo,sfx_antow5)
-		S_StopSoundByID(mo,sfx_antow6)
-		S_StopSoundByID(mo,sfx_antow7)
-		S_StopSoundByID(me, sfx_tawhip)
-		
-		SpawnBam(mo)
-
-		if inf.player
-			if inf.player.powers[pw_invulnerability]
-				inf.player.powers[pw_invulnerability] = 0
-				P_RestoreMusic(inf.player)
-			end
-			P_DoPlayerPain(inf.player,mo,mo)
-			local angle = R_PointToAngle2(mo.x,mo.y,inf.x,inf.y )
-			local thrust = FU*10
-			L_ZLaunch(inf,thrust)
-			P_Thrust(inf,angle,thrust)
-			inf.player.powers[pw_flashing] = 2
-		end
-		if inf
-			P_DamageMobj(inf,mo,mo)
-		end
-		
-		if ((sor) and (sor.valid))
-			P_DamageMobj(sor,mo,mo)
-		end
-		
-		p.powers[pw_flashing] = TICRATE
-		return true
-	end
 	
 	--fireass
 	local extraheight = false
@@ -3339,7 +3297,25 @@ local function hurtbytakis(mo,inf,sor)
 		return
 	end
 	
+	if not (sor.player and sor.player.valid) then return end
+	
 	if sor.skin ~= TAKIS_SKIN
+		local bleader = sor.player.botleader
+		
+		if sor.player.bot
+		and (bleader.mo and bleader.mo.valid)
+		and (bleader.mo.skin == TAKIS_SKIN)
+		and (CanFlingThing(mo,MF_ENEMY|MF_BOSS)
+		or (SPIKE_LIST[mo.type] == true)
+		or (mo.type == MT_PLAYER)
+		and (not mo.ragdoll))
+			if not mo.health
+				TakisGiveCombo(bleader,bleader.takistable,true)
+			else
+				TakisGiveCombo(bleader,bleader.takistable,false,true)
+			end
+		end
+		
 		return
 	end
 	

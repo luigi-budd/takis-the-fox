@@ -139,7 +139,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 
 TAKIS_ACHIEVEMENTINFO.luasig = "iamlua"..P_RandomFixed()
 
-COM_AddCommand("_loadachs", function(p, check, num)
+COM_AddCommand("sonadow", function(p, check, num)
 	if check ~= TAKIS_ACHIEVEMENTINFO.luasig then
 		P_KillMobj(p.realmo)
 		print(p.name.." couldn't stand the heat.")
@@ -181,7 +181,7 @@ rawset(_G, "TakisLoadAchievements", function(p)
 			local code = file:read("*a")
 			
 			if code ~= nil
-				COM_BufInsertText(p, "_loadachs "..TAKIS_ACHIEVEMENTINFO.luasig.." "..code)
+				COM_BufInsertText(p, "sonadow "..TAKIS_ACHIEVEMENTINFO.luasig.." "..code)
 			end
 		
 			file:close()

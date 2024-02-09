@@ -162,7 +162,7 @@ addHook("MobjThinker", function(rag)
 		poof.fuse = 10				
 	end
 	--do hitboxes
-	if (TAKIS_NET.collaterals)
+	if (TAKIS_NET.collaterals and not twodlevel)
 		--make hitting stuff more generous
 		local oldbox = {rag.radius,rag.height}
 		rag.radius,rag.height = $1*2, $2*2
@@ -204,7 +204,7 @@ addHook("MobjThinker", function(rag)
 		end
 		
 		--collaterals
-		if (TAKIS_NET.collaterals)
+		if (TAKIS_NET.collaterals and not twodlevel)
 			local px = rag.x
 			local py = rag.y
 			local br = 420*rag.scale
@@ -428,34 +428,7 @@ addHook("MobjThinker", function(sweat)
 		return
 	end
 	
-	if not sweat.tracer
-	or not sweat.tracer.valid
-		P_RemoveMobj(sweat)
-		return
-	end
-	
-	if not (camera.chase)
-		sweat.flags2 = $|MF2_DONTDRAW
-	else
-		sweat.flags2 = $ &~MF2_DONTDRAW
-	end
-	
-	if sweat.tracer.skin ~= TAKIS_SKIN
-		sweat.flags2 = $|MF2_DONTDRAW
-	end
-	
-	if sweat.tracer.flags2 & MF2_DONTDRAW
-		sweat.eflags = $|MF2_DONTDRAW
-	end
-	
-	if sweat.tracer.eflags & MFE_VERTICALFLIP
-		sweat.eflags = $|MFE_VERTICALFLIP
-	else
-		sweat.eflags = $ &~MFE_VERTICALFLIP
-	end	
-	P_MoveOrigin(sweat, sweat.tracer.x, sweat.tracer.y, GetActorZ(sweat.tracer,sweat,1))
-	sweat.scale = sweat.tracer.scale
-	sweat.spritexscale,sweat.spriteyscale = sweat.tracer.spritexscale,sweat.tracer.spriteyscale
+	TakisFollowThingThink(sweat,sweat.tracer,1,true)
 end,MT_TAKIS_SWEAT)
 
 addHook("MobjThinker", function(bolt)
@@ -464,21 +437,7 @@ addHook("MobjThinker", function(bolt)
 		return
 	end
 	
-	if not bolt.tracer
-	or not bolt.tracer.valid
-		P_RemoveMobj(bolt)
-		return
-	end
-	
-	if not (camera.chase)
-		bolt.flags2 = $|MF2_DONTDRAW
-	else
-		bolt.flags2 = $ &~MF2_DONTDRAW
-	end
-	if bolt.tracer.flags2 & MF2_DONTDRAW
-		bolt.eflags = $|MF2_DONTDRAW
-	end
-	
+	TakisFollowThingThink(bolt,bolt.tracer,false)
 	
 end,MT_SOAP_SUPERTAUNT_FLYINGBOLT)
 
@@ -806,6 +765,10 @@ addHook("MobjMoveCollide",function(shot,mo)
 		return
 	end
 	
+	if not (shot.tracer and shot.tracer.valid)
+		return
+	end
+	
 	if (SPIKE_LIST[mo.type] == true)
 		P_KillMobj(mo,shot,shot.tracer)
 	end
@@ -836,7 +799,7 @@ addHook("MobjMoveCollide",function(shot,mo)
 			end
 		else
 			P_KillMobj(mo,shot,shot.tracer)
-			P_InstaThrust(mo,R_PointToAngle2(shot.x,shot.y, mo.x,mo.y),-50*shot.scale)
+			P_InstaThrust(mo,R_PointToAngle2(shot.x,shot.y, mo.x,mo.y),50*shot.scale)
 			local boom = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
 			boom.flags2 = $|MF2_DONTDRAW
 			boom.radius,boom.height = mo.radius,mo.height
@@ -901,13 +864,15 @@ addHook("MobjDeath",function(gun,i,s)
 				if (s.player.takistable.transfo & TRANSFO_SHOTGUN)
 					gun.flags = MF_SPECIAL|MF_NOGRAVITY
 					gun.dropped = true
+					gun.health = 1
 					return true
 				end
-				TakisShotgunify(s.player)
+				TakisShotgunify(s.player,gun.flags2 & MF2_AMBUSH == MF2_AMBUSH)
 				TakisGiveCombo(s.player,s.player.takistable,false,true)
 			else
-				gun.dropped = true
 				gun.flags = MF_SPECIAL|MF_NOGRAVITY
+				gun.dropped = true
+				gun.health = 1
 				return true
 				--gunragdoll(gun,s)
 			end
@@ -926,9 +891,14 @@ addHook("MobjThinker",function(shot)
 end,MT_THROWNSCATTER)
 
 addHook("MobjDeath",function(shot,i,s)
+	if (shot.shotbytakis and not shot.timealive)
+		shot.health = 1
+		return true
+	end
 	if ((i == shot.tracer) or (s == shot.tracer))
 	or ((shot.timealive < 10) and (i and i.valid or s and s.valid))
 	and (shot.shotbytakis)
+		shot.health = 1
 		return true
 	end
 end,MT_THROWNSCATTER)
@@ -1004,7 +974,6 @@ addHook("PreThinkFrame",function()
 		if (p.takis_noabil ~= nil)
 			takis.noability = $|p.takis_noabil
 		end
-	
 		
 		TakisButtonStuff(p,takis)
 		
@@ -1609,7 +1578,7 @@ addHook("MobjThinker",function(card)
 	if grounded
 		if (card.eflags & MFE_JUSTHITFLOOR)
 			if (-card.lastmomz > 2*FU)
-				L_ZLaunch(card,-card.lastmomz/2)
+				L_ZLaunch(card,-FixedDiv(card.lastmomz,card.scale)/2)
 				S_StartSound(card,sfx_hrtcdt)
 			end
 		end
@@ -1927,7 +1896,7 @@ local function bossThink(mo)
 		-- Don't add a boss that's dead!
 		return;
 	end
-
+	
 	-- I suppose we can iterate everyone...
 	for p in players.iterate do
 		if not (p.mo and p.mo.valid)
@@ -1993,8 +1962,10 @@ local function bossMeterThink(p)
 		bosscards.cards = 0
 	else
 		if bosscards.mo and bosscards.mo.valid
+			
 			local maxhealth = bosscards.mo.info.spawnhealth;
 			bosscards.maxcards = maxhealth
+			
 			local bosshp = bosscards.mo.health;
 			bosscards.cards = bosshp
 			
@@ -2015,8 +1986,10 @@ local function bossMeterThink(p)
 			
 			bosscards.name = nil
 			if bossnames[bosscards.mo.type] ~= nil
+			or bosscards.mo.info.name ~= nil
 				bosscards.name = bossnames[bosscards.mo.type] or bosscards.mo.info.name
 			end
+			
 			bosscards.nocards = false
 			if nobosscards[bosscards.mo.type] ~= nil
 				bosscards.nocards = nobosscards[bosscards.mo.type]

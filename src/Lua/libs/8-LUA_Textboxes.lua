@@ -65,7 +65,7 @@ local function BreakUpText(v, s) -- lol
     return str
 end
 
-freeslot("SPR2_TBXA", "SPR2_TBXM") -- Slots for any custom animations required. I'm generous enough to give you a whole 64 extra slots for free! As well as 64 mini slots.
+SafeFreeslot("SPR2_TBXA", "SPR2_TBXM") -- Slots for any custom animations required. I'm generous enough to give you a whole 64 extra slots for free! As well as 64 mini slots.
 
 local TB = CFTextBoxes -- shortcut
 
@@ -675,7 +675,7 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			name = takisname,
 			portrait = takisport,
 			color = "playercolor",
-			text = "Finishing a level with the Shotgun will award |esc\x82".."80000|esc\x80 bonus points.",
+			text = "Finishing a level with the Shotgun will award |esc\x82".."2000|esc\x80 bonus points.",
 			sound = takisvox,
 			soundchance = takischance,
 			delay = 2*TICRATE,
@@ -1088,68 +1088,6 @@ TAKIS_TEXTBOXES.gmap1000 = {
 		},
 	},
 }
-
-
---extra char stuff
-local addedina = false
-local addedpep = false
-
-addHook("ThinkFrame",do
-	if skins["inazuma"]
-	and not addedina
-		TAKIS_TEXTBOXES.ultzuma = {
-			[1] = { 
-				name = takisname,
-				portrait = takisport,
-				color = "playercolor",
-				text = "Holy MOLY! Is that |esc\x88Ultimate Inazuma|esc\x80!?",
-				sound = takisvox,
-				soundchance = takischance,
-				delay = 2*TICRATE,
-				next = 2
-			},
-			[2] = { 
-				name = "Ultimate Inazuma",
-				namemap = V_SKYMAP,
-				portrait = {"inazuma", SPR2_CLNG, A, 8, true},
-				portyoffset = -30*FU,
-				color = SKINCOLOR_ULTIMATE1,
-				text = "Yeah, it's me.",
-				sound = {sfx_menu1},
-				soundchance = FU,
-				delay = 2*TICRATE,
-				next = 0
-			},
-		}
-		addedina = true
-	end
-	if skins["npeppino"]
-	and not addedpep
-		TAKIS_TEXTBOXES.ntopp = {
-			[1] = { 
-				name = takisname,
-				portrait = takisport,
-				color = "playercolor",
-				text = "Holy crap, Peppino Spaghetti!?",
-				sound = takisvox,
-				soundchance = takischance,
-				delay = 2*TICRATE,
-				next = 2
-			},
-			[2] = { 
-				name = "Peppino",
-				portrait = {"npeppino", SPR2_STND, A, 8, true},
-				color = SKINCOLOR_WHITE,
-				text = "Peppino",
-				sound = {sfx_menu1},
-				soundchance = FU/2,
-				delay = 2*TICRATE,
-				next = 0
-			},
-		}
-		addedpep = true
-	end
-end)
 
 
 filesdone = $+1

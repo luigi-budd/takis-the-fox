@@ -49,6 +49,7 @@ local filelistt1 = {
 	"happyhour",
 	"NFreeroam",
 	"Textboxes",
+	"battlemod",
 }
 local filelist = {
 	"io",
@@ -60,11 +61,21 @@ local filelist = {
 	"misc",
 	"MOTD",
 	"finaldemo",
+	"compat",
 }
 --
 
 rawset(_G, "filesdone", 0)
 rawset(_G, "NUMFILES", (#guh)+(#filelistt1)+(#filelist-1))
+--from chrispy chars!!! by Lach!!!!
+rawset(_G,"SafeFreeslot",function(...)
+	for _, item in ipairs({...})
+		if rawget(_G, item) == nil
+			freeslot(item)
+		end
+	end
+end)
+
 
 rawset(_G, "takis_printdebuginfo",function(p)
 	if not p

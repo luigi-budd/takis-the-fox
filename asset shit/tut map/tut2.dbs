@@ -76,9 +76,9 @@ maps
 		overrideceilheight = false;
 		overridebrightness = false;
 		uselongtexturenames = false;
-		viewpositionx = 2441.41f;
-		viewpositiony = -4225.706f;
-		viewscale = 0.08157302f;
+		viewpositionx = 4379.064f;
+		viewpositiony = 3300.742f;
+		viewscale = 0.03712929f;
 		
 		grid
 		{
@@ -88,7 +88,7 @@ maps
 			backoffsety = 0;
 			backscalex = 100;
 			backscaley = 100;
-			gridsize = 256;
+			gridsize = 512;
 		}
 		
 		plugins
@@ -143,7 +143,7 @@ maps
 			file
 			{
 				filename = "OBJCTCFG";
-				hash = 0;
+				hash = 484659484;
 			}
 		}
 	}

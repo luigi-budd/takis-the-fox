@@ -63,6 +63,7 @@ local function drawheartcards(v,p)
 	--space allocated for all the cards
 	local bump = 0
 	if (TAKIS_NET.inbossmap)
+	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
 		bump = TAKIS_NET.cardbump
 	end
@@ -166,14 +167,14 @@ local function drawbosscards(v,p)
 
 	if (customhud.CheckType("takis_bosscards") != modname) return end
 	
-	local xoff = -5*FU
+	local xoff = -20*FU
 	local takis = p.takistable
 	local me = p.mo
 	local bosscards = takis.HUD.bosscards
 	
 	if (bosscards == nil) then return end
 	if not (bosscards.mo and bosscards.mo.valid) then return end
-	if (bosscards.nocards) then return end
+	if (bosscards.nocards or TAKIS_NET.nobosscards[bosscards.mo.type] ~= nil) then return end
 	
 	local amiinsrbz = false
 	
@@ -188,8 +189,10 @@ local function drawbosscards(v,p)
 	or (TAKIS_NET.inspecialstage)
 	or amiinsrbz
 	or p.takistable.hhexiting
+	or p.takistable.inChaos
 		return
 	end
+	
 	
 	--space allocated for all the cards
 	local bump = 0
@@ -575,6 +578,7 @@ local function drawbossface(v,p)
 	if not (bosscards.mo and bosscards.mo.valid) then return end
 	if not (bosscards.name) then return end
 	if (bosscards.dontdrawcards) then return end
+	if (takis.inChaos) then return end
 	
 	local eflags = 0
 	
@@ -629,6 +633,11 @@ local function drawrings(v,p)
 	if p.rings == 0
 	and takis.heartcards <= 0
 	and not (p.exiting)
+		flash = true
+	end
+	
+	if (p.rings <= 0)
+	and not (gametyperules & GTR_FRIENDLY)
 		flash = true
 	end
 	
@@ -690,7 +699,8 @@ local function howtotimer(player)
 		timertype = "counting"
 	else
 		-- Time limit?
-		if (gametyperules & GTR_TIMELIMIT) and (puretlimit) then -- Gotta thank CobaltBW for spotting this oversight.
+		if (gametyperules & GTR_TIMELIMIT) 
+		and (puretlimit) then -- Gotta thank CobaltBW for spotting this oversight.
 			if (tlimit > pt)
 				tics = tlimit - pt
 			else -- Overtime!
@@ -699,9 +709,14 @@ local function howtotimer(player)
 			flash = true
 			timertype = "counting"
 		-- Post-hidetime normal.
-        elseif (gametyperules & GTR_STARTCOUNTDOWN) and (gametyperules & GTR_TIMELIMIT) -- Thanking 'im again.
-            tics = tlimit - pt
-			timertype = "countdown"
+        elseif (gametyperules & GTR_STARTCOUNTDOWN)
+		and (gametyperules & GTR_TIMELIMIT) -- Thanking 'im again.
+			if puretlimit
+				tics = tlimit - pt
+				timertype = "countdown"
+			else
+				tics = pt-hlimit
+			end
         elseif (gametyperules & GTR_STARTCOUNTDOWN)
             tics = pt - hlimit
 			extrafunc = "hiding"
@@ -797,11 +812,21 @@ local function drawtimer(v,p,altpos)
 		end
 	end
 	if (takis.inBattle)
-		timey = $+battleoffset
+		timey = 25
+		timex = 160
+		flag = $ &~V_SNAPTOLEFT
+		if (gametype == GT_DIAMOND)
+		or (gametype == GT_TEAMDIAMOND)
+		or (gametype == GT_CP)
+		or (gametype == GT_TEAMCP)
+			timey = $+10
+		end
 	end
 	
-	v.drawString(timex, timey, hours..extrac..minutes..":"..spad..seconds.."."..tictrn..tpad,flag,"thin-right")
-	v.drawString(timetx, timey, "Time"..extra,flag,"thin")
+	v.drawString(timex, timey, hours..extrac..minutes..":"..spad..seconds.."."..tictrn..tpad,flag,((takis.inBattle) and "thin-center" or "thin-right"))
+	if not takis.inBattle
+		v.drawString(timetx, timey, "Time"..extra,flag,"thin")
+	end
 	if extrastring ~= ''
 		v.drawString(timetx, timey+8, extratext,flag,"thin")			
 	end
@@ -832,6 +857,10 @@ local function drawscore(v,p)
 	if (gametype == GT_TEAMARENA)
 	or (gametype == GT_SURVIVAL)
 	or (gametype == GT_TEAMSURVIVAL)
+	or (gametype == GT_DIAMOND)
+	or (gametype == GT_TEAMDIAMOND)
+	or (gametype == GT_CP)
+	or (gametype == GT_TEAMCP)
 	and (takis.inBattle)
 		return
 	end
@@ -874,12 +903,12 @@ local function drawscore(v,p)
 	
 	if (gametype == GT_ARENA)
 		x = 160
-		y = 25
+		y = 35
 		align = "center"
 		snap = V_SNAPTOTOP
 	end
 	
-	local width = string.len(score)*(v.cachePatch(scorenum.."1").width*4/10)
+	local width = FixedMul(string.len(score)*FU,(v.cachePatch(scorenum.."1").width*FU*4/10))
 	if align == "center"
 		width = $/2
 	elseif align ~= "right"
@@ -894,7 +923,7 @@ local function drawscore(v,p)
 	
 	for i = 1,string.len(score)
 		local n = string.sub(score,i,i)
-		v.drawScaled((x+prevw-width)*FU+xshake,
+		v.drawScaled((x+prevw)*FU+xshake-width,
 			y*FU+yshake,
 			FU/2,
 			v.cachePatch(scorenum+n),
@@ -1175,6 +1204,7 @@ local function drawlivesarea(v,p)
 	end
 	
 	if (takis.transfo & TRANSFO_SHOTGUN)
+	and (takis.shotgunforceon == false)
 		v.drawScaled(hudinfo[HUD_LIVES].x*FU, (hudinfo[HUD_LIVES].y+disp)*FU, (FU/2)+(FU/12), v.cachePatch("TB_C3"), V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS)
 		v.drawString(hudinfo[HUD_LIVES].x+20, hudinfo[HUD_LIVES].y+(disp+5), "De-Shotgun",V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS, "thin")	
 		disp = $-20
@@ -1270,7 +1300,7 @@ local function R_GetScreenCoords(v, p, c, mx, my, mz)
 	y = FixedDiv(y, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my)))
 	y = (y*160)+(100<<FRACBITS)
 	y = y+tan(camaiming, true)*160
-
+ 
 	local scale = FixedDiv(160*FRACUNIT, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my)))
 	--print(scale)
 
@@ -1368,6 +1398,7 @@ local function drawclutches(v,p,cam)
 			else
 				flip = P_MobjFlip(mo)
 			end
+			scale = FixedMul($,mo.scale)
 		else
 			x, y, scale = 160*FRACUNIT, (100 + bubble.height >> 1)*FRACUNIT, FRACUNIT
 		end
@@ -1381,8 +1412,8 @@ local function drawclutches(v,p,cam)
 		end
 		
 		local angle = angdiff + ANGLE_90
-		local x = x - P_ReturnThrustX(nil, angle, 50*scale)
-		local y = y - flip*P_ReturnThrustY(nil, angle, 64*scale)
+		local x = x - P_ReturnThrustX(nil, angle, 40*scale)
+		local y = y - flip*P_ReturnThrustY(nil, angle, 70*scale)
 			
 		if not cutoff(y)
 			if takis.clutchcombo
@@ -1514,7 +1545,9 @@ end
 local function drawcombostuff(v,p)
 
 	if (customhud.CheckType("takis_combometer") != modname) return end
-
+	
+	if (TAKIS_DEBUGFLAG & DEBUG_BOSSCARD) then return end
+	
 	if p.takistable.inNIGHTSMode
 	or (TAKIS_NET.inspecialstage)
 		return
@@ -1581,11 +1614,11 @@ local function drawcombostuff(v,p)
 			)
 			
 			if verys > 1
-				v.drawString(15*FU+(verypatch.width*FU/3),
-					takis.HUD.combo.basey+offy+9*FU,
+				v.drawString(15*FU+((verypatch.width*FU/3)/2),
+					takis.HUD.combo.basey+offy+15*FU,
 					"x"..verys,
 					V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
-					"thin-fixed"
+					"thin-fixed-center"
 				)
 			end
 			
@@ -1596,8 +1629,7 @@ local function drawcombostuff(v,p)
 	or takis.combo.outrotics
 		local slide = 0
 		if (takis.combo.slidetime)
-			local et = TR/2
-			slide = ease.outback((FU/et)*((TR/2)-takis.combo.slidetime), -300*FU, 0, FU)
+			slide = takis.combo.slidein
 		end
 		local comboscale = takis.HUD.combo.scale+FU
 		local shake = -FixedMul(takis.HUD.combo.shake,comboscale)
@@ -2633,6 +2665,7 @@ local function drawcosmenu(v,p)
 				local ach = t[1<<i]
 				
 				if (number & (1<<i))
+				and not (TAKIS_NET.cheatedgame)
 					has = 0
 				end
 				
@@ -2659,45 +2692,58 @@ local function drawcosmenu(v,p)
 				)
 				
 			end
-			--draw a bigger version so you can see the icon
-			local x = pos.x*FU
-			local y = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))
 			
-			local t = TAKIS_ACHIEVEMENTINFO
-			local num = menu.achcur
-			local ach = t[1<<num]
-			local has = V_60TRANS
-			if (number & (1<<num))
-				has = 0
+			if not (TAKIS_NET.cheatedgame)
+				--draw a bigger version so you can see the icon
+				local x = pos.x*FU
+				local y = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))
+				
+				local t = TAKIS_ACHIEVEMENTINFO
+				local num = menu.achcur
+				local ach = t[1<<num]
+				local has = V_60TRANS
+				if (number & (1<<num))
+					has = 0
+				end
+			
+				local curx = pos.x*FU+((140*FU)*(num%2))
+				local cury = pos.y*FU+10*FU+(17*FU*(num/2))
+				v.drawScaled(curx,cury,FU,
+					v.cachePatch("TA_MENUACHCUR"),
+					V_SNAPTOLEFT|V_SNAPTOTOP,
+					v.getColormap(nil,SKINCOLOR_SUPERGOLD4)
+				)
+				
+				--ok draw the ach
+				v.drawScaled(x,
+					y,
+					(ach.scale or FU)*2,
+					(number & (1<<num)) and v.cachePatch(ach.icon) or ((ach.secret and has) and v.cachePatch("ACH_SPLACEHOLDER") or v.cachePatch("ACH_PLACEHOLDER")),
+					V_SNAPTOLEFT|V_SNAPTOTOP|has
+				)
+				v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
+					y,
+					(ach.secret and has) and "Secret Achievement" or (ach.name or "Ach. Enum "..(1<<i)),
+					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+					"fixed"
+				)
+				v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
+					y+(8*FU),
+					(ach.secret and has) and " " or (ach.text or "Flavor text goes here"),
+					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+					"thin-fixed"
+				)
+				
+			else
+				local x = pos.x*FU
+				local y = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))				
+				
+				v.drawString(x,y,
+					"Achievements cannot be earned in cheated games.",
+					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_REDMAP,
+					"thin-fixed"
+				)
 			end
-		
-			local curx = pos.x*FU+((140*FU)*(num%2))
-			local cury = pos.y*FU+10*FU+(17*FU*(num/2))
-			v.drawScaled(curx,cury,FU,
-				v.cachePatch("TA_MENUACHCUR"),
-				V_SNAPTOLEFT|V_SNAPTOTOP,
-				v.getColormap(nil,SKINCOLOR_SUPERGOLD4)
-			)
-			
-			--ok draw the ach
-			v.drawScaled(x,
-				y,
-				(ach.scale or FU)*2,
-				(number & (1<<num)) and v.cachePatch(ach.icon) or ((ach.secret and has) and v.cachePatch("ACH_SPLACEHOLDER") or v.cachePatch("ACH_PLACEHOLDER")),
-				V_SNAPTOLEFT|V_SNAPTOTOP|has
-			)
-			v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
-				y,
-				(ach.secret and has) and "Secret Achievement" or (ach.name or "Ach. Enum "..(1<<i)),
-				V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
-				"fixed"
-			)
-			v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
-				y+(8*FU),
-				(ach.secret and has) and " " or (ach.text or "Flavor text goes here"),
-				V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
-				"thin-fixed"
-			)
 			
 		end
 	end
@@ -2747,9 +2793,6 @@ local function drawcosmenu(v,p)
 			"thin-fixed"
 		)
 			
-		if not paused
-			menu.hintfade = $-1
-		end
 	end
 	
 	if takis.HUD.showingletter
@@ -2882,6 +2925,7 @@ local function drawtutbuttons(v,p)
 	local disp = 0
 	
 	if (takis.transfo & TRANSFO_SHOTGUN)
+	and (takis.shotgunforceon == false)
 		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
 			(hudinfo[HUD_LIVES].y+disp)*FU,
 			(FU/2)+(FU/12),
@@ -3093,7 +3137,6 @@ local function drawbosstitles(v,p)
 	end
 	
 end
-
 
 /*
 local function drawbubbles(v,p,cam)
@@ -3322,6 +3365,7 @@ local function drawdebug(v,p)
 		drawflag(v,x+45,y-50,"SL",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SLIDE))
 		drawflag(v,x+60,y-50,"WD",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_WAVEDASH))
 		drawflag(v,x+75,y-50,"SG",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHOTGUN))
+		drawflag(v,x+75,y-58,"FO",flags,V_GREENMAP,V_REDMAP,"thin",(takis.shotgunforceon))
 		drawflag(v,x+90,y-50,"SH",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_SHIELD))
 		drawflag(v,x+105,y-50,"TH",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_THOK))
 		drawflag(v,x+120,y-50,"AI",flags,V_GREENMAP,V_REDMAP,"thin",(takis.noability & NOABIL_AFTERIMAGE))
@@ -3393,10 +3437,51 @@ local function drawdebug(v,p)
 			v.drawString(100,30+(8*(k-1)),va,V_ALLOWLOWERCASE,"thin")
 		end
 		
+		local dh = {}
+		dh.x = tonumber(mapheaderinfo[gamemap].takis_hh_exit_x)
+		dh.y = tonumber(mapheaderinfo[gamemap].takis_hh_exit_y)
+		dh.z = tonumber(mapheaderinfo[gamemap].takis_hh_exit_z)
+		for k,v in pairs(dh)
+			if v == nil
+				dh.valid = false
+				break
+			else
+				dh.valid = true
+				continue
+			end
+		end
+		local th = {}
+		th.x = tonumber(mapheaderinfo[gamemap].takis_hh_trig_x)
+		th.y = tonumber(mapheaderinfo[gamemap].takis_hh_trig_y)
+		th.z = tonumber(mapheaderinfo[gamemap].takis_hh_trig_z)
+		th.flip = mapheaderinfo[gamemap].takis_hh_trig_flip ~= nil
+		for k,v in pairs(th)
+			if type(v) == "boolean" then continue end
+			if v == nil
+				th.valid = false
+				break
+			else
+				th.valid = true
+				continue
+			end
+		end
+		
+		v.drawString(100,
+			30+(8*(#strings)),
+			"door: {x="..(dh.x or "nil")..",y="..(dh.y or "nil")..",z="..(dh.z or "nil").."}",
+			V_ALLOWLOWERCASE|((not dh.valid) and V_REDMAP or 0),"thin"
+		)
+		v.drawString(100,
+			38+(8*(#strings)),
+			"trig: {x="..(th.x or "nil")..",y="..(th.y or "nil")..",z="..(th.z or "nil")..",f="..(tostring(th.flip) or "nil").."}",
+			V_ALLOWLOWERCASE|((not th.valid) and V_REDMAP or 0),"thin"
+		)
+		
+		
 	end
 	--not exactly aligned but whatever
 	if (TAKIS_DEBUGFLAG & DEBUG_ALIGNER)
-		v.draw(160,100,v.cachePatch("ALIGNER"),V_20TRANS)
+		v.drawScaled(160*FU-(FU/2),100*FU-(FU/2),FU,v.cachePatch("ALIGNER"),V_20TRANS)
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_PFLAGS)
 		drawflag(v,100,60,"FC",
@@ -3543,13 +3628,20 @@ local function drawdebug(v,p)
 		if modeattacking then ypos = hudinfo[HUD_LIVES].y+10 end
 		local maxspeed = 200*FU
 		local speed = FixedDiv(takis.accspeed,maxspeed)
+		local normalspeed = FixedDiv(p.normalspeed,maxspeed)
 		local roll
+		local nroll
 		local scale = FU
 		local offy2 = 0
 		if (speed ~= 0)
 			roll = FixedAngle(180*FU-FixedMul(180*FU,speed))
 		else
 			roll = FixedAngle(180*FU)
+		end
+		if (normalspeed ~= 0)
+			nroll = FixedAngle(180*FU-FixedMul(180*FU,normalspeed))
+		else
+			nroll = FixedAngle(180*FU)
 		end
 		if AngleFixed(roll) == 0
 			offy2 = -4
@@ -3569,20 +3661,27 @@ local function drawdebug(v,p)
 			)
 			if i == 5
 				v.drawString((hudinfo[HUD_LIVES].x+30)*FU+(30*cos(ra)),
-					(ypos-8+offy2)*FU-(35*sin(ra))-(4*FU),
+					(ypos-8+offy)*FU-(35*sin(ra))-(4*FU),
 					"100",
 					V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
 					"thin-fixed-center"
 				)	
 			elseif i == 10
 				v.drawString((hudinfo[HUD_LIVES].x+30)*FU+(35*cos(ra)),
-					(ypos-8+offy2)*FU-(35*sin(ra))-(7*FU),
+					(ypos-8+offy)*FU-(35*sin(ra))-(7*FU),
 					"200",
 					V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
 					"thin-fixed-center"
 				)	
 			end
 		end
+		
+		v.drawScaled((hudinfo[HUD_LIVES].x+30)*FU,
+			(ypos-8+offy2)*FU,
+			FU/2,
+			v.getSpritePatch(SPR_THND,C,0,nroll),
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
+		)
 		
 		v.drawScaled((hudinfo[HUD_LIVES].x+30)*FU,
 			(ypos-8+offy2)*FU,
@@ -3610,28 +3709,19 @@ local function drawdebug(v,p)
 			prevw = $+v.cachePatch(scorenum+n).width*4/10
 		end
 		
-		local score = L_FixedDecimal(me.friction,3)
-		prevw = 0
-		
-		for i = 1,string.len(score)
-			local n = string.sub(score,i,i)
-			--if n == "." then n = "DOT" end
-			v.drawScaled(hudinfo[HUD_LIVES].x*FU+(prevw*(scale/2)),
-				(ypos-60)*FU-(v.cachePatch(scorenum+n).height*FixedDiv(scale-FU,4*FU)),
-				FixedDiv(scale,4*FU),
-				v.cachePatch(scorenum+n),
-				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
-			)
-				
-			prevw = $+v.cachePatch(scorenum+n).width*4/10
-		end
-		v.drawString(hudinfo[HUD_LIVES].x*FU+(prevw*(scale/2)),
+		v.drawString(hudinfo[HUD_LIVES].x*FU,
 			(ypos-60)*FU,
-			" friction",
+			L_FixedDecimal(me.friction,3).." friction",
 			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
 			"thin-fixed"
 		)
-			
+		
+		v.drawString(hudinfo[HUD_LIVES].x*FU,
+			(ypos-668)*FU,
+			p.thrustfactor.." thrust",
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
+			"thin-fixed"
+		)
 		
 		/*
 		//height debug
@@ -3687,6 +3777,53 @@ local function drawdebug(v,p)
 			end
 		end
 	end
+	if (TAKIS_DEBUGFLAG & DEBUG_BOSSCARD)
+		local bosscards = takis.HUD.bosscards
+		
+		local x,y = 10,60
+		local flags = V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE
+		if not (bosscards.mo and bosscards.mo.valid)
+			v.drawString(x,y,"No boss",flags|V_REDMAP,"thin")
+		else
+			/*
+				maxcards = 0,
+				dontdrawcards = false,
+				cards = 0,
+				cardshake = 0,
+				mo = 0,
+				name = '',
+				statusface = {
+					priority = 0,
+					state = "IDLE",
+					frame = 0,
+				},
+			*/
+			
+			local hascard
+			v.drawString(x,y,
+				"mo: \x86"..tostring(bosscards.mo),
+				flags,"thin"
+			)		
+			v.drawString(x,y+8,"type#: "..tonumber(bosscards.mo.type),flags,"thin")		
+			v.drawString(x,y+16,bosscards.name or "No name",flags,"thin")		
+			v.drawString(x,y+24,"HP: "..
+				bosscards.mo.health.."/"..
+				bosscards.maxcards..
+				((bosscards.nocards or TAKIS_NET.nobosscards[bosscards.mo.type] ~= nil) and " (Not drawn)" or ''),
+				flags|((bosscards.nocards or TAKIS_NET.nobosscards[bosscards.mo.type] ~= nil) and V_REDMAP or 0),"thin"
+			)		
+			v.drawString(x,y+32,"face: "..
+				(TAKIS_NET.bossprefix[bosscards.mo.type] or "No face prefix"),
+				flags,"thin"
+			)		
+			local strings = prtable("statusface",bosscards.statusface,false)
+			for k,va in ipairs(strings)
+				v.drawString(x,y+32+(k*8),va,flags,"thin")		
+			end
+		end
+		
+	end
+	
 end
 
 --draw the stuff
@@ -4013,6 +4150,20 @@ addHook("HUD", function(v,p,cam)
 end)
 
 addHook("HUD", function(v)
+	if (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
+		v.drawString(0,0,
+			"funny: "..L_FixedDecimal(
+				FixedMul(
+					FixedDiv(TAKIS_TITLETIME,120*TR),
+					100*FU
+				),
+				1
+			).."%",
+			V_SNAPTOLEFT|V_SNAPTOTOP,
+			"left"
+		)
+	end
+	
 	if TAKIS_TITLEFUNNY
 		v.fadeScreen(35,10)
 		

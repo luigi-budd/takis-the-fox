@@ -289,7 +289,7 @@ addHook("KeyDown", function(key)
 end)
 
 addHook("ThinkFrame", function()
-	if gamemap ~= demomap then return end
+	if gamemap ~= demomap then set = false; return end
 	if not multiplayer
 		if set == false then
 			F_StartDemoEnd()

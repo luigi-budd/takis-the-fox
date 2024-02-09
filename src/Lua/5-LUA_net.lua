@@ -259,7 +259,7 @@ end)
 
 --didnt know stagefailed was passed onto IntermissionThinker
 --until i looked at the source code. this should be documented
---on the wiki now
+--on the wiki now, thanks to yours truely :))))
 addHook("IntermissionThinker",function(stagefailed)
 	t.inttic = $+1
 	t.stagefailed = stagefailed
@@ -291,6 +291,14 @@ addHook("IntermissionThinker",function(stagefailed)
 				end
 			end
 		end
+	end
+end)
+
+--this only works if you dont have a menu open...
+addHook("KeyDown", function(key)
+	if gamestate == GS_TITLESCREEN
+		TAKIS_TITLETIME = $-10
+		if TAKIS_TITLETIME < 0 then TAKIS_TITLETIME = 0 end
 	end
 end)
 

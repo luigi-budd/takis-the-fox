@@ -4,6 +4,8 @@
 --after 40 years in development, hopefully it will be worth the wait.
 --thanks, and have fun.
 
+--specki is not takis, and takis is not specki!!
+
 /*
 	SPECIAL THANKS/CONTRIBUTORS
 	remember to put this in the MB page luigi
@@ -12,7 +14,7 @@
 	-Jisk - jelped jith jome jode
 	-Unmatched Bracket - waterslide pain -> sliding code, compiling code
 	-katsy - bounce sector detection
-	-Banddy - metal sonic boss portrait
+	-Banddy - metal sonic boss portrait, tested hh things mapheader positions
 	-Marilyn - final demo cutscene i used lol
 	
 	CODE I STOLE (from reusable mods)
@@ -22,7 +24,7 @@
 									  banjo kazooie (also linedef
 									  triggers)
 	-NiGHTS Freeroam - ok this isnt reusable but buggie asked me to put it in
-	-ChrispyChars - some code used for confetti
+	-ChrispyChars - some code used for confetti, safefreeslot code
 	
 	SOME MORE STUFF I STOLE
 	-AntonBlast - sound effects, music, sprites
@@ -59,6 +61,7 @@ local dbgflags = {
 	"DEATH",
 	"SPEEDOMETER",
 	"HURTMSG",
+	"BOSSCARD",
 }
 for k,v in ipairs(dbgflags)
 	local val = 1<<(k-1)
@@ -299,6 +302,8 @@ rawset(_G, "TAKIS_NET", {
 		
 		--stage locks you out of any backtracking routes
 		["eruption conduit 2"] = true,
+		["snowcap nimbus 1"] = true,
+		["snowcap nimbus 2"] = true,
 	},
 	
 	--titlecard stuff
@@ -307,6 +312,7 @@ rawset(_G, "TAKIS_NET", {
 		[MT_EGGMOBILE] = "Egg Zapper",
 		[MT_EGGMOBILE2] = "Egg Slimer",
 		[MT_EGGMOBILE3] = "Sea Egg",
+		--this is the longest a name can be on a green res
 		[MT_EGGMOBILE4] = "E. Colosseum",
 		[MT_FANG] = "Fang",
 		[MT_METALSONIC_BATTLE] = "Metal Sonic",
@@ -354,6 +360,9 @@ rawset(_G, "TAKIS_NET", {
 		MT_ANASTASIA = "Anastasia",
 		MT_INFINITE_318 = "Infinite",
 		
+		--specki
+		MT_AGGROMANEN = "Aggromobile",
+		MT_AGGROPAINTER = "Aggropainter",
 	},
 	
 	nobosscards = {},
@@ -416,8 +425,8 @@ rawset(_G, "TAKIS_NET", {
 rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
 table.insert(constlist,{"TAKIS_HAMMERDISP",FixedMul(52*FU,9*FU/10)})
 
-freeslot("MT_TAKIS_TAUNT_HITBOX")
-freeslot("S_TAKIS_TAUNT_HITBOX")
+SafeFreeslot("MT_TAKIS_TAUNT_HITBOX")
+SafeFreeslot("S_TAKIS_TAUNT_HITBOX")
 mobjinfo[MT_TAKIS_TAUNT_HITBOX] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_TAUNT_HITBOX,
@@ -494,6 +503,7 @@ rawset(_G, "TakisInitTable", function(p)
 		otherskin = false,
 		otherskintime = 0,
 		rmomz = 0,
+		prevz = 0,
 		lastrank = 1,
 		lastmomz = 0,
 		recovwait = 0,
@@ -557,7 +567,6 @@ rawset(_G, "TakisInitTable", function(p)
 		--these are actually io but they arent in the io table :trol:
 		tauntquick1 = 0,
 		tauntquick2 = 0,
-		tauntcanparry = false,
 		--holds the player doing a partner taunt with us
 		tauntpartner = 0,
 		--dont put the other player in tauntpartner if this is false
@@ -699,12 +708,12 @@ rawset(_G, "TakisInitTable", function(p)
 			["ultimatecombo"] = {
 				tics = 0, 
 				score = 0,
-				text = "\x82Ultimate Combo"
+				text = "\x82Ultimate Combo\x80"
 			},
 			["happyhour"] = {
 				tics = 0, 
 				score = 0,
-				text = "\x85Happy Hour trigger"
+				text = "\x85Happy Hour trigger\x80"
 			},
 			cards = {},
 			/*
@@ -734,6 +743,7 @@ rawset(_G, "TakisInitTable", function(p)
 		shotguntime = 0,
 		timesincelastshot = 0,
 		shotguntuttic = 0,
+		shotgunforceon = false,
 		
 		--bools
 		--booleans
@@ -903,7 +913,7 @@ rawset(_G, "TakisInitTable", function(p)
 			},
 			bosscards = {
 				maxcards = 0,
-				dontdrawcards = false,
+				nocards = false,
 				cards = 0,
 				cardshake = 0,
 				mo = 0,
@@ -971,84 +981,75 @@ rawset(_G, "TakisInitTable", function(p)
 	return true
 end)
 
---from chrispy chars!!! by Lach!!!!
-local function SafeFreeslot(...)
-	for _, item in ipairs({...})
-		if rawget(_G, item) == nil
-			freeslot(item)
-		end
-	end
-end
-
-freeslot("sfx_clutch")
+SafeFreeslot("sfx_clutch")
 sfxinfo[sfx_clutch].caption = "Clutch Boost"
-freeslot("sfx_cltch2")
+SafeFreeslot("sfx_cltch2")
 sfxinfo[sfx_cltch2].caption = "Clutch Boost"
 
-freeslot("sfx_taksld")
+SafeFreeslot("sfx_taksld")
 sfxinfo[sfx_taksld].caption = "Slide"
 
 --takis vox
-freeslot("sfx_eeugh")
+SafeFreeslot("sfx_eeugh")
 sfxinfo[sfx_eeugh].caption = '\x8F"Ehh!"\x80'
-freeslot("sfx_antow1")
+SafeFreeslot("sfx_antow1")
 sfxinfo[sfx_antow1].caption = '\x8F"Aah!!"\x80'
-freeslot("sfx_antow2")
+SafeFreeslot("sfx_antow2")
 sfxinfo[sfx_antow2].caption = '\x8F"Eargh!"\x80'
-freeslot("sfx_antow3")
+SafeFreeslot("sfx_antow3")
 sfxinfo[sfx_antow3].caption = '\x8F"Grr!"\x80'
-freeslot("sfx_antow4")
+SafeFreeslot("sfx_antow4")
 sfxinfo[sfx_antow4].caption = '\x8F"Hey, hey!"\x80'
-freeslot("sfx_antow5")
+SafeFreeslot("sfx_antow5")
 sfxinfo[sfx_antow5].caption = '\x8F"Oh boy!"\x80'
-freeslot("sfx_antow6")
+SafeFreeslot("sfx_antow6")
 sfxinfo[sfx_antow6].caption = '\x8F"WOW! Eheh!"\x80'
-freeslot("sfx_antow7")
+SafeFreeslot("sfx_antow7")
 sfxinfo[sfx_antow7].caption = '\x8F"W-w-w-w I\'m good!"\x80'
-freeslot("sfx_antwi1")
+SafeFreeslot("sfx_antwi1")
 sfxinfo[sfx_antwi1].caption = "Strange laughing"
-freeslot("sfx_antwi2")
+SafeFreeslot("sfx_antwi2")
 sfxinfo[sfx_antwi2].caption = '\x8F"Ha!"\x80'
-freeslot("sfx_tayeah")
+SafeFreeslot("sfx_tayeah")
 sfxinfo[sfx_tayeah].caption = '\x8F"Yyyeahh!"\x80'
-freeslot("sfx_hapyhr")
+SafeFreeslot("sfx_hapyhr")
 sfxinfo[sfx_hapyhr].caption = '\x8F'.."IT'S HAPPY HOUR!!"..'\x80'
 --
 
-freeslot("sfx_takdiv")
+SafeFreeslot("sfx_takdiv")
 sfxinfo[sfx_takdiv].caption = 'Dive'
-freeslot("sfx_airham")
+SafeFreeslot("sfx_airham")
 sfxinfo[sfx_airham].caption = 'Swing'
-freeslot("sfx_tawhip")
+SafeFreeslot("sfx_tawhip")
 sfxinfo[sfx_tawhip].caption = '\x82Johnny Test!\x80'
-freeslot("sfx_takhel")
+SafeFreeslot("sfx_takhel")
 sfxinfo[sfx_takhel].caption = '\x8EHealed!\x80'
-freeslot("sfx_smack")
+SafeFreeslot("sfx_smack")
 sfxinfo[sfx_smack].caption = "\x8DSmacked!\x80"
-freeslot("sfx_takoww")
+SafeFreeslot("sfx_takoww")
 sfxinfo[sfx_takoww] = {
 	flags = SF_X4AWAYSOUND,
 	caption = "\x85".."EUROOOOWWWW!!!\x80"
 }
-freeslot("sfx_takdjm")
+SafeFreeslot("sfx_takdjm")
 sfxinfo[sfx_takdjm].caption = "Double jump"
-freeslot("sfx_takst1")
+SafeFreeslot("sfx_takst1")
 sfxinfo[sfx_takst1].caption = "Step"
-freeslot("sfx_takst2")
+SafeFreeslot("sfx_takst2")
 sfxinfo[sfx_takst2].caption = "Step"
-freeslot("sfx_takst3")
+SafeFreeslot("sfx_takst3")
 sfxinfo[sfx_takst3].caption = "Step"
-freeslot("sfx_takst4")
+SafeFreeslot("sfx_takst4")
 sfxinfo[sfx_takst4].caption = "Land"
-freeslot("sfx_takst0")
+SafeFreeslot("sfx_takst0")
 sfxinfo[sfx_takst0].caption = "Step"
 
-freeslot("sfx_tkapow")
+SafeFreeslot("sfx_tkapow")
 sfxinfo[sfx_tkapow] = {
 	flags = SF_X2AWAYSOUND,
 	caption = "\x82KaPOW!!!\x80"
 }
-freeslot("sfx_tacrit")
+SafeFreeslot("sfx_tacrit")
 sfxinfo[sfx_tacrit] = {
 	flags = SF_X2AWAYSOUND,
 	caption = "\x82".."Crit!".."\x80"
@@ -1239,21 +1240,21 @@ SafeFreeslot("SPR2_TBRD")
 
 --state freeslot
 
-freeslot("S_PLAY_TAKIS_TORNADO")
+SafeFreeslot("S_PLAY_TAKIS_TORNADO")
 states[S_PLAY_TAKIS_TORNADO] = {
     sprite = SPR_PLAY,
     frame = SPR2_NADO,
     tics = -1,
 }
 
-freeslot("S_PLAY_TAKIS_SHOULDERBASH")
+SafeFreeslot("S_PLAY_TAKIS_SHOULDERBASH")
 states[S_PLAY_TAKIS_SHOULDERBASH] = {
     sprite = SPR_PLAY,
     frame = SPR2_PLHD, --SPR2_SGBS,
     tics = TR,
     nextstate = S_PLAY_STND
 }
-freeslot("S_PLAY_TAKIS_SHOULDERBASH_JUMP")
+SafeFreeslot("S_PLAY_TAKIS_SHOULDERBASH_JUMP")
 states[S_PLAY_TAKIS_SHOULDERBASH_JUMP] = {
     sprite = SPR_PLAY,
     frame = SPR2_PLHD, --SPR2_SGBS,
@@ -1261,14 +1262,14 @@ states[S_PLAY_TAKIS_SHOULDERBASH_JUMP] = {
     nextstate = S_PLAY_TAKIS_SHOULDERBASH
 }
 
-freeslot("S_PLAY_TAKIS_SHOTGUNSTOMP")
+SafeFreeslot("S_PLAY_TAKIS_SHOTGUNSTOMP")
 states[S_PLAY_TAKIS_SHOTGUNSTOMP] = {
     sprite = SPR_PLAY,
     frame = A|FF_ANIMATE|SPR2_SGST,
     tics = -1,
     nextstate = S_PLAY_STND
 }
-freeslot("S_PLAY_TAKIS_KILLBASH")
+SafeFreeslot("S_PLAY_TAKIS_KILLBASH")
 states[S_PLAY_TAKIS_KILLBASH] = {
     sprite = SPR_PLAY,
     frame = SPR2_PLHD, --SPR2_CLKB,
@@ -1277,7 +1278,7 @@ states[S_PLAY_TAKIS_KILLBASH] = {
 }
 
 
-freeslot("S_PLAY_TAKIS_SMUGASSGRIN")
+SafeFreeslot("S_PLAY_TAKIS_SMUGASSGRIN")
 states[S_PLAY_TAKIS_SMUGASSGRIN] = {
     sprite = SPR_PLAY,
     frame = SPR2_TAKI,
@@ -1285,10 +1286,10 @@ states[S_PLAY_TAKIS_SMUGASSGRIN] = {
     nextstate = S_PLAY_STND
 }
 
-freeslot("S_TAKIS_SWEAT1")
-freeslot("S_TAKIS_SWEAT2")
-freeslot("S_TAKIS_SWEAT3")
-freeslot("S_TAKIS_SWEAT4")
+SafeFreeslot("S_TAKIS_SWEAT1")
+SafeFreeslot("S_TAKIS_SWEAT2")
+SafeFreeslot("S_TAKIS_SWEAT3")
+SafeFreeslot("S_TAKIS_SWEAT4")
 states[S_TAKIS_SWEAT1] = {
     --sprite = SPR_RING,
 	sprite = SPR_SWET,
@@ -1366,7 +1367,7 @@ states[S_SOAP_SUPERTAUNT_FLYINGBOLT5] = {
 	var2 = 2
 }
 
-freeslot("S_PLAY_TAKIS_SLIDE")
+SafeFreeslot("S_PLAY_TAKIS_SLIDE")
 states[S_PLAY_TAKIS_SLIDE] = {
     sprite = SPR_PLAY,
     frame = SPR2_SLID,
@@ -1376,7 +1377,7 @@ states[S_PLAY_TAKIS_SLIDE] = {
     nextstate = S_PLAY_STND
 }
 
-freeslot("S_TAKIS_TAUNT_JOIN")
+SafeFreeslot("S_TAKIS_TAUNT_JOIN")
 states[S_TAKIS_TAUNT_JOIN] = {
 	sprite = SPR_TPTN,
 	frame = A|FF_FULLBRIGHT,
@@ -1384,8 +1385,8 @@ states[S_TAKIS_TAUNT_JOIN] = {
 	nextstate = S_NULL
 }
 
-freeslot("S_TAKIS_TROPHY")
-freeslot("S_TAKIS_TROPHY2")
+SafeFreeslot("S_TAKIS_TROPHY")
+SafeFreeslot("S_TAKIS_TROPHY2")
 states[S_TAKIS_TROPHY] = {
 	sprite = SPR_TKFT,
 	frame = E|FF_FULLBRIGHT,
@@ -1399,7 +1400,7 @@ states[S_TAKIS_TROPHY2] = {
 	nextstate = S_NULL
 }
 
-freeslot("S_PLAY_TAKIS_CONGA")
+SafeFreeslot("S_PLAY_TAKIS_CONGA")
 states[S_PLAY_TAKIS_CONGA] = {
     sprite = SPR_PLAY,
     frame = SPR2_WALK|A|FF_ANIMATE,
@@ -1409,7 +1410,7 @@ states[S_PLAY_TAKIS_CONGA] = {
     nextstate = S_PLAY_TAKIS_CONGA
 }
 
-freeslot("S_PLAY_TAKIS_BIRD")
+SafeFreeslot("S_PLAY_TAKIS_BIRD")
 states[S_PLAY_TAKIS_BIRD] = {
     sprite = SPR_PLAY,
     frame = SPR2_TBRD,
@@ -1417,7 +1418,7 @@ states[S_PLAY_TAKIS_BIRD] = {
     nextstate = S_PLAY_TAKIS_BIRD
 }
 
-freeslot("S_TAKIS_SHOTGUN")
+SafeFreeslot("S_TAKIS_SHOTGUN")
 states[S_TAKIS_SHOTGUN] = {
 	sprite = SPR_SHGN,
 	frame = A,
@@ -1433,7 +1434,7 @@ states[S_TAKIS_SHOTGUN_HITBOX] = {
 }
 */
 
-freeslot("S_TAKIS_CLUTCHDUST")
+SafeFreeslot("S_TAKIS_CLUTCHDUST")
 states[S_TAKIS_CLUTCHDUST] = {
 	sprite = SPR_CDST,
 	frame = A|FF_PAPERSPRITE|FF_ANIMATE,
@@ -1442,7 +1443,7 @@ states[S_TAKIS_CLUTCHDUST] = {
 	tics = 6*2,
 }
 
-freeslot("S_TAKIS_DRILLEFFECT")
+SafeFreeslot("S_TAKIS_DRILLEFFECT")
 states[S_TAKIS_DRILLEFFECT] = {
     sprite = SPR_TNDE,
     frame = FF_PAPERSPRITE|FF_ANIMATE,
@@ -1452,7 +1453,7 @@ states[S_TAKIS_DRILLEFFECT] = {
     nextstate = S_TAKIS_DRILLEFFECT
 }
 
-freeslot("S_TAKIS_BADNIK_RAGDOLL_A")
+SafeFreeslot("S_TAKIS_BADNIK_RAGDOLL_A")
 states[S_TAKIS_BADNIK_RAGDOLL_A] = {
     sprite = SPR_RGDA,
     frame = A|FF_ANIMATE,
@@ -1461,7 +1462,7 @@ states[S_TAKIS_BADNIK_RAGDOLL_A] = {
 	tics = (1*2)*20,
 }
 
-freeslot("S_TAKIS_HEARTCARD_SPIN")
+SafeFreeslot("S_TAKIS_HEARTCARD_SPIN")
 states[S_TAKIS_HEARTCARD_SPIN] = {
     sprite = SPR_HTCD,
     frame = A|FF_PAPERSPRITE,
@@ -1474,7 +1475,7 @@ states[S_TAKIS_HEARTCARD_SPIN] = {
 
 --i would like to make these last forever like banjo, but
 --server sustainability comes first!
-freeslot("MT_TAKIS_HEARTCARD")
+SafeFreeslot("MT_TAKIS_HEARTCARD")
 mobjinfo[MT_TAKIS_HEARTCARD] = {
 	--$Name Heartcard
 	--$Sprite HTCDALAR
@@ -1490,7 +1491,7 @@ mobjinfo[MT_TAKIS_HEARTCARD] = {
 	flags = MF_SLIDEME|MF_SPECIAL
 }
 
-freeslot("MT_TAKIS_DRILLEFFECT")
+SafeFreeslot("MT_TAKIS_DRILLEFFECT")
 mobjinfo[MT_TAKIS_DRILLEFFECT] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_DRILLEFFECT,
@@ -1499,7 +1500,7 @@ mobjinfo[MT_TAKIS_DRILLEFFECT] = {
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID
 }
 
-freeslot("MT_TAKIS_AFTERIMAGE")
+SafeFreeslot("MT_TAKIS_AFTERIMAGE")
 
 mobjinfo[MT_TAKIS_AFTERIMAGE] = {
 	doomednum = -1,
@@ -1509,8 +1510,8 @@ mobjinfo[MT_TAKIS_AFTERIMAGE] = {
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_NOBLOCKMAP	
 }
 
-freeslot("MT_WINDRINGLOL")
-freeslot("S_SOAPYWINDRINGLOL")
+SafeFreeslot("MT_WINDRINGLOL")
+SafeFreeslot("S_SOAPYWINDRINGLOL")
 
 --Wallbounce ring effect object
 mobjinfo[MT_WINDRINGLOL] = {
@@ -1524,8 +1525,8 @@ states[S_SOAPYWINDRINGLOL] = {
 	frame = TR_TRANS10|FF_PAPERSPRITE|A
 }
 
-freeslot("MT_TAKIS_HAMMERHITBOX")
-freeslot("S_TAKIS_HAMMERHITBOX")
+SafeFreeslot("MT_TAKIS_HAMMERHITBOX")
+SafeFreeslot("S_TAKIS_HAMMERHITBOX")
 mobjinfo[MT_TAKIS_HAMMERHITBOX] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_HAMMERHITBOX,
@@ -1538,7 +1539,7 @@ states[S_TAKIS_HAMMERHITBOX] = {
 	frame = A
 }
 
-freeslot("MT_TAKIS_BADNIK_RAGDOLL")
+SafeFreeslot("MT_TAKIS_BADNIK_RAGDOLL")
 mobjinfo[MT_TAKIS_BADNIK_RAGDOLL] = {
 	doomednum = -1,
 	spawnstate = S_PLAY_WAIT,
@@ -1547,7 +1548,7 @@ mobjinfo[MT_TAKIS_BADNIK_RAGDOLL] = {
 	radius = 25*FRACUNIT,
 }
 
-freeslot("MT_TAKIS_SWEAT")
+SafeFreeslot("MT_TAKIS_SWEAT")
 mobjinfo[MT_TAKIS_SWEAT] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_SWEAT1,
@@ -1557,7 +1558,7 @@ mobjinfo[MT_TAKIS_SWEAT] = {
 
 }
 
-freeslot("MT_TAKIS_TAUNT_JOIN")
+SafeFreeslot("MT_TAKIS_TAUNT_JOIN")
 mobjinfo[MT_TAKIS_TAUNT_JOIN] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_TAUNT_JOIN,
@@ -1567,7 +1568,7 @@ mobjinfo[MT_TAKIS_TAUNT_JOIN] = {
 
 }
 
-freeslot("MT_TAKIS_TROPHY")
+SafeFreeslot("MT_TAKIS_TROPHY")
 mobjinfo[MT_TAKIS_TROPHY] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_TROPHY,
@@ -1585,7 +1586,7 @@ mobjinfo[MT_SOAP_SUPERTAUNT_FLYINGBOLT] = {
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
 }
 
-freeslot("MT_TAKIS_DEADBODY")
+SafeFreeslot("MT_TAKIS_DEADBODY")
 mobjinfo[MT_TAKIS_DEADBODY] = {
 	doomednum = -1,
 	spawnstate = S_NULL,
@@ -1595,7 +1596,7 @@ mobjinfo[MT_TAKIS_DEADBODY] = {
 	radius = 26*FRACUNIT,
 }
 
-freeslot("MT_TAKIS_SHOTGUN")
+SafeFreeslot("MT_TAKIS_SHOTGUN")
 mobjinfo[MT_TAKIS_SHOTGUN] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_SHOTGUN,
@@ -1605,7 +1606,7 @@ mobjinfo[MT_TAKIS_SHOTGUN] = {
 	radius = 5*FRACUNIT,
 }
 
-freeslot("MT_TAKIS_CLUTCHDUST")
+SafeFreeslot("MT_TAKIS_CLUTCHDUST")
 mobjinfo[MT_TAKIS_CLUTCHDUST] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_CLUTCHDUST,
@@ -1614,7 +1615,7 @@ mobjinfo[MT_TAKIS_CLUTCHDUST] = {
 	radius = 5*FRACUNIT,
 }
 
-freeslot("MT_TAKIS_BADNIK_RAGDOLL_A")
+SafeFreeslot("MT_TAKIS_BADNIK_RAGDOLL_A")
 mobjinfo[MT_TAKIS_BADNIK_RAGDOLL_A] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_BADNIK_RAGDOLL_A,
@@ -1623,7 +1624,7 @@ mobjinfo[MT_TAKIS_BADNIK_RAGDOLL_A] = {
 	radius = 5*FRACUNIT,
 }
 
-freeslot("MT_SHOTGUN_GOLDBOX")
+SafeFreeslot("MT_SHOTGUN_GOLDBOX")
 function A_ShotgunBox(mo)
 	local gun = P_SpawnMobjFromMobj(mo,0,0,0,MT_TAKIS_SHOTGUN)
 	gun.dropped = true
@@ -1631,6 +1632,7 @@ function A_ShotgunBox(mo)
 	gun.scale = $/20
 	L_ZLaunch(gun,4*FU)
 	gun.destscale = oldscale
+	gun.flags2 = $|(mo.flags2 & MF2_AMBUSH)
 	
 	if mo.info.seesound
 		local g = P_SpawnGhostMobj(mo)
@@ -1642,15 +1644,15 @@ function A_ShotgunBox(mo)
 	
 end
 
-freeslot("S_SHOTGUN_BOX")
+SafeFreeslot("S_SHOTGUN_BOX")
 states[S_SHOTGUN_BOX] = {
 	sprite = SPR_TVSG,
 	frame = A,
 	tics = 2,
 	nextstate = S_BOX_FLICKER
 }
-freeslot("S_SHOTGUN_ICON1")
-freeslot("S_SHOTGUN_ICON2")
+SafeFreeslot("S_SHOTGUN_ICON1")
+SafeFreeslot("S_SHOTGUN_ICON2")
 states[S_SHOTGUN_ICON1] = {
 	sprite = SPR_TVSG,
 	frame = FF_ANIMATE|C,
@@ -1667,12 +1669,13 @@ states[S_SHOTGUN_ICON2] = {
 	nextstate = S_NULL
 }
 
-freeslot("MT_SHOTGUN_BOX")
-freeslot("MT_SHOTGUN_ICON")
+SafeFreeslot("MT_SHOTGUN_BOX")
+SafeFreeslot("MT_SHOTGUN_ICON")
 mobjinfo[MT_SHOTGUN_BOX] = {
 	--$Name Shotgun Box
 	--$Sprite TVSGA0
 	--$Category Takis Stuff
+	--$Flags4Text Force On
 	--$Flags8Text Golden
 	doomednum = 3002,
 	spawnstate = S_SHOTGUN_BOX,
@@ -1700,7 +1703,7 @@ mobjinfo[MT_SHOTGUN_ICON] = {
 	radius = 8*FRACUNIT,
 }
 
-freeslot("S_SHOTGUN_GOLDBOX")
+SafeFreeslot("S_SHOTGUN_GOLDBOX")
 states[S_SHOTGUN_GOLDBOX] = {
 	sprite = SPR_TVSG,
 	frame = B,
@@ -1735,8 +1738,8 @@ mobjinfo[MT_TAKIS_SHOTGUN_HITBOX] = {
 	radius = 60*FU,
 }
 */
-freeslot("S_TAKIS_FLINGSOLID")
-freeslot("MT_TAKIS_FLINGSOLID")
+SafeFreeslot("S_TAKIS_FLINGSOLID")
+SafeFreeslot("MT_TAKIS_FLINGSOLID")
 states[S_TAKIS_FLINGSOLID] = {
 	sprite = SPR_TVSG,
 	frame = A,
@@ -1750,8 +1753,8 @@ mobjinfo[MT_TAKIS_FLINGSOLID] = {
 	radius = 8*FRACUNIT,
 }
 
-freeslot("S_TAKIS_GIB")
-freeslot("MT_TAKIS_GIB")
+SafeFreeslot("S_TAKIS_GIB")
+SafeFreeslot("MT_TAKIS_GIB")
 states[S_TAKIS_GIB] = {
 	sprite = SPR_TGIB,
 	frame = A,
@@ -1765,8 +1768,8 @@ mobjinfo[MT_TAKIS_GIB] = {
 	radius = 4*FRACUNIT,
 }
 
-freeslot("S_TAKIS_FETTI")
-freeslot("MT_TAKIS_FETTI")
+SafeFreeslot("S_TAKIS_FETTI")
+SafeFreeslot("MT_TAKIS_FETTI")
 states[S_TAKIS_FETTI] = {
 	sprite = SPR_TKFT,
 	frame = A|FF_PAPERSPRITE,
@@ -1782,7 +1785,7 @@ mobjinfo[MT_TAKIS_FETTI] = {
 	mass = FU*60/63,
 }
 
-freeslot("S_TAKIS_SPIRIT","MT_TAKIS_SPIRIT")
+SafeFreeslot("S_TAKIS_SPIRIT","MT_TAKIS_SPIRIT")
 states[S_TAKIS_SPIRIT] = {
 	sprite = SPR_TSPR,
 	frame = A,
@@ -1796,8 +1799,8 @@ mobjinfo[MT_TAKIS_SPIRIT] = {
 	radius = 4*FRACUNIT,
 }
 
-freeslot("MT_TAKIS_METALDETECTOR")
-freeslot("S_TAKIS_METALDETECTOR")
+SafeFreeslot("MT_TAKIS_METALDETECTOR")
+SafeFreeslot("S_TAKIS_METALDETECTOR")
 states[S_TAKIS_METALDETECTOR] = {
 	sprite = SPR_RING,
 	frame = A,
@@ -1818,6 +1821,26 @@ mobjinfo[MT_TAKIS_METALDETECTOR] = {
 	radius = 32*FRACUNIT,
 	flags = MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY
 }
+
+SafeFreeslot("MT_TAKIS_STEAM")
+SafeFreeslot("S_TAKIS_STEAM")
+states[S_TAKIS_STEAM] = {
+	sprite = SPR_RING,
+	frame = A,
+	tics = -1,
+	nextstate = S_TAKIS_STEAM,
+}
+
+mobjinfo[MT_TAKIS_STEAM] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_STEAM,
+	deathstate = S_TAKIS_STEAM,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT
+}
+
 
 addHook("NetVars",function(n)
 	TAKIS_NET = n($)
@@ -1857,19 +1880,5 @@ addHook("ThinkFrame",do
 		end
 	end
 end)
-
-local setname = false
-local addedskip = false
-addHook("ThinkFrame",do
-	if (OLDC and OLDC.SetSkinFullName) and not setname
-		OLDC.SetSkinFullName(TAKIS_SKIN,"Takis the Fox")
-		setname = true
-	end
-	if (AddSkipMonitor) and not addedskip
-		AddSkipMonitor(MT_SHOTGUN_BOX,35,"Time to kick ass!","")
-		addedskip = true
-	end
-end)
-
 
 filesdone = $+1
