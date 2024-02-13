@@ -89,20 +89,22 @@ addHook("MobjThinker", function(ai)
 	end
 	*/
 	
-	if not (camera.chase)
-		--only dontdraw afterimages that are too close to the player
-		local dist = TAKIS_TAUNT_DIST*3
-		
-		local dx = (displayplayer.realmo.x)-ai.x
-		local dy = (displayplayer.realmo.y)-ai.y
-		local dz = (displayplayer.realmo.z)-ai.z
-		if FixedHypot(FixedHypot(dx,dy),dz) < dist
-			ai.flags2 = $|MF2_DONTDRAW
+	if (displayplayer and displayplayer.valid)
+		if not (camera.chase)
+			--only dontdraw afterimages that are too close to the player
+			local dist = TAKIS_TAUNT_DIST*3
+			
+			local dx = (displayplayer.realmo.x)-ai.x
+			local dy = (displayplayer.realmo.y)-ai.y
+			local dz = (displayplayer.realmo.z)-ai.z
+			if FixedHypot(FixedHypot(dx,dy),dz) < dist
+				ai.flags2 = $|MF2_DONTDRAW
+			else
+				ai.flags2 = $ &~MF2_DONTDRAW
+			end
 		else
 			ai.flags2 = $ &~MF2_DONTDRAW
 		end
-	else
-		ai.flags2 = $ &~MF2_DONTDRAW
 	end
 	
 	if p.takistable.io.additiveai
@@ -747,6 +749,7 @@ addHook("MobjThinker",function(mo)
 	
 end,MT_TAKIS_SHOTGUN)
 
+--specki is strangely invulnerable to this
 addHook("MobjMoveCollide",function(shot,mo)
 	if not shot
 	or not shot.valid
@@ -813,27 +816,6 @@ addHook("MobjMoveCollide",function(shot,mo)
 		return true
 	end
 	
-	--spice runners' pf ai
-	/*
-	if (_G["MT_PIZZA_ENEMY"])
-	and (mo.type == MT_PIZZA_ENEMY)
-		local ang = R_PointToAngle2(mo.x,mo.y, shot.x,shot.y)
-		local tics = TR
-		local xy,z = 15*FU,15*FU
-		if (CV_PTSR)
-			tics = CV_PTSR.parrystuntime.value
-			xy = CV_PTSR.parryknockback_xy.value
-			z = CV_PTSR.parryknockback_z.value
-		end
-		
-		mo.pfstunmomentum = true
-		mo.pfstuntime = tics
-		P_SetObjectMomZ(mo, z)
-		P_InstaThrust(mo, ang - ANGLE_180, xy)
-		
-	end
-	*/
-	
 end,MT_THROWNSCATTER)
 
 local function gunragdoll(gun,i)
@@ -846,8 +828,9 @@ local function gunragdoll(gun,i)
 	rag.rollangle = ANGLE_90-(ANG10*3)
 	
 	L_ZLaunch(rag,10*FU)
-	P_Thrust(rag, R_PointToAngle2(rag.x,rag.y, i.x,i.y), -5*rag.scale)
-	
+	if i and i.valid
+		P_Thrust(rag, R_PointToAngle2(rag.x,rag.y, i.x,i.y), -5*rag.scale)
+	end
 	S_StartSound(i,sfx_shgnk)
 end
 
@@ -1237,6 +1220,8 @@ addHook("MobjThinker",function(me)
 end,MT_STARPOST)
 
 addHook("BossThinker", function(mo)
+	if TAKIS_NET.bossprefix[mo.type] == nil then return end
+	
 	if (mo.target and mo.target.valid)
 	and (mo.target.player and mo.target.player.valid)
 		mo.p_target = mo.target
@@ -2013,7 +1998,7 @@ local function isMobjTypeValid(mt)
 	end
 end
 
-local function mapSet(mo)
+local function mapSet()
 	-- Check for new addon bosses
 	for k,v in pairs(addonbosses) do
 		local mt = isMobjTypeValid(k);
@@ -2045,7 +2030,7 @@ local function mapSet(mo)
 
 end
 
-addHook("MapChange", mapSet);
+addHook("ThinkFrame", mapSet);
 addHook("BossThinker", bossThink);
 addHook("MobjDamage", bossHurt);
 addHook("MobjDeath", bossHurt);
@@ -2118,6 +2103,7 @@ addHook("MobjThinker",function(gem)
 			
 		else
 			if gem.flags & MF_NOGRAVITY
+				gem.circle = $ or gem.angle-ANGLE_90
 				S_StartSound(gem,sfx_shldls)
 				P_SetObjectMomZ(gem,6*FU)
 				P_Thrust(gem,gem.circle+ANGLE_90,2*gem.scale)
@@ -2583,6 +2569,40 @@ for _,type in ipairs(gibbinglist)
 	addHook("MobjSpawn",regulargib,type)
 end
 
+addHook("MobjThinker",function(mo)
+	if not mo
+	or not mo.valid
+		return
+	end
+	
+	mo.timealive = $+1
+	if mo.timealive >= 10
+		if mo.scalespeed == 0
+			mo.scalespeed = FU/20
+		end
+		mo.scalespeed = $*6/5
+	else
+		mo.scalespeed = 0
+	end
+	
+	if not (camera.chase)
+		mo.flags2 = $|MF2_DONTDRAW
+	else
+		mo.flags2 = $ &~MF2_DONTDRAW
+	end
+	
+	if mo.tracer.skin ~= TAKIS_SKIN
+		mo.flags2 = $|MF2_DONTDRAW
+	end
+	
+	if mo.tracer.flags2 & MF2_DONTDRAW
+		mo.eflags = $|MF2_DONTDRAW
+	end
+	
+	local mul = FU*19/22
+	
+	mo.momx,mo.momy = FixedMul($1,mul),FixedMul($2,mul)
+end,MT_TAKIS_STEAM)
 
 filesdone = $+1
 

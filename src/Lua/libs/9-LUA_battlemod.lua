@@ -1,5 +1,7 @@
 local added = false
 
+--TODO: move this to compat.lua
+
 /*
 		hurtmsg = {
 			[HURTMSG_CLUTCH] = {text = "Clutch Boost",tics = 0},

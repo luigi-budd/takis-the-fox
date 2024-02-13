@@ -384,7 +384,7 @@ COM_AddCommand("takis_takistutorial", function(p)
 	end
 	
 	if (mulitplayer or netgame)
-		prn(p,"You can't use this right now.")
+		prn(p,"You can only use this in singleplayer.")
 		return	
 	end
 	

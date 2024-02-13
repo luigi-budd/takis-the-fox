@@ -457,6 +457,35 @@ COM_AddCommand("setach", function(p, num)
 	
 end,COM_ADMIN)
 
+COM_AddCommand("sharecombo", function(p, num)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if tonumber(num) == nil 
+		return
+	end
+	
+	local sharedex = p.takistable.HUD.comboshare[#p]
+	sharedex.comboadd = $+num
+	sharedex.tics = TR*3/2
+	local x,y = R_GetScreenCoords(nil,p,camera,players[#p].realmo)
+	sharedex.x,sharedex.y = x,y
+	sharedex.startx,sharedex.starty = x,y
+	
+end,COM_ADMIN)
+
+COM_AddCommand("forcecheat", function(p, num)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	G_SetUsedCheats(false)
+	
+end,COM_ADMIN)
+
 /*
 COM_AddCommand("_gmodify", function(p,gdex,value,vty)
 	local dex = _G[gdex]

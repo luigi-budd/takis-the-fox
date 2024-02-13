@@ -13,7 +13,7 @@ local animtimer = 0
 local timetonext
 
 local finalestage
-local finalecount
+local finalecount = 0
 local finaletextcount
 
 local mouthtic = 0

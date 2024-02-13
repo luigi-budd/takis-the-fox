@@ -123,9 +123,12 @@
 	 on spawn
 	-battlemod stuff
 	-[done]you can still clutch in waterslides
-	-make gibs face screen in 2d instead of being a straight line
+	-[done?]make gibs face screen in 2d instead of being a straight line
 	-udmf arguments for all the mapthings
 	-[done]bots can give takis leaders combo
+	-[done]ujl coop score thing for combo sharing
+	-[done but better]make the server execute a command when cheats are activated to
+	 set a var in TAKIS_NET
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -144,8 +147,8 @@
 	-[done]Takis_HH_NoInter - disable the intermission screen
 	-[done]Takis_HH_NoHappyHour - disable allhappyhour from doin the lvl
 	-Takis_HH_NoClang - disable mysterious clanging
-	-Takis_HH_Exit_[x,y,z] - exit pos
-	-Takis_HH_Trig_[x,y,z] - trigger pos
+	-[done]Takis_HH_Exit_[x,y,z] - exit pos
+	-[done]Takis_HH_Trig_[x,y,z] - trigger pos
 	
 	
 */
@@ -364,6 +367,14 @@ addHook("PlayerThink", function(p)
 				and doswitch
 					takis.bashtime = 0
 				end
+				
+				if (takis.accspeed <= 15*FU)
+					me.state = S_PLAY_WALK
+					P_MovePlayer(p)
+					S_StopSoundByID(me,sfx_shgnbs)
+					takis.bashtime = 0
+				end
+				
 			else
 				if takis.bashtics ~= 0
 					takis.bashtics = 0
@@ -1705,6 +1716,7 @@ addHook("PlayerThink", function(p)
 					takis.coyote = 0
 				end
 				
+				--coyote time
 				if takis.coyote
 					takis.coyote = $-1
 					if takis.jump == 1
@@ -1750,7 +1762,6 @@ addHook("PlayerThink", function(p)
 				
 				--keep increasing this until it reaches
 				--2*TR, kill if then
-				--but this isnt a zone map?
 				if G_BuildMapTitle(gamemap) ~= "Red Room"
 					takis.timescrushed = $+1
 				end
@@ -1866,6 +1877,7 @@ addHook("PlayerThink", function(p)
 				or (me.pizza_in or me.pizza_out)
 				or (takis.inWaterSlide)
 				or (p.ptsr_outofgame)
+				or (HAPPY_HOUR.othergt and HAPPY_HOUR.overtime)
 					takis.combo.frozen = true
 					if ((p.exiting) and not (p.pflags & PF_FINISHED))
 					or (p.ptsr_outofgame)
@@ -3116,6 +3128,8 @@ local function hammerhitbox(t,tm)
 		return
 	end
 	
+	if not (t.parent and t.parent.valid) then return end
+	
 	if tm == t.parent
 		return
 	end
@@ -3303,6 +3317,7 @@ local function hurtbytakis(mo,inf,sor)
 		local bleader = sor.player.botleader
 		
 		if sor.player.bot
+		and (bleader and bleader.valid)
 		and (bleader.mo and bleader.mo.valid)
 		and (bleader.mo.skin == TAKIS_SKIN)
 		and (CanFlingThing(mo,MF_ENEMY|MF_BOSS)
@@ -3693,6 +3708,7 @@ addHook("MobjMoveCollide",function(tm,t)
 		and (t.type ~= MT_PLAYER)
 		
 			if (t.takis_flingme == false) then return end
+			if not (t and t.valid) then return end
 			
 			local fling = P_SpawnMobjFromMobj(t,0,0,0,MT_TAKIS_FLINGSOLID)
 			local ang = R_PointToAngle2(t.x,t.y, tm.x,tm.y)

@@ -481,6 +481,8 @@ rawset(_G, "TakisHUDStuff", function(p)
 	end
 	
 	if hud.flyingscore.tics > 0
+		--in hud.lua now
+		/*
 		local expectedtime = 2*TR
 		local tics = ((2*TR)+1)-hud.flyingscore.tics
 		
@@ -498,6 +500,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 			backy+7*FU, 
 			hud.flyingscore.scorey*FU
 		)
+		*/
 		
 		hud.flyingscore.tics = $-1
 	else
@@ -686,6 +689,43 @@ rawset(_G, "TakisHUDStuff", function(p)
 	end
 	
 	if takis.combo.failtics then takis.combo.failtics = $-1 end
+	
+	--this shouldnt resynch
+	for i = 0,31
+		if players[i] == nil then continue end
+		
+		local sharedex = hud.comboshare[i]
+		
+		if sharedex == nil
+			hud.comboshare[i] = {
+				comboadd = 0,
+				tics = 0,
+				x = 0,
+				y = 0,
+				node = i
+			}
+		end
+		
+		
+	end
+	
+	for k,sharedex in pairs(hud.comboshare)
+		if sharedex.tics
+			sharedex.tics = $-1
+			
+			if sharedex.tics == 0
+				for i = 1,sharedex.comboadd
+					TakisGiveCombo(p,takis,true,false,nil,true)
+				end
+			end
+		else
+			sharedex.comboadd = 0
+			sharedex.x = 0
+			sharedex.y = 0
+			sharedex.startx = nil
+			sharedex.starty = nil
+		end
+	end
 	
 --hud stuff end
 --hudstuff end
@@ -1313,6 +1353,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if (p.powers[pw_sneakers] > 0)
+	and not (HAPPY_HOUR.gameover and HAPPY_HOUR.othergt)
 		local rad = me.radius/FRACUNIT
 		local hei = me.height/FRACUNIT
 		local x = P_RandomRange(-rad,rad)*FRACUNIT
@@ -1976,11 +2017,31 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if takis.isAngry
-		if leveltime % 5 == 0
-			--A_BossScream(me,1,
+		if leveltime % 20 == 0
+			local angle = p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT ))
+			local x,y = ReturnTrigAngles(angle)
+			local steam = P_SpawnMobjFromMobj(me,10*x,10*y,
+				P_RandomRange(-2,(me.height/me.scale)+2),
+				MT_TAKIS_STEAM
+			)
+			steam.angle = angle
+			P_Thrust(steam,steam.angle,P_RandomRange(5,10)*steam.scale)
+			steam.timealive = 1
+			steam.tracer = me
+			steam.destscale = 1
+			
 		end
 	end
 	
+	if HAPPY_HOUR.happyhour
+	and HAPPY_HOUR.othergt
+		local mname = string.lower(S_MusicName(p) or '') 
+		if (mname ~= HAPPY_HOUR.song
+		or mname ~= HAPPY_HOUR.songend)
+		and (TAKIS_NET.specsongs[mname] ~= true)
+			S_ChangeMusic(HAPPY_HOUR.song,true,p)
+		end
+	end
 	p.alreadyhascombometer = 2
 	
 --shorts end
@@ -2696,6 +2757,11 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 	end
 	
 	if add == true
+		if (HAPPY_HOUR.othergt and HAPPY_HOUR.overtime)
+		and not takis.combo.count
+			return
+		end
+		
 		takis.combo.count = $+1
 		local cc = takis.combo.count
 		if (HAPPY_HOUR.othergt)
@@ -2751,13 +2817,21 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 				local dx = p2.mo.x-p.mo.x
 				local dy = p2.mo.y-p.mo.y
 				local dz = p2.mo.z-p.mo.z
-				local dist = TAKIS_TAUNT_DIST*5
+				local dist = (TAKIS_TAUNT_DIST*5)*5/2
 				
 				if FixedHypot(FixedHypot(dx,dy),dz) > dist
 					continue
 				end
 				
-				TakisGiveCombo(p2,p2.takistable,true,nil,nil,true)
+				local tak2 = p2.takistable
+				local sharedex = tak2.HUD.comboshare[#p]
+				sharedex.comboadd = $+1
+				sharedex.tics = TR*3/2
+				local x,y = R_GetScreenCoords(nil,p2,camera,players[#p].realmo)
+				sharedex.x,sharedex.y = x,y
+				sharedex.startx,sharedex.starty = x,y
+				
+				TakisGiveCombo(p2,tak2,false,true,nil,true)
 				
 			end
 		end
@@ -4037,6 +4111,8 @@ rawset(_G,"CanFlingThing",function(en,flags)
 	local flingable = false
 	flags = $ or MF_ENEMY|MF_BOSS|MF_MONITOR
 	
+	if not (en and en.valid) then return false end
+	
 	if (en.flags2 & MF2_FRET)
 		return false
 	end
@@ -4340,6 +4416,61 @@ rawset(_G,"TakisFollowThingThink",function(follow,tracer,ztype,doscale)
 		follow.spritexscale,follow.spriteyscale = tracer.spritexscale,tracer.spriteyscale	
 	end
 	
+end)
+
+rawset(_G,"R_GetScreenCoords",function(v, p, c, mx, my, mz)
+	
+	local camx, camy, camz, camangle, camaiming
+	if p.awayviewtics then
+		camx = p.awayviewmobj.x
+		camy = p.awayviewmobj.y
+		camz = p.awayviewmobj.z
+		camangle = p.awayviewmobj.angle
+		camaiming = p.awayviewaiming
+	elseif c.chase then
+		camx = c.x
+		camy = c.y
+		camz = c.z
+		camangle = c.angle
+		camaiming = c.aiming
+	else
+		camx = p.mo.x
+		camy = p.mo.y
+		camz = p.viewz-20*FRACUNIT
+		camangle = p.mo.angle
+		camaiming = p.aiming
+	end
+
+	-- Lat: I'm actually very lazy so mx can also be a mobj!
+	if type(mx) == "userdata" and mx.valid
+		my = mx.y
+		mz = mx.z
+		mx = mx.x	-- life is easier
+	end
+
+	local x = camangle-R_PointToAngle2(camx, camy, mx, my)
+
+	local distfact = cos(x)
+	if not distfact then
+		distfact = 1
+	end -- MonsterIestyn, your bloody table fixing...
+
+	if x > ANGLE_90 or x < ANGLE_270 then
+		return -9, -9, 0
+	else
+		x = FixedMul(tan(x, true), 160<<FRACBITS)+160<<FRACBITS
+	end
+
+	local y = camz-mz
+	--print(y/FRACUNIT)
+	y = FixedDiv(y, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my)))
+	y = (y*160)+(100<<FRACBITS)
+	y = y+tan(camaiming, true)*160
+ 
+	local scale = FixedDiv(160*FRACUNIT, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my)))
+	--print(scale)
+
+	return x, y, scale
 end)
 
 filesdone = $+1

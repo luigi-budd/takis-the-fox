@@ -56,8 +56,8 @@ addHook("ThinkFrame",do
 				next = 0
 			},
 		}
-		printf("Added Silverhorn textboxes.")
 		compat.inatext = true
+		printf("Added Silverhorn textboxes.")
 	end
 	if skins["npeppino"]
 	and not compat.peptext

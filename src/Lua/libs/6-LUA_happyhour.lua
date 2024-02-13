@@ -528,6 +528,7 @@ mobjinfo[MT_HHEXIT] = {
 	height = 115*FRACUNIT,
 	radius = 25*FRACUNIT,
 	flags = MF_SPECIAL,
+	dispoffset = -1,
 }
 
 --might need a mapthingspawn for this?

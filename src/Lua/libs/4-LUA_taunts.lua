@@ -56,6 +56,7 @@ local function init_bird(p)
 	takis.stasistic = 2
 	takis.tauntacceptspartners = false
 	me.state = S_PLAY_TAKIS_BIRD
+	P_PlayJingleMusic(p,"brdwrd",0,true,JT_OTHER)
 end
 
 local function init_yeah(p)
@@ -160,12 +161,13 @@ local function think_bird(p)
 	
 	if me.state == S_PLAY_TAKIS_BIRD
 		--me.state = S_PLAY_TAKIS_BIRD
-		me.frame = ((takis.taunttime-2)/4 % 6)
+		me.frame = ((takis.taunttime-2) % 6)
 	end
 	
 	--cancel conga
 	if (p.cmd.buttons & BT_CUSTOM1)
 		TakisResetTauntStuff(takis)
+		P_RestoreMusic(p)
 		me.state = S_PLAY_STND
 		P_MovePlayer(p)
 	end

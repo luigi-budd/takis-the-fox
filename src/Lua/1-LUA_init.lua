@@ -16,6 +16,7 @@
 	-katsy - bounce sector detection
 	-Banddy - metal sonic boss portrait, tested hh things mapheader positions
 	-Marilyn - final demo cutscene i used lol
+	-nicholas rickys - helped me with some code in sharecombos
 	
 	CODE I STOLE (from reusable mods)
 	-SMSReborn - IO code
@@ -25,6 +26,7 @@
 									  triggers)
 	-NiGHTS Freeroam - ok this isnt reusable but buggie asked me to put it in
 	-ChrispyChars - some code used for confetti, safefreeslot code
+	-MinHUD - some hud functions i used
 	
 	SOME MORE STUFF I STOLE
 	-AntonBlast - sound effects, music, sprites
@@ -248,8 +250,8 @@ rawset(_G, "TAKIS_NET", {
 	
 	inttic = 0,
 	stagefailed = true,
-	cheatedgame = false,
 	cardbump = 0,
+	usedcheats = false,
 	
 	--DONT change to happy hour if the song is any one of these
 	specsongs = {
@@ -268,6 +270,7 @@ rawset(_G, "TAKIS_NET", {
 		["_conga"] = true,
 		["_gover"] = true,
 		["blstcl"] = true,
+		["brdwrd"] = true,
 		--spice runers
 		["ovrtme"] = true,
 		["ovrtm2"] = true,
@@ -950,7 +953,22 @@ rawset(_G, "TakisInitTable", function(p)
 					160-19,
 					160,
 				}
-			}
+			},
+			comboshare = {
+				--indexing every player node
+				/*
+				[0] = serfver
+				[4] = pnode 4
+				and whatnot
+				*/
+				/*
+					p = 0,
+					comboadd = 0,
+					tics = 0,
+					x = 0,
+					y = 0,
+				*/
+			},
 			
 				/*
 			scoretext = {
@@ -1046,6 +1064,7 @@ sfxinfo[sfx_takst0].caption = "Step"
 
 SafeFreeslot("sfx_tkapow")
 sfxinfo[sfx_tkapow] = {
+	singular = true,
 	flags = SF_X2AWAYSOUND,
 	caption = "\x82KaPOW!!!\x80"
 }
@@ -1827,14 +1846,13 @@ SafeFreeslot("S_TAKIS_STEAM")
 states[S_TAKIS_STEAM] = {
 	sprite = SPR_RING,
 	frame = A,
-	tics = -1,
-	nextstate = S_TAKIS_STEAM,
+	tics = 20,
+	nextstate = S_NULL,
 }
 
 mobjinfo[MT_TAKIS_STEAM] = {
 	doomednum = -1,
 	spawnstate = S_TAKIS_STEAM,
-	deathstate = S_TAKIS_STEAM,
 	spawnhealth = 1,
 	height = 6*FRACUNIT,
 	radius = 6*FRACUNIT,

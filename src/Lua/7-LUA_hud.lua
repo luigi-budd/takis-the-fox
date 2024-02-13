@@ -79,6 +79,7 @@ local function drawheartcards(v,p)
 		
 		local eflag = V_HUDTRANS
 		if (TAKIS_NET.inbossmap)
+		and (takis.HUD.bosscards and takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 		and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
 			eflag = $ &~V_HUDTRANS
 		end
@@ -577,7 +578,7 @@ local function drawbossface(v,p)
 	
 	if not (bosscards.mo and bosscards.mo.valid) then return end
 	if not (bosscards.name) then return end
-	if (bosscards.dontdrawcards) then return end
+	if (bosscards.nocards or TAKIS_NET.nobosscards[bosscards.mo.type] ~= nil) then return end
 	if (takis.inChaos) then return end
 	
 	local eflags = 0
@@ -637,7 +638,8 @@ local function drawrings(v,p)
 	end
 	
 	if (p.rings <= 0)
-	and not (gametyperules & GTR_FRIENDLY)
+	and ((not (gametyperules & GTR_FRIENDLY))
+	or G_RingSlingerGametype())
 		flash = true
 	end
 	
@@ -891,7 +893,8 @@ local function drawscore(v,p)
 	local x,y = 300-2+(v.cachePatch(scorenum.."1").width*4/10),15
 	
 	if takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid
-	and not (takis.HUD.bosscards.nocards)
+	and not (takis.HUD.bosscards.nocards
+	or TAKIS_NET.nobosscards[takis.HUD.bosscards.mo.type] ~= nil)
 		y = $+30
 	end
 	
@@ -933,34 +936,33 @@ local function drawscore(v,p)
 		prevw = $+v.cachePatch(scorenum+n).width*4/10
 	end
 	
-	/*
-	for k,va in ipairs(takis.HUD.scoretext)
-		if va == nil
-			continue
-		end
-		
-		if va.tics
-			va.ymin = $-FU
-			v.drawString((300-15)*FU,(15+8)*FU-va.ymin,va.text,va.cmap|va.trans|V_SNAPTOTOP|V_SNAPTORIGHT|V_ADD,"thin-fixed-right")
-			va.tics = $-1
-		else
-			table.remove(takis.HUD.scoretext,k)
-		end
-	end
-	*/
-	
 	if fs.tics
-		local snap = V_SNAPTOLEFT
-		if fs.tics < 4
-			snap = V_SNAPTORIGHT
-		end
+		local expectedtime = 2*TR
+		local tics = ((2*TR)+1)-fs.tics
 		
-		local x = fs.x
-		local y = fs.y
+		local total_width = (v.width() / v.dupx()) + 1
+		local total_height = (v.height() / v.dupy()) + 1
 		
-		v.drawString(x, y, 
+		local cxpos = (160*FU-(total_width*FU/2))+takis.HUD.combo.basex
+		local cypos = ((100*FU)-(total_height*FU/2))+takis.HUD.combo.basey
+
+		local sxpos = (160*FU+(total_width*FU/2))-(300*FU-((x*FU)+((v.cachePatch(scorenum.."1").width*4/10)*FU)))
+		local sypos = ((100*FU)-(total_height*FU/2))+(y*FU)
+		
+		local fx = ease.inexpo(
+			( FU / expectedtime )*tics,
+			cxpos+5*FU+takis.HUD.combo.patchx, 
+			sxpos
+		)
+		local fy = ease.inexpo(
+			( FU / expectedtime )*tics,
+			cypos+7*FU, 
+			sypos
+		)
+		
+		v.drawString(fx, fy, 
 			fs.num,
-			snap|V_SNAPTOTOP|V_HUDTRANS|V_PERPLAYER,
+			V_HUDTRANS|V_PERPLAYER,
 			"thin-fixed-center"
 		)
 		
@@ -1253,60 +1255,6 @@ end
 
 --      ----------
 
-local function R_GetScreenCoords(v, p, c, mx, my, mz)
-	local camx, camy, camz, camangle, camaiming
-	if p.awayviewtics then
-		camx = p.awayviewmobj.x
-		camy = p.awayviewmobj.y
-		camz = p.awayviewmobj.z
-		camangle = p.awayviewmobj.angle
-		camaiming = p.awayviewaiming
-	elseif c.chase then
-		camx = c.x
-		camy = c.y
-		camz = c.z
-		camangle = c.angle
-		camaiming = c.aiming
-	else
-		camx = p.mo.x
-		camy = p.mo.y
-		camz = p.viewz-20*FRACUNIT
-		camangle = p.mo.angle
-		camaiming = p.aiming
-	end
-
-	-- Lat: I'm actually very lazy so mx can also be a mobj!
-	if type(mx) == "userdata" and mx.valid
-		my = mx.y
-		mz = mx.z
-		mx = mx.x	-- life is easier
-	end
-
-	local x = camangle-R_PointToAngle2(camx, camy, mx, my)
-
-	local distfact = cos(x)
-	if not distfact then
-		distfact = 1
-	end -- MonsterIestyn, your bloody table fixing...
-
-	if x > ANGLE_90 or x < ANGLE_270 then
-		return -9, -9, 0
-	else
-		x = FixedMul(tan(x, true), 160<<FRACBITS)+160<<FRACBITS
-	end
-
-	local y = camz-mz
-	--print(y/FRACUNIT)
-	y = FixedDiv(y, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my)))
-	y = (y*160)+(100<<FRACBITS)
-	y = y+tan(camaiming, true)*160
- 
-	local scale = FixedDiv(160*FRACUNIT, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my)))
-	--print(scale)
-
-	return x, y, scale
-end
-
 --CLUTCH----------
 
 local function drawclutches(v,p,cam)
@@ -1542,7 +1490,7 @@ end
 
 --COMBO ----------
 
-local function drawcombostuff(v,p)
+local function drawcombostuff(v,p,cam)
 
 	if (customhud.CheckType("takis_combometer") != modname) return end
 	
@@ -1810,6 +1758,76 @@ local function drawcombostuff(v,p)
 			V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP, 
 			v.getColormap(nil, p.skincolor)
 		)
+	end
+	
+	--this is so um jammer lammy
+	for k,va in pairs(takis.HUD.comboshare)
+		if not va.tics then continue end
+		
+		local total_width = (v.width() / v.dupx()) + 1
+		local total_height = (v.height() / v.dupy()) + 1
+		
+		/*
+		v.drawString(
+			160*FU-(total_width*FU/2),
+			((100*FU)-(total_height*FU/2))+takis.HUD.combo.basey,
+			"Combo Share",
+			V_ALLOWLOWERCASE,
+			"fixed"
+		)
+		*/
+		
+		local x,y = va.x,va.y
+		/*
+		if va.tics >= (2*TR+(TR/2))-1
+			x,y = R_GetScreenCoords(v, p, cam, players[va.node].realmo)
+			va.x,va.y = x,y
+			va.startx = x
+			va.starty = y
+		end
+		*/
+		
+		if va.tics <= TR/2
+			--THANKS NICK FOR HELPIN ME WITH THE COORDS!!
+			local et = TR/2
+			local tics = et-va.tics
+			
+			local ypos = ((100*FU)-(total_height*FU/2))+takis.HUD.combo.basey+9*FU
+			local xpos = 160*FU-(total_width*FU/2)
+			
+			if takis.combo.time
+				xpos = $+(v.cachePatch("TAKCOBACK").width*FU/2)
+			end
+			
+			y = ease.outback(
+				(FU/et)*tics,
+				va.starty,
+				ypos,
+				FU*4
+			)
+			x = ease.insine(
+				(FU/et)*tics,
+				va.startx,
+				xpos,
+				FU
+			)
+			
+		end
+		
+		local waveforce = FU*3
+		local ay = FixedMul(waveforce,sin(FixedAngle(leveltime*20*FU)))
+		if va.tics <= TR/2
+			ay = 0
+		end
+		
+		local cpatch = v.cachePatch("TAKCOSHARE")
+		local color = v.getColormap(nil,
+			(leveltime/2 % 2) and SKINCOLOR_GREEN
+			or SKINCOLOR_RED
+		)
+		local xoff = -7*FU
+		v.drawScaled(x+8*FU-xoff,y+ay,FU,cpatch,0,color)
+		v.drawString(x+8*FU-xoff,y+ay,"+"..va.comboadd,0,"fixed-right")
 	end
 	
 end
@@ -2665,7 +2683,7 @@ local function drawcosmenu(v,p)
 				local ach = t[1<<i]
 				
 				if (number & (1<<i))
-				and not (TAKIS_NET.cheatedgame)
+				and not (TAKIS_NET.usedcheats)
 					has = 0
 				end
 				
@@ -2693,7 +2711,7 @@ local function drawcosmenu(v,p)
 				
 			end
 			
-			if not (TAKIS_NET.cheatedgame)
+			if not (TAKIS_NET.usedcheats)
 				--draw a bigger version so you can see the icon
 				local x = pos.x*FU
 				local y = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))
@@ -3133,7 +3151,9 @@ local function drawbosstitles(v,p)
 		elseif title.tic < 10
 			trans = (10-title.tic)<<V_ALPHASHIFT
 		end
-		v.drawString(160,190,G_BuildMapTitle(gamemap),V_YELLOWMAP|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE|trans,"thin-center")
+		if G_BuildMapTitle(gamemap) ~= nil
+			v.drawString(160,190,G_BuildMapTitle(gamemap),V_YELLOWMAP|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE|trans,"thin-center")
+		end
 	end
 	
 end
@@ -3414,6 +3434,16 @@ local function drawdebug(v,p)
 			)
 			work = $+1
 		end
+		v.drawString(290,30+(work*8),
+			"\x8EusedCheats\x80:\x84 "..tostring(usedCheats),
+			V_HUDTRANS|V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE,
+			"thin-right"
+		)
+		v.drawString(290,38+(work*8),
+			"TAKIS_NET.usedcheats\x80:\x84 "..tostring(TAKIS_NET.usedcheats),
+			V_HUDTRANS|V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE,
+			"thin-right"
+		)
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_QUAKE)
 		local red = (not takis.io.quakes) and V_REDMAP or 0
@@ -3821,6 +3851,11 @@ local function drawdebug(v,p)
 				v.drawString(x,y+32+(k*8),va,flags,"thin")		
 			end
 		end
+		flags = $|V_SNAPTORIGHT &~V_SNAPTOLEFT
+		local strings = prtable("TAKIS_NET.nobosscards",TAKIS_NET.nobosscards,false)
+		for k,va in ipairs(strings)
+			v.drawString(300-x,y-8+(k*8),va,flags,"thin-right")		
+		end
 		
 	end
 	
@@ -3948,7 +3983,7 @@ addHook("HUD", function(v,p,cam)
 				drawtimer(v,p)
 			end
 			drawlivesarea(v,p)
-			drawcombostuff(v,p)
+			drawcombostuff(v,p,cam)
 			drawpizzatips(v,p)
 			drawpizzatimer(v,p)
 			--drawnickranks(v,p)
@@ -3970,13 +4005,15 @@ addHook("HUD", function(v,p,cam)
 			end
 			drawcfgnotifs(v,p)
 			drawtutbuttons(v,p)
+			if not hasstat
+				drawscore(v,p)
+			end
 			drawbosstitles(v,p)
 			if not hasstat
 				drawheartcards(v,p)
 				drawbosscards(v,p)
 				drawface(v,p)
 				drawbossface(v,p)
-				drawscore(v,p)
 				drawpizzaranks(v,p)
 				drawbonuses(v,p)
 			end

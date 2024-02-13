@@ -164,13 +164,10 @@ addHook("ThinkFrame", do
 	CVtoNET()
 	
 	if usedCheats
-	and not t.cheatedgame
+	and not t.usedcheats
+		t.usedcheats = true
 		print("\x83NOTICE:\x80 Achievements cannot be earned in cheated games.")
-		S_StartSound(nil,sfx_menu1)
 	end
-	
-	--you cant turn this off!
-	t.cheatedgame = $ or usedCheats
 	
 	if gamestate == GS_TITLESCREEN
 		TAKIS_TITLETIME = $+1

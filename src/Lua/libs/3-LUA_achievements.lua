@@ -141,8 +141,12 @@ TAKIS_ACHIEVEMENTINFO.luasig = "iamlua"..P_RandomFixed()
 
 COM_AddCommand("sonadow", function(p, check, num)
 	if check ~= TAKIS_ACHIEVEMENTINFO.luasig then
-		P_KillMobj(p.realmo)
-		print(p.name.." couldn't stand the heat.")
+		if p.realmo.health
+		and p.playerstate == PST_LIVE
+		and not p.spectator
+			P_KillMobj(p.realmo)
+			print(p.name.." couldn't stand the heat.")
+		end
 		return
 	end
 	
@@ -193,7 +197,7 @@ end)
 
 rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	if (TAKIS_NET.noachs and netgame) then return end
-	if (TAKIS_NET.cheatedgame) then return end
+	if (TAKIS_NET.usedcheats) then return end
 	
 	if p.bot == BOT_2PAI
 	or p.bot == BOT_MPAI
