@@ -8,7 +8,7 @@ local achs = {
 	"TAKISFEST",
 	"HOMERUN",
 	"JUMPSCARE",
-	"HARDCORE",
+--	"HARDCORE",
 	"CLUTCHSPAM",
 	"COMBOALMOST",
 	"BOOMSTICK",
@@ -71,6 +71,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		scale = FU/4,
 		text = "Get jumpscared."
 	},
+	/*
 	[ACHIEVEMENT_HARDCORE] = {
 		name = "Hardcore Enjoyer",
 		icon = "ACH_HARDCORE",
@@ -78,6 +79,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		text = "Beat a level with 1 Card\n"
 			 .."and after being hit 3 times."
 	},
+	*/
 	[ACHIEVEMENT_CLUTCHSPAM] = {
 		name = "Amatuer Clutcher",
 		icon = "ACH_CLUTCHSPAM",
@@ -150,6 +152,9 @@ COM_AddCommand("sonadow", function(p, check, num)
 		return
 	end
 	
+	if TAKIS_ISDEBUG
+		print("\x83TAKIS:\x80 Loaded achs for "..p.name)
+	end
 	p.takistable.achfile = tonumber(num)
 end)
 

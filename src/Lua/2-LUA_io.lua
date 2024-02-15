@@ -9,12 +9,14 @@
 --Y7GDSUYFHIDJPK AAAAAAAAAAAHHHHHHHHH!!!!!!!!
 
 --if you use this manually and mess something up, its not my fault!
-COM_AddCommand("takis_load", function(p, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,timeshit)
+COM_AddCommand("takis_load", function(p,sig, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,timeshit)
 	
-	if a1 == nil
-		CONS_Printf(p,"\x85"+"Do not use this command manually! You may risk messing up Takis or your config!")
+	if sig ~= TAKIS_ACHIEVEMENTINFO.luasig
+		CONS_Printf(p,"\x85"+"Do not use this command manually!")
 		return
 	end
+	
+	if not p.takistable then return end
 
 	a1 = tonumber($) --Turn all of you to numbers!
 	a2 = tonumber($)
@@ -220,7 +222,7 @@ rawset(_G, "TakisLoadStuff", function(p)
 			local code = file:read("*a")
 			
 			if code ~= nil and not (string.find(code, ";"))
-				COM_BufInsertText(p, "takis_load "..code)
+				COM_BufInsertText(p, "takis_load "..TAKIS_ACHIEVEMENTINFO.luasig..code)
 				p.takistable.io.loaded = true
 			end
 		

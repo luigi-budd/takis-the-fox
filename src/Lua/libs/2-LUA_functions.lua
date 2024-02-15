@@ -713,6 +713,14 @@ rawset(_G, "TakisHUDStuff", function(p)
 		if sharedex.tics
 			sharedex.tics = $-1
 			
+			if sharedex.comboadd > 99999
+				sharedex.comboadd = 99999
+			end
+			
+			if sharedex.tics == TR/2
+				S_StartSound(nil,sfx_didgod,p)
+			end
+			
 			if sharedex.tics == 0
 				for i = 1,sharedex.comboadd
 					TakisGiveCombo(p,takis,true,false,nil,true)
@@ -1809,10 +1817,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if (HAPPY_HOUR.othergt)
 	and (HAPPY_HOUR.overtime)
 	and (HAPPY_HOUR.happyhour)
-		if (takis.heartcards > 1)
-		and (not p.ptsr_outofgame)
-			takis.heartcards = 1
-		end
 		p.powers[pw_sneakers] = 3
 	end
 	
@@ -2018,17 +2022,46 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if takis.isAngry
 		if leveltime % 20 == 0
+			TakisSpawnDust(me,
+				p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT )),
+				10,
+				P_RandomRange((me.height/me.scale)/2,(me.height/me.scale)*3/2)*me.scale,
+				{
+					xspread = 0,
+					yspread = 0,
+					zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+					
+					thrust = P_RandomRange(5,10)*me.scale,
+					thrustspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+					
+					momz = P_RandomRange(10,-5)*me.scale,
+					momzspread = 0,
+					
+					scale = me.scale,
+					scalespread = P_RandomFixed(),
+					
+					fuse = 20,
+				}
+			)
+			
+			/*
 			local angle = p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT ))
 			local x,y = ReturnTrigAngles(angle)
 			local steam = P_SpawnMobjFromMobj(me,10*x,10*y,
-				P_RandomRange(-2,(me.height/me.scale)+2),
+				P_RandomRange((me.height/me.scale)/2,(me.height/me.scale)*3/2)*me.scale,
 				MT_TAKIS_STEAM
 			)
 			steam.angle = angle
-			P_Thrust(steam,steam.angle,P_RandomRange(5,10)*steam.scale)
+			P_Thrust(steam,steam.angle,P_RandomRange(5,10)*me.scale)
+			P_SetObjectMomZ(steam,
+				P_RandomRange(10,-5)*me.scale+P_RandomFixed(),
+				false
+			)
 			steam.timealive = 1
 			steam.tracer = me
 			steam.destscale = 1
+			steam.fuse = 20
+			*/
 			
 		end
 	end
@@ -2616,6 +2649,26 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 			P_DamageMobj(tm,t,t,1)
 			return
 		end
+	else
+		local rad = 1000*t.scale
+		for p in players.iterate
+			
+			local m2 = p.realmo
+			
+			if not m2 or not m2.valid
+				continue
+			end
+			
+			if (FixedHypot(m2.x-t.x,m2.y-t.y) <= rad)
+				DoQuake(p,
+					FixedMul(
+						t.scale*25+(speed/4), FixedDiv( rad-FixedHypot(m2.x-t.x,m2.y-t.y),rad )
+					),
+					10
+				)
+			end
+		end
+		
 	end
 	
 	if not (tm.flags & MF_BOSS)
@@ -4349,8 +4402,8 @@ rawset(_G,"TakisDoClutch",function(p)
 	
 	--xmom code
 	if takis.notCarried
-		local d1 = P_SpawnMobjFromMobj(me, -20*cos(ang + ANGLE_45), -20*sin(p.drawangle + ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
-		local d2 = P_SpawnMobjFromMobj(me, -20*cos(ang - ANGLE_45), -20*sin(p.drawangle - ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
+		local d1 = P_SpawnMobjFromMobj(me, -20*cos(ang + ANGLE_45), -20*sin(ang + ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
+		local d2 = P_SpawnMobjFromMobj(me, -20*cos(ang - ANGLE_45), -20*sin(ang - ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
 		d1.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d1.x, d1.y) --- ANG5
 		d2.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d2.x, d2.y) --+ ANG5
 	end
@@ -4370,7 +4423,77 @@ rawset(_G,"TakisDoClutch",function(p)
 	p.jp = 2
 	p.jt = -5
 	takis.coyote = 0
-
+	
+	for j = -1,1,2
+		for i = 3,P_RandomRange(5,10)
+			TakisSpawnDust(me,
+				ang+FixedAngle(45*FU*j+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
+				P_RandomRange(0,-50),
+				P_RandomRange(-1,2)*me.scale,
+				{
+					xspread = 0,--(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+					yspread = 0,--(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+					zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+					
+					thrust = P_RandomRange(0,-10)*me.scale,
+					thrustspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+					
+					momz = (P_RandomRange(4,0)*i)*(me.scale/2),
+					momzspread = ((P_RandomChance(FU/2)) and 1 or -1),
+					
+					scale = me.scale,
+					scalespread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+					
+					fuse = 15+P_RandomRange(-5,5),
+				}
+			)
+		end
+	end
+	
+	/*
+	local angle = ang + ANGLE_45
+	for i = 3,P_RandomRange(5,10)
+		local dist = P_RandomRange(0,-50)
+		local x,y = ReturnTrigAngles(angle)
+		local steam = P_SpawnMobjFromMobj(me,
+			dist*x+P_RandomFixed(),
+			dist*y+P_RandomFixed(),
+			P_RandomRange(-1,2)*me.scale+P_RandomFixed(),
+			MT_TAKIS_STEAM
+		)
+		steam.angle = angle
+		P_SetObjectMomZ(steam,
+			P_RandomRange(6,0)*me.scale+P_RandomFixed(),
+			false
+		)
+		steam.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
+		steam.timealive = 1
+		steam.tracer = me
+		steam.destscale = 1
+		steam.fuse = 20
+	end
+	angle = ang - ANGLE_45
+	for i = 3,P_RandomRange(5,10)
+		local dist = P_RandomRange(0,-50)
+		local x,y = ReturnTrigAngles(angle)
+		local steam = P_SpawnMobjFromMobj(me,
+			dist*x+P_RandomFixed(),
+			dist*y+P_RandomFixed(),
+			P_RandomRange(-1,2)*me.scale+P_RandomFixed(),
+			MT_TAKIS_STEAM
+		)
+		steam.angle = angle
+		P_SetObjectMomZ(steam,
+			P_RandomRange(6,0)*me.scale+P_RandomFixed(),
+			false
+		)
+		steam.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
+		steam.timealive = 1
+		steam.tracer = me
+		steam.destscale = 1
+		steam.fuse = 20
+	end
+	*/
 end)
 
 rawset(_G,"TakisFollowThingThink",function(follow,tracer,ztype,doscale)
@@ -4471,6 +4594,49 @@ rawset(_G,"R_GetScreenCoords",function(v, p, c, mx, my, mz)
 	--print(scale)
 
 	return x, y, scale
+end)
+
+rawset(_G,"TakisSpawnDust",function(me,angle,dist,z,options)
+	if options == nil then
+		options = {
+			xspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+			yspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+			zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+			
+			thrust = 0,
+			thrustspread = 0,
+			
+			momz = P_RandomRange(6,1)*me.scale,
+			momzspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+			
+			scale = me.scale,
+			scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+			
+			fuse = 20,
+		}
+	end
+	
+	local x,y = ReturnTrigAngles(angle)
+	local steam = P_SpawnMobjFromMobj(me,
+		dist*x+options.xspread,
+		dist*y+options.yspread,
+		z+options.zspread,
+		MT_TAKIS_STEAM
+	)
+	steam.angle = angle
+	P_Thrust(steam,steam.angle,options.thrust+options.thrustspread)
+	L_ZLaunch(steam,
+		options.momz+options.momzspread,
+		false
+	)
+	steam.scale = options.scale+options.scalespread
+	steam.timealive = 1
+	steam.tracer = me
+	steam.destscale = 1
+	steam.fuse = options.fuse
+	steam.startfuse = steam.fuse
+	steam.rollangle = $+(ANGLE_180*(P_RandomChance(FU/2) and 1 or 0))
+	return steam
 end)
 
 filesdone = $+1

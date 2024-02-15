@@ -669,6 +669,8 @@ addHook("MapLoad", function(mapid)
 	local hasexit = false
 	local hassign = false
 	local hasdoor = false
+	local door
+	local trig
 	
 	--spawn our hh things
 	--this seems REALLY bad, iterating all of this x3 on load
@@ -703,13 +705,13 @@ addHook("MapLoad", function(mapid)
 					--print(mt.angle,mt.angle*FU)
 					--local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
 					local px,py,pz  = mt.x*FU,mt.y*FU,mt.z*FU
-					local door = P_SpawnMobj(px,py,pz,MT_HHEXIT)
+					door = P_SpawnMobj(px,py,pz,MT_HHEXIT)
 					hasdoor = true
 				end
 			end
 		else
 			local d = doorheader
-			local door = P_SpawnMobj(d.x*FU,d.y*FU,d.z*FU,MT_HHEXIT)
+			door = P_SpawnMobj(d.x*FU,d.y*FU,d.z*FU,MT_HHEXIT)
 			hasdoor = true
 		end
 	end
@@ -736,7 +738,7 @@ addHook("MapLoad", function(mapid)
 				--trigger
 				if mt.type == mobjinfo[MT_SIGN].doomednum
 					local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
-					local trig = P_SpawnMobj(
+					trig = P_SpawnMobj(
 						mt.x*FU+(-10*x), 
 						mt.y*FU+(-10*y), 
 						mt.z*FU,
@@ -752,7 +754,7 @@ addHook("MapLoad", function(mapid)
 			end
 		else
 			local t = trigheader
-			local trig = P_SpawnMobj(
+			trig = P_SpawnMobj(
 				t.x*FU, 
 				t.y*FU, 
 				t.z*FU,
@@ -763,6 +765,11 @@ addHook("MapLoad", function(mapid)
 			end
 			hassign = true
 		end
+	end
+	
+	if not hassign
+		P_RemoveMobj(door)
+		return
 	end
 	
 	--remove exitsectors

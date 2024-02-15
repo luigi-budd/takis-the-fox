@@ -149,6 +149,8 @@ addHook("MobjThinker", function(rag)
 		return
 	end
 	
+	local intwod = (rag.flags2 & MF2_TWOD or twodlevel)
+	
 	rag.speed = abs(FixedHypot(rag.momx,rag.momy))
 	rag.timealive = $+1
 	if not (rag.timealive % 2)
@@ -164,7 +166,7 @@ addHook("MobjThinker", function(rag)
 		poof.fuse = 10				
 	end
 	--do hitboxes
-	if (TAKIS_NET.collaterals and not twodlevel)
+	if (TAKIS_NET.collaterals and not intwod)
 		--make hitting stuff more generous
 		local oldbox = {rag.radius,rag.height}
 		rag.radius,rag.height = $1*2, $2*2
@@ -205,8 +207,27 @@ addHook("MobjThinker", function(rag)
 			A_BossScream(rag,1,MT_SONIC3KBOSSEXPLODE)
 		end
 		
+		local rad = 1200*rag.scale
+		for p in players.iterate
+			
+			local m2 = p.realmo
+			
+			if not m2 or not m2.valid
+				continue
+			end
+			
+			if (FixedHypot(m2.x-rag.x,m2.y-rag.y) <= rad)
+				DoQuake(p,
+					FixedMul(
+						100*FU, FixedDiv( rad-FixedHypot(m2.x-rag.x,m2.y-rag.y),rad )
+					),
+					17
+				)
+			end
+		end
+		
 		--collaterals
-		if (TAKIS_NET.collaterals and not twodlevel)
+		if (TAKIS_NET.collaterals and not intwod)
 			local px = rag.x
 			local py = rag.y
 			local br = 420*rag.scale
@@ -2123,7 +2144,6 @@ addHook("MobjThinker",function(gem)
 		
 		gem.circle = FixedAngle( ((2*FU)*3/2)*gem.timealive )
 		
-		local waveforce = FU
 		local z = sin(gem.circle)*12
 		gem.spriteyoffset = 3*FU+z
 		
@@ -2562,7 +2582,7 @@ local gibbinglist = {
 local function regulargib(mo)
 	if not (mo and mo.valid) then return end
 	mo.takis_metalgibs = false
-	print("ASDSAD "..tostring(mo.takis_metalgibs))
+	print("metalgib: "..tostring(mo.takis_metalgibs))
 end
 
 for _,type in ipairs(gibbinglist)
@@ -2575,8 +2595,9 @@ addHook("MobjThinker",function(mo)
 		return
 	end
 	
+	mo.startfuse = $ or 20
 	mo.timealive = $+1
-	if mo.timealive >= 10
+	if (mo.startfuse - mo.timealive) <= 10
 		if mo.scalespeed == 0
 			mo.scalespeed = FU/20
 		end
@@ -2601,8 +2622,92 @@ addHook("MobjThinker",function(mo)
 	
 	local mul = FU*19/22
 	
-	mo.momx,mo.momy = FixedMul($1,mul),FixedMul($2,mul)
+	if mo.eflags & MFE_UNDERWATER
+		mo.tics = -1
+		mo.frame = A
+		mo.sprite = SPR_BUBL
+		mo.frame = D
+		mo.rollangle = 0
+		mul = $/2
+	else
+		if mo.sprite == SPR_BUBL
+			P_RemoveMobj(mo)
+			return
+		end
+	end
+	
+	mo.momx,mo.momy,mo.momz = FixedMul($1,mul),FixedMul($2,mul),FixedMul($3,mul)
 end,MT_TAKIS_STEAM)
+
+addHook("MobjThinker",function(drone)
+	if not (drone and drone.valid) then return end
+	
+	if not (drone.exitsign and drone.exitsign.valid)
+		local d = P_SpawnMobjFromMobj(drone,0,0,100*drone.scale,MT_THOK)
+		d.sprite = SPR_WDRG
+		d.frame = A
+		d.tics = -1
+		d.fuse = -1
+		drone.exitsign = d
+	end
+	if not (drone.exitrow1 and drone.exitrow1.valid)
+		local d = P_SpawnMobjFromMobj(drone,0,0,15*drone.scale,MT_THOK)
+		d.sprite = SPR_WDRG
+		d.frame = C
+		d.renderflags = $|RF_PAPERSPRITE
+		d.tics = -1
+		d.fuse = -1
+		drone.exitrow1 = d
+	end
+	if not (drone.exitrow2 and drone.exitrow2.valid)
+		local d = P_SpawnMobjFromMobj(drone,0,0,15*drone.scale,MT_THOK)
+		d.sprite = SPR_WDRG
+		d.frame = C
+		d.renderflags = $|RF_PAPERSPRITE
+		d.tics = -1
+		d.fuse = -1
+		drone.exitrow2 = d
+	end
+	
+	local ticker = (leveltime/2 % 2)
+	
+	if drone.timealive == nil
+		drone.timealive = 0
+	else
+		drone.timealive = $+1
+	end
+	drone.circle = FixedAngle( (5*FU)*drone.timealive )
+	
+	if (drone.exitsign and drone.exitsign.valid)
+		drone.exitsign.frame = D+ticker
+		if not HAPPY_HOUR.happyhour
+			drone.exitsign.flags2 = $|MF2_DONTDRAW
+		else
+			drone.exitsign.flags2 = $ &~MF2_DONTDRAW
+		end
+	end
+	if (drone.exitrow1 and drone.exitrow1.valid)
+		drone.exitrow1.frame = B+ticker
+		drone.exitrow1.angle = drone.circle
+		drone.exitrow1.spriteyoffset = sin(drone.circle)*12
+		if not HAPPY_HOUR.happyhour
+			drone.exitrow1.flags2 = $|MF2_DONTDRAW
+		else
+			drone.exitrow1.flags2 = $ &~MF2_DONTDRAW
+		end
+	end
+	if (drone.exitrow2 and drone.exitrow2.valid)
+		drone.exitrow2.frame = B+ticker
+		drone.exitrow2.angle = drone.circle+ANGLE_90
+		drone.exitrow2.spriteyoffset = sin(drone.circle)*12
+		if not HAPPY_HOUR.happyhour
+			drone.exitrow2.flags2 = $|MF2_DONTDRAW
+		else
+			drone.exitrow2.flags2 = $ &~MF2_DONTDRAW
+		end
+	end
+	
+end,MT_NIGHTSDRONE)
 
 filesdone = $+1
 

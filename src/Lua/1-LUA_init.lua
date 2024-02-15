@@ -283,6 +283,7 @@ rawset(_G, "TAKIS_NET", {
 	},
 	
 	inescapable = {
+		--vanilla
 		["techno hill zone 1"] = true,
 		["techno hill zone 2"] = true,
 		["deep sea zone 1"] = true,
@@ -297,16 +298,26 @@ rawset(_G, "TAKIS_NET", {
 		["aerial garden zone"] = true,
 		["azure temple zone"] = true,
 		
+		--oldc shit
+		["hub"] = true,
 		["hell coaster zone 1"] = true,
 		--this stage kinda already has an escape sequence
 		--of its own
 		["festung oder so"] = true,
 		["spiral hill pizza"] = true,
+		["magma mountain 1"] = true,
+		["hanging illusion"] = true,
+		["hexacolor heaven"] = true,
+		["null space"] = true,
 		
+		--tortured planet
 		--stage locks you out of any backtracking routes
 		["eruption conduit 2"] = true,
 		["snowcap nimbus 1"] = true,
 		["snowcap nimbus 2"] = true,
+		
+		--the past
+		["srb2 museum zone"] = true,
 	},
 	
 	--titlecard stuff
@@ -621,7 +632,6 @@ rawset(_G, "TakisInitTable", function(p)
 			tmcursorstyle = 1, --taunt menu cursor style, 1 for nums, 2 for cursor
 			quakes = 1,
 			flashes = 1,
-			windowstyle = 'win10', --for cosmenu, all lowercase
 			additiveai = 1,
 			clutchstyle = 1, --0 for bar, 1 for meter
 			sharecombos = 1,
@@ -1151,6 +1161,8 @@ sfxinfo[sfx_sprcar] = {
 }
 SafeFreeslot("sfx_didbad")
 sfxinfo[sfx_didbad].caption = "/"
+SafeFreeslot("sfx_didgod")
+sfxinfo[sfx_didgod].caption = "/"
 SafeFreeslot("sfx_fastfl")
 sfxinfo[sfx_fastfl].caption = "/"
 for i = 0, 9
@@ -1230,6 +1242,7 @@ SafeFreeslot("SPR_TGIB")
 SafeFreeslot("SPR_TSPR")
 SafeFreeslot("SPR_TKFT")
 SafeFreeslot("SPR_MTLD")
+SafeFreeslot("SPR_MDST")
 
 --
 
@@ -1843,11 +1856,22 @@ mobjinfo[MT_TAKIS_METALDETECTOR] = {
 
 SafeFreeslot("MT_TAKIS_STEAM")
 SafeFreeslot("S_TAKIS_STEAM")
+SafeFreeslot("S_TAKIS_STEAM2")
 states[S_TAKIS_STEAM] = {
-	sprite = SPR_RING,
-	frame = A,
-	tics = 20,
-	nextstate = S_NULL,
+	sprite = SPR_MDST,
+	frame = A|FF_ANIMATE,
+	var1 = 3,
+	var2 = 1,
+	tics = 3*1,
+	nextstate = S_TAKIS_STEAM2,
+}
+states[S_TAKIS_STEAM2] = {
+	sprite = SPR_MDST,
+	frame = D|FF_ANIMATE,
+	var1 = 7,
+	var2 = 1,
+	tics = 1*7,
+	nextstate = S_TAKIS_STEAM2
 }
 
 mobjinfo[MT_TAKIS_STEAM] = {
@@ -1886,6 +1910,7 @@ addHook("NetVars",function(n)
 		HAPPY_HOUR[v] = n($)
 	end
 	TAKIS_ACHIEVEMENTINFO = n($)
+	CV_TAKIS = n($) --should i even do thsi?
 end)
 
 addHook("ThinkFrame",do

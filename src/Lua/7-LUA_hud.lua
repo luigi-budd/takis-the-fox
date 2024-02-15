@@ -283,13 +283,14 @@ end
 -- https:--github.com/id-Software/DOOM/blob/77735c3ff0772609e9c8d29e3ce2ab42ff54d20b/linuxdoom-1.10/st_stuff.c#L752
 local function calcstatusface(p,takis)
 	local me = p.mo
+	local noretrooverride = false
 	
 	--idle
 	if not HAPPY_HOUR.happyhour
 	and not ((p.pizzaface) or ultimatemode)
-			takis.HUD.statusface.state = "IDLE"
-			takis.HUD.statusface.frame = (leveltime/3)%2
-			takis.HUD.statusface.priority = 0
+		takis.HUD.statusface.state = "IDLE"
+		takis.HUD.statusface.frame = (leveltime/3)%2
+		takis.HUD.statusface.priority = 0
 	else
 		takis.HUD.statusface.state = "PTIM"
 		takis.HUD.statusface.frame = (2*leveltime/3)%2
@@ -306,10 +307,12 @@ local function calcstatusface(p,takis)
 		takis.HUD.statusface.priority = 0		
 	end
 	if (takis.transfo & TRANSFO_BALL)
+	and (p.realmo.sprite == SPR2_ROLL)
 		--im lazy and dont want to draw more ball frames
 		takis.HUD.statusface.state = "SPR2"
 		takis.HUD.statusface.frame = p.realmo.frame
-		takis.HUD.statusface.priority = 0		
+		takis.HUD.statusface.priority = 0
+		noretrooverride = true
 	end
 	if (takis.transfo & TRANSFO_PANCAKE)
 		takis.HUD.statusface.state = "PCKE"
@@ -407,6 +410,7 @@ local function calcstatusface(p,takis)
 	--isnt this just so retro?
 	--god, if only i lived in retroville
 	if TAKIS_NET.isretro
+	and not noretrooverride
 		takis.HUD.statusface.frame = 0
 	end
 	
@@ -1916,6 +1920,18 @@ local function drawhappyhour(v,p)
 			v.fadeScreen(cmap,16)
 		elseif ((tics >= ((2*TR)+17)) and (tics < 103))
 			v.fadeScreen(cmap,16-(tics-87)) 
+		end
+		if tics < 4*TR
+		and not (p.texttimer < TICRATE/2)
+			if p.texttimer
+			and p.textvar == 1
+				v.drawString(160,
+					52,
+					"GET TO THE GOAL!",
+					V_PERPLAYER|V_GREENMAP,
+					"center"
+				)
+			end
 		end
 		
 		local h = takis.HUD.happyhour
@@ -4309,7 +4325,7 @@ addHook("HUD", function(v,p,tic,endtic)
 	end
 	if (skins[p.skin].name ~= TAKIS_SKIN) then return end	
 	if not (p.takistable) then return end
-	if not (p.takistable.HUD.bosscards.name) then return end
+	if (p.takistable.HUD.bosscards.name == '') then return end
 	
 	hud.disable("stagetitle")
 end,"titlecard")

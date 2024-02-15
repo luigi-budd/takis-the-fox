@@ -129,6 +129,7 @@
 	-[done]ujl coop score thing for combo sharing
 	-[done but better]make the server execute a command when cheats are activated to
 	 set a var in TAKIS_NET
+	-replace all dust effects with the cool funny takis_steam
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -202,6 +203,27 @@ end
 --also lazy
 local function MeSoundHalfVolume(sfx,p)
 	S_StartSoundAtVolume(nil,sfx,4*255/5,p)
+end
+
+--buggie gave me this
+local function peptoboxed(mobj)
+	if mobj.player.pep and mobj.skin == "peppino"
+		mobj.player.height = mobj.player.spinheight
+		mobj.player.mo.radius = 3*skins[mobj.skin].radius/2
+		mobj.player.pflags = $&~PF_SPINNING
+		  
+		if not mobj.player.pep.transfo
+			PT_SpawnEffect(mobj,"sfx_peppino_transform") --Custom peppino function, would not work
+			mobj.player.pep.transfoappear = 16
+		end
+		PT_SpawnEffect(mobj,"poof") --Custom peppino function, would not work
+		mobj.player.pep.transfo = "box"
+		mobj.player.pep.transfovars = {}
+		mobj.state = S_BOXPEP_TRNS
+		mobj.player.pep.transfovars["transanimtime"] = 20
+		mobj.player.pep.transfotime = 30*TICRATE
+		mobj.player.jumpfactor = 2*skins[mobj.skin].jumpfactor/3
+	end
 end
 
 local ranktonum = {
@@ -459,6 +481,7 @@ addHook("PlayerThink", function(p)
 						
 						if (p.exiting <= 45)
 						and (me.health)
+						--ends your run?
 						and not ultimatemode
 							P_KillMobj(me)
 							S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSPLDET4])
@@ -1311,7 +1334,7 @@ addHook("PlayerThink", function(p)
 							local dust = P_SpawnMobjFromMobj(me,25*x,25*y,0,mt)
 							dust.momx = FixedMul(sin(fa),radius)
 							dust.momy = FixedMul(cos(fa),radius)
-							dust.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or 0))
+							dust.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
 							dust.destscale = dust.scale/2
 						end
 					end
@@ -1539,6 +1562,53 @@ addHook("PlayerThink", function(p)
 								--d2.scale = $*2/3
 								d2.destscale = FU/10
 								d2.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d2.x, d2.y) --+ ANG5
+								
+								for i = 3,P_RandomRange(5,7)
+									TakisSpawnDust(me,
+										p.drawangle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed()),
+										P_RandomRange(0,-20),
+										P_RandomRange(-1,2)*me.scale,
+										{
+											xspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+											yspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+											zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+											
+											thrust = 0,
+											thrustspread = 0,
+											
+											momz = P_RandomRange(6,1)*me.scale,
+											momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
+											
+											scale = me.scale,
+											scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+											
+											fuse = 23+P_RandomRange(-2,3),
+										}
+									)
+								end
+								/*
+								for i = 3,P_RandomRange(5,7)
+									local angle = p.drawangle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
+									local dist = P_RandomRange(0,-20)
+									local x,y = ReturnTrigAngles(angle)
+									local steam = P_SpawnMobjFromMobj(me,
+										dist*x+P_RandomFixed(),
+										dist*y+P_RandomFixed(),
+										P_RandomRange(-1,2)*me.scale+P_RandomFixed(),
+										MT_TAKIS_STEAM
+									)
+									P_SetObjectMomZ(steam,
+										P_RandomRange(6,1)*me.scale+P_RandomFixed(),
+										false
+									)
+									steam.angle = angle
+									steam.scale = me.scale+(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1))
+									steam.timealive = 1
+									steam.tracer = me
+									steam.destscale = 1
+									steam.fuse = 20
+								end
+								*/
 							end
 						end
 					end
@@ -1652,14 +1722,53 @@ addHook("PlayerThink", function(p)
 				or me.sprite2 == SPR2_WALK)
 				and (me.health)
 				and not takis.dontfootdust
-					if ((me.frame == A) or (me.frame == E))
+					local frame = me.frame & FF_FRAMEMASK
+					if ((frame == A) or (frame == E))
 						if not takis.steppedthisframe
 							local sfx = P_RandomRange(sfx_takst1,sfx_takst3)
 							
 							S_StartSoundAtVolume(me,sfx_takst0,255/2)
 							S_StartSound(me,sfx)
 							takis.steppedthisframe = true
-							P_SpawnSkidDust(p,3*me.scale)
+							TakisSpawnDust(me,
+								p.drawangle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed()),
+								P_RandomRange(0,-10),
+								P_RandomRange(-1,2)*me.scale+P_RandomFixed(),
+								{
+									xspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+									yspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+									zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+									
+									thrust = 0,
+									thrustspread = 0,
+									
+									momz = 0,
+									momzspread = 0,
+									
+									scale = me.scale*4/5,
+									scalespread = 0,--(P_RandomFixed()/4*((P_RandomChance(FU/2)) and 1 or -1)),
+									
+									fuse = 15+P_RandomRange(-2,3),
+								}
+							)
+							/*
+							local angle = p.drawangle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
+							local dist = P_RandomRange(0,-10)
+							local x,y = ReturnTrigAngles(angle)
+							local steam = P_SpawnMobjFromMobj(me,
+								dist*x+P_RandomFixed(),
+								dist*y+P_RandomFixed(),
+								P_RandomRange(-1,2)*me.scale+P_RandomFixed(),
+								MT_TAKIS_STEAM
+							)
+							steam.angle = angle
+							steam.scale = me.scale*4/5+(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1))
+							steam.timealive = 1
+							steam.tracer = me
+							steam.destscale = 1
+							steam.fuse = 20
+							*/
+							
 						end
 					else
 						takis.steppedthisframe = false
@@ -1700,7 +1809,7 @@ addHook("PlayerThink", function(p)
 							local mz = takis.prevmomz/10
 							dust.momx = FixedMul(FixedMul(sin(fa),radius),mz)
 							dust.momy = FixedMul(FixedMul(cos(fa),radius),mz)
-							dust.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or 0))
+							dust.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
 							dust.destscale = dust.scale/2
 							takis.dontlanddust = true
 						end
@@ -1999,12 +2108,6 @@ addHook("PlayerThink", function(p)
 					local hadbonus = false
 					--time for bonuses!
 					if takis.fakeexiting == 1
-						
-						if (takis.heartcards == 1)
-						and (p.timeshit >= 3)
-						and (p.playerstate == PST_LIVE)
-							TakisAwardAchievement(p,ACHIEVEMENT_HARDCORE)
-						end
 						
 						if takis.shotgunned
 							if ((takis.shotgun) and (takis.shotgun.valid))
@@ -3143,6 +3246,10 @@ local function hammerhitbox(t,tm)
 		if CanPlayerHurtPlayer(t.parent.player,tm.player)
 			TakisAddHurtMsg(tm.player,HURTMSG_HAMMERBOX)
 			P_DamageMobj(tm,t,t.parent,5)
+		else
+			if tm.skin == "peppino"
+				peptoboxed(tm)
+			end
 		end
 	else
 		
@@ -3548,7 +3655,7 @@ addHook("JumpSpecial", function(p)
 			local dust = P_SpawnMobjFromMobj(me,x,y,0,mt)
 			dust.momx = FixedMul(sin(fa),radius)
 			dust.momy = FixedMul(cos(fa),radius)
-			dust.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or 0))
+			dust.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
 			dust.destscale = dust.scale/2
 		end
 

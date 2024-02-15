@@ -21,7 +21,7 @@ end
 
 addHook("ThinkFrame",do
 	if (OLDC and OLDC.SetSkinFullName) and not compat.oldcname
-		OLDC.SetSkinFullName(TAKIS_SKIN,"Takis the Fox")
+		OLDC.SetSkinFullName(TAKIS_SKIN,"Takis")
 		compat.oldcname = true
 		printf("Added OLDC Fullname.")
 	end
