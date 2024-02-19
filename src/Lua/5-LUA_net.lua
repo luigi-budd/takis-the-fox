@@ -37,6 +37,12 @@ CV_TAKIS.hammerquake = CV_RegisterVar({
 	flags = CV_NETVAR|CV_SHOWMODIF,
 	PossibleValue = CV_TrueFalse
 })
+CV_TAKIS.chaingun = CV_RegisterVar({
+	name = "takis_chaingun",
+	defaultvalue = "false",
+	flags = CV_NETVAR|CV_SHOWMODIF,
+	PossibleValue = CV_TrueFalse
+})
 
 local boolean = {
 	["false"] = false,
@@ -49,6 +55,7 @@ local function CVtoNET()
 	t.collaterals = boolean[string.lower(CV_TAKIS.collaterals.string)]
 	t.cards = boolean[string.lower(CV_TAKIS.heartcards.string)]
 	t.hammerquakes = boolean[string.lower(CV_TAKIS.hammerquake.string)]
+	t.chaingun = boolean[string.lower(CV_TAKIS.chaingun.string)]
 end
 
 local function livesCount()

@@ -124,11 +124,13 @@ function TB.AdvanceBox(player)
     
 	S_StartSound(nil,sfx_tb_cls,player)
     if player.textBox.current != 0
+		print(player.textBox.current)
 		if lasttree
 			if player.textBox.tree[lasttree].advancescript then
 				player.textBox.tree[lasttree].advancescript(player)
 			end
 		end
+		player.textBox.move = player.textBox.tree[player.textBox.current].move
 	else
 		if player.textBox.tree[lasttree].closescript then 
 			player.textBox.tree[lasttree].closescript(player)
@@ -1089,5 +1091,44 @@ TAKIS_TEXTBOXES.gmap1000 = {
 	},
 }
 
+--TEST MAP
+TAKIS_TEXTBOXES.gmap1003 = {
+	[3] = {							
+		[1] = { 
+			name = takisname,
+			portrait = takisport,
+			color = "playercolor",
+			text = "This is a dialog box executed through linedef",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = TICRATE*2,
+			next = 2,
+		},
+		[2] = { 
+			name = takisname,
+			portrait = takisport,
+			color = "playercolor",
+			text = "Transparent boxes let you move",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = TICRATE*2,
+			move = true,
+			next = 3,
+		},
+		[3] = { 
+			name = takisname,
+			portrait = takisport,
+			color = "playercolor",
+			text = "Closing this box will give you 5 rings",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = TICRATE*2,
+			closescript = function(p)
+				p.rings = $+5
+			end,
+			next = 0,
+		},
+	},
+}
 
 filesdone = $+1

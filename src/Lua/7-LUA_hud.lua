@@ -307,7 +307,7 @@ local function calcstatusface(p,takis)
 		takis.HUD.statusface.priority = 0		
 	end
 	if (takis.transfo & TRANSFO_BALL)
-	and (p.realmo.sprite == SPR2_ROLL)
+	and (p.realmo.sprite2 == SPR2_ROLL)
 		--im lazy and dont want to draw more ball frames
 		takis.HUD.statusface.state = "SPR2"
 		takis.HUD.statusface.frame = p.realmo.frame
@@ -365,6 +365,9 @@ local function calcstatusface(p,takis)
 		--evil grin when killing someone
 		--or a boss
 		if takis.HUD.statusface.evilgrintic
+		or (takis.transfo & TRANSFO_SHOTGUN
+		and TAKIS_NET.chaingun
+		and takis.use >= TR)
 			takis.HUD.statusface.state = "EVL_"
 			takis.HUD.statusface.frame = (leveltime/4)%2
 			takis.HUD.statusface.priority = 7
@@ -494,6 +497,7 @@ local function drawface(v,p)
 	end
 	
 	if (TAKIS_NET.inbossmap)
+	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
 		eflags = $ &~(V_HUDTRANS|V_HUDTRANSHALF)
 	end
@@ -760,6 +764,7 @@ local function drawtimer(v,p,altpos)
 	if (type == "regular"
 	and (gametype == GT_COOP))
 	and (not altpos)
+	and not modeattacking
 		if not p.exiting then return end
 	end
 	
@@ -4304,6 +4309,7 @@ addHook("HUD", function(v)
 			
 			if (type == "regular"
 			and (gametype == GT_COOP))
+			and not modeattacking
 				drawtimer(v,p,true)
 			end
 			

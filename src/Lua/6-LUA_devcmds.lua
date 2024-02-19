@@ -486,6 +486,16 @@ COM_AddCommand("forcecheat", function(p, num)
 	
 end,COM_ADMIN)
 
+COM_AddCommand("pong", function(p)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	TakisSpawnPongler(p.realmo,p.drawangle)
+	
+end,COM_ADMIN)
+
 /*
 COM_AddCommand("_gmodify", function(p,gdex,value,vty)
 	local dex = _G[gdex]

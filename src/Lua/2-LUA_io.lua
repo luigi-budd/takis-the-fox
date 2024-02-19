@@ -9,7 +9,7 @@
 --Y7GDSUYFHIDJPK AAAAAAAAAAAHHHHHHHHH!!!!!!!!
 
 --if you use this manually and mess something up, its not my fault!
-COM_AddCommand("takis_load", function(p,sig, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,a12,timeshit)
+COM_AddCommand("takis_load", function(p,sig, a1,a2,a4,t1,t2,a5,a6,a7,a10,a11,a12,timeshit)
 	
 	if sig ~= TAKIS_ACHIEVEMENTINFO.luasig
 		CONS_Printf(p,"\x85"+"Do not use this command manually!")
@@ -28,7 +28,6 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,
 	a5 = tonumber($)
 	a6 = tonumber($)
 	a7 = tonumber($)
-	a9 = tonumber($)
 	a10 = tonumber($)
 	a11 = tonumber($)
 	a12 = tonumber($)
@@ -102,14 +101,6 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a4,t1,t2,a5,a6,a7,a9,a10,a11,
 		CONS_Printf(p,"\x85"+"Error loading Flashes! Defaulting to 1...")
 	end
 
-	if a9 == 1
-		takis.io.additiveai = 1
-	elseif a9 == 0
-		takis.io.additiveai = 0
-	else
-		CONS_Printf(p,"\x85"+"Error loading Additive Afterimages! Defaulting to 0...")
-	end
-
 	if a10 == 1
 		takis.io.clutchstyle = 1
 	elseif a10 == 0
@@ -176,7 +167,6 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	a5 = t.tmcursorstyle
 	a6 = t.quakes
 	a7 = t.flashes
-	a9 = t.additiveai
 	a10 = t.clutchstyle
 	a11 = t.sharecombos
 	a12 = t.dontshowach
@@ -189,7 +179,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 		
 		local file = io.openlocal("client/takisthefox/config.dat", "w+")
 		file:write(" "..a1.." "..a2.." "..a4.." "..t1.." "
-			..t2.." "..a5.." "..a6.." "..a7.." "..a9.." "
+			..t2.." "..a5.." "..a6.." "..a7.." "
 			..a10.." "..a11.." "..a12.." "..timeshit
 		)
 		

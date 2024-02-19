@@ -574,7 +574,7 @@ addHook("MobjThinker",function(door)
 	end
 	
 	if door.state == S_HHEXIT_OPEN
-		door.frame = 1+((hh.time)%14)
+		door.frame = 1+((hh.time)%14)|FF_FULLBRIGHT
 	elseif door.state == S_HHEXIT_CLOSE3
 		if not (door.exittic)
 			door.exittic = 1
@@ -681,7 +681,6 @@ addHook("MapLoad", function(mapid)
 		end
 	end	
 	
-	--TODO: test this lol
 	local doorheader = {}
 	doorheader.x = tonumber(mapheaderinfo[gamemap].takis_hh_exit_x)
 	doorheader.y = tonumber(mapheaderinfo[gamemap].takis_hh_exit_y)
@@ -768,6 +767,7 @@ addHook("MapLoad", function(mapid)
 	end
 	
 	if not hassign
+	and (door and door.valid)
 		P_RemoveMobj(door)
 		return
 	end

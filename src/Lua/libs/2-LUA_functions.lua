@@ -63,8 +63,10 @@ rawset(_G, "TakisButtonStuff", function(p,takis)
 		takis.weaponnext = 0
 		takis.weaponprev = 0
 		*/
-		takis.noability = NOABIL_ALL|NOABIL_THOK
+		takis.noability = NOABIL_ALL|NOABIL_THOK|NOABIL_AFTERIMAGE
 		if takis.nocontrol
+		--LOL THIS FIXES IT
+		and (p.powers[pw_carry] ~= CR_DUSTDEVIL)
 			p.powers[pw_nocontrol] = takis.nocontrol
 		end
 	end
@@ -281,9 +283,12 @@ rawset(_G, "TakisHappyHourThinker", function(p)
 			local time = takis.HUD.timeshake
 			
 			if tics <= (56*TR)
+				local nomus,noendmus,song,songend = GetHappyHourMusic()
+				
 				if not takis.sethappyend
-					S_ChangeMusic("hpyhre",false,p,0,0,3*MUSICRATE)
-					mapmusname = "hpyhre"
+				and not noendmus
+					S_ChangeMusic(HAPPY_HOUR.songend,false,p,0,0,3*MUSICRATE)
+					mapmusname = HAPPY_HOUR.songend
 					takis.sethappyend = true
 				end
 				DoQuake(p,(time*FU)/50,1,0)
@@ -786,9 +791,11 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 				takis.ballretain = 2
 				takis.noability = $|NOABIL_SLIDE
 			else
+				--detransfo otherwise
 				if takis.ballretain == 0
 					S_StopSoundByID(me,sfx_trnsfo)
 					S_StartSound(me,sfx_shgnk)
+					p.pflags = $ &~PF_SPINNING
 					takis.transfo = $ &~TRANSFO_BALL
 					p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
 				end
@@ -802,23 +809,36 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			if (takis.onGround)
 				p.thrustfactor = skins[TAKIS_SKIN].thrustfactor*10
 				
-				takis.dustspawnwait = $+FixedDiv(takis.accspeed,60*FU)
-				while takis.dustspawnwait > FU
-					takis.dustspawnwait = $-FU
-					--xmom code
-					if (takis.onGround)
-					and not (leveltime % 6)
-					and (takis.accspeed >= 25*FU)
-						local d1 = P_SpawnMobjFromMobj(me, -20*cos(p.drawangle + ANGLE_45), -20*sin(p.drawangle + ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
-						local d2 = P_SpawnMobjFromMobj(me, -20*cos(p.drawangle - ANGLE_45), -20*sin(p.drawangle - ANGLE_45), 0, MT_TAKIS_CLUTCHDUST)
-						--d1.scale = $*2/3
-						d1.destscale = FU/10
-						d1.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d1.x, d1.y) --- ANG5
-
-						--d2.scale = $*2/3
-						d2.destscale = FU/10
-						d2.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d2.x, d2.y) --+ ANG5
-					end
+				local chance = P_RandomChance(FU/3)
+				if takis.accspeed >= 30*FU
+					chance = true
+				end
+				if takis.accspeed <= 20*FU
+					chance = false
+				end
+				
+				if chance
+					TakisSpawnDust(me,
+						p.drawangle+FixedAngle(P_RandomRange(-45,45)*FU+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
+						P_RandomRange(0,-50),
+						P_RandomRange(-1,2)*me.scale,
+						{
+							xspread = 0,--(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+							yspread = 0,--(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+							zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+							
+							thrust = P_RandomRange(0,-10)*me.scale,
+							thrustspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+							
+							momz = P_RandomRange(4,0)*P_RandomRange(3,10)*(me.scale/2),
+							momzspread = ((P_RandomChance(FU/2)) and 1 or -1),
+							
+							scale = me.scale,
+							scalespread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+							
+							fuse = 15+P_RandomRange(-5,5),
+						}
+					)
 				end
 			else
 				p.thrustfactor = skins[TAKIS_SKIN].thrustfactor
@@ -2145,6 +2165,7 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	ghost.takis_spritexscale,ghost.takis_spriteyscale = me.spritexscale, me.spriteyscale
 	ghost.takis_spritexoffset,ghost.takis_spriteyoffset = me.spritexoffset, me.spriteyoffset
 	ghost.takis_rollangle = me.rollangle
+	ghost.blendmode = AST_ADD
 	return ghost
 end)
 
@@ -3528,9 +3549,11 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 	if down == nil
 		down = false
 	end
-
+	
 	local takis = p.takistable
 	local me = p.mo
+	
+	if takis.noability & NOABIL_SHOTGUN then return end
 	
 	local lastaimingbeforedown = p.aiming
 	if down
@@ -4067,27 +4090,31 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	end
 end)
 
---TODO: fix this
 local function metalorreggib(mo)
 	local spawnmetal = true
 	
-	if ( ((mo.flags & MF_ENEMY)
+	if ((mo.flags & MF_ENEMY|MF_BOSS)
 	or (mo.type == MT_TAKIS_BADNIK_RAGDOLL))
-	and mo.sprite ~= SPR_PLAY)
 		if (TAKIS_NET.isretro)
 			spawnmetal = false
 		end
 		if mo.takis_metalgibs ~= nil
 			spawnmetal = mo.takis_metalgibs
 		end
-	elseif (mo.type == MT_PLAYER or mo.sprite == SPR_PLAY)
+	end
+	
+	if (mo.type == MT_PLAYER or mo.sprite == SPR_PLAY)
 		if not (
-		(mo.player and (mo.player.charflags & SF_MACHINE))
-		or
-		(skins[mo.skin].flags & SF_MACHINE))
+			(mo.player and (mo.player.charflags & SF_MACHINE))
+			or
+			(skins[mo.skin].flags & SF_MACHINE)
+		)
 			spawnmetal = false
+		else
+			spawnmetal = true
 		end
 	end
+	
 	return spawnmetal
 end
 
@@ -4131,7 +4158,6 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang,fromdoor)
 		gib.frame = P_RandomRange(A,I)
 		if (mo and mo.valid)
 			if not fromdoor
-				--TODO: test thsi
 				if not metalorreggib(mo)
 					gib.frame = choosething(A,B,E,G,H,I)
 				end
@@ -4637,6 +4663,22 @@ rawset(_G,"TakisSpawnDust",function(me,angle,dist,z,options)
 	steam.startfuse = steam.fuse
 	steam.rollangle = $+(ANGLE_180*(P_RandomChance(FU/2) and 1 or 0))
 	return steam
+end)
+
+rawset(_G,"TakisSpawnPongler",function(mo,ang)
+	local x,y = ReturnTrigAngles(ang+ANGLE_90)
+	local rad = mo.radius/FU
+	local pong = P_SpawnMobjFromMobj(mo,rad*x,rad*y,mo.height/2,MT_TAKIS_PONGLER)
+	pong.momz = 3*mo.scale
+	
+	local oldscale = pong.scale
+	pong.scale = $/6
+	pong.destscale = oldscale
+	pong.scalespeed = 0
+	
+	pong.angle = ang+ANGLE_90
+	pong.frame = P_RandomRange(A,states[S_TAKIS_PONGLER].var1)
+	return pong
 end)
 
 filesdone = $+1

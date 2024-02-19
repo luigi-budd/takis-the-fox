@@ -238,6 +238,7 @@ rawset(_G, "TAKIS_NET", {
 	collaterals = true, --let ragdolls kill other ragdolls
 	cards = true, --only spawn heartcards if this is true
 	hammerquakes = true,
+	chaingun = false,
 	
 	numdestroyables = 0,
 	partdestroy = 0,
@@ -541,6 +542,7 @@ rawset(_G, "TakisInitTable", function(p)
 		nightsexplode = false,
 		bashtime = 0,
 		bashtics = 0,
+		bashcooldown = false,
 		pizzastate = 0,
 		deathfloored = false,
 		pancaketime = 0,
@@ -1094,11 +1096,6 @@ sfxinfo[sfx_mclang] = {
 	caption = "\x8DMysterious clanging\x80",
 	flags = SF_X2AWAYSOUND|SF_NOMULTIPLESOUND|SF_TOTALLYSINGLE,
 }
-SafeFreeslot("sfx_sparry")
-sfxinfo[sfx_sparry] = {
-	flags = SF_X2AWAYSOUND,
-	caption = "\x82POW!\x80"
-}
 SafeFreeslot("sfx_rakupc")
 sfxinfo[sfx_rakupc].caption = "/"
 SafeFreeslot("sfx_rakupb")
@@ -1120,10 +1117,6 @@ SafeFreeslot("sfx_rakdnc")
 sfxinfo[sfx_rakdnc].caption = "/"
 SafeFreeslot("sfx_rakdnd")
 sfxinfo[sfx_rakdnd].caption = "/"
-SafeFreeslot("sfx_tactic")
-sfxinfo[sfx_tactic].caption = "\x86Tick...\x80"
-SafeFreeslot("sfx_tactoc")
-sfxinfo[sfx_tactoc].caption = "\x86..Tock\x80"
 SafeFreeslot("sfx_homrun")
 sfxinfo[sfx_homrun] = {
 	caption = "\x82HOMERUN!!!\x80",
@@ -1216,7 +1209,10 @@ SafeFreeslot("sfx_sptclt")
 sfxinfo[sfx_sptclt].caption = "Collect Spirit"
 SafeFreeslot("sfx_sdmkil")
 sfxinfo[sfx_sdmkil].caption = "/"
-
+SafeFreeslot("sfx_summit")
+sfxinfo[sfx_summit].caption = "\x89SUMMIT!\x80"
+SafeFreeslot("sfx_ponglr")
+sfxinfo[sfx_ponglr].caption = "/"
 
 --spr_ freeslot
 
@@ -1243,6 +1239,7 @@ SafeFreeslot("SPR_TSPR")
 SafeFreeslot("SPR_TKFT")
 SafeFreeslot("SPR_MTLD")
 SafeFreeslot("SPR_MDST")
+SafeFreeslot("SPR_PGLR") --polar and other pongler sprites
 
 --
 
@@ -1883,6 +1880,22 @@ mobjinfo[MT_TAKIS_STEAM] = {
 	flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT
 }
 
+SafeFreeslot("MT_TAKIS_PONGLER")
+SafeFreeslot("S_TAKIS_PONGLER")
+states[S_TAKIS_PONGLER] = {
+	sprite = SPR_PGLR,
+	frame = A,
+	var1 = A,
+	tics = TR*3/2,
+}
+mobjinfo[MT_TAKIS_PONGLER] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_PONGLER,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT
+}
 
 addHook("NetVars",function(n)
 	TAKIS_NET = n($)

@@ -107,11 +107,7 @@ addHook("MobjThinker", function(ai)
 		end
 	end
 	
-	if p.takistable.io.additiveai
-		ai.blendmode = AST_ADD
-	else
-		ai.blendmode = AST_TRANSLUCENT
-	end
+	ai.blendmode = AST_ADD
 	
 	local fuselimit = 5
 
@@ -203,6 +199,13 @@ addHook("MobjThinker", function(rag)
 	if rag.speed == 0
 	or ((P_IsObjectOnGround(rag)) and (rag.timealive > 4))
 		SpawnEnemyGibs(nil,rag)
+		
+		if P_IsObjectOnGround(rag)
+		and P_RandomChance(FU/2)
+			P_SetObjectMomZ(rag,10*FU)
+			return
+		end
+		
 		for i = 0, 34
 			A_BossScream(rag,1,MT_SONIC3KBOSSEXPLODE)
 		end
@@ -329,6 +332,7 @@ addHook("MobjSpawn", function(post)
 		combo = {},
 		cardsrespawn = {},
 		comborespawn = {},
+		first = {},
 	}
 end, MT_STARPOST)
 
@@ -387,37 +391,212 @@ addHook("TouchSpecial", function(post,touch)
 		return
 	end
 	
-	if not post.activators
-		post.activators = {
-			cards = {},
-			combo = {},
-			cardsrespawn = {},
-			comborespawn = {},
-		}
-	end
-	if not post.activators.cards
-		post.activators.cards = {}
-	end
-	if not post.activators.combo
-		post.activators.combo = {}
-	end
-	
 	--thanks amperbee
 	if not post.activators.cards[touch]
 		
-		if ((post.activators.cards[touch] == false) or (post.activators.cards[touch] == nil))
+		if ((post.activators.cards[touch] == false) 
+		or (post.activators.cards[touch] == nil))
 			docards(post,touch)
 		end
 	end
 	if not post.activators.combo[touch]
-		if ((post.activators.combo[touch] == false) or (post.activators.combo[touch] == nil))
+		if ((post.activators.combo[touch] == false) 
+		or (post.activators.combo[touch] == nil))
 			docombo(post,touch)
 		end
 	end
-	if not touch.player.takistable.HUD.menutext.tics
-		touch.player.takistable.HUD.menutext.tics = 3*TR+9
+	if not post.activators.first[touch]
+		if ((post.activators.first[touch] == false) 
+		or (post.activators.first[touch] == nil))
+			touch.player.takistable.HUD.menutext.tics = 3*TR+9
+			
+			TakisSpawnPongler(post,
+				R_PointToAngle2(touch.x,touch.y,
+					post.x,post.y
+				)
+			)
+			post.activators.first[touch] = true
+			S_StartSound(post,sfx_ponglr)
+		end
 	end
+	
 end, MT_STARPOST)
+
+addHook("MobjThinker",function(me)
+	if not me
+	or not me.valid
+		return
+	end
+	
+	if me.activators == nil
+	or (HAPPY_HOUR.time == 1)
+		if HAPPY_HOUR.time == 1
+			me.activators.cards = {}
+			me.activators.combo = {}
+			me.activators.cardsrespawn = {}
+			me.activators.comborespawn = {}
+			--dont set first field
+		else
+			me.activators = {
+				cards = {},
+				combo = {},
+				cardsrespawn = {},
+				comborespawn = {},
+				first = {},
+			}
+		end
+		return
+	end
+	
+	for k,v in pairs(me.activators.cardsrespawn)
+		if v == nil
+			continue
+		end
+		
+		if v > 0
+			if v > CV_FindVar("respawnitemtime").value*TICRATE
+				v = CV_FindVar("respawnitemtime").value*TICRATE
+			end
+			
+			me.activators.cardsrespawn[k] = $-1
+			
+			if (HAPPY_HOUR.time == 1)
+				me.activators.cardsrespawn[k] = 0
+			end
+		elseif v == 0
+		and (me.activators.cards[k] ~= false)
+			me.activators.cards[k] = false
+			table.remove(me.activators.cardsrespawn,me.activators.cardsrespawn[k])
+			S_StartSound(me,sfx_sprcar)
+			
+			local g = P_SpawnMobjFromMobj(me,0,0,me.height/4,MT_THOK)
+			g.sprite = SPR_HTCD
+			g.frame = A
+			g.tics = TR
+			g.blendmode = AST_ADD
+			g.scale = FixedMul(me.scale,2*FU)
+			g.destscale = FixedDiv(me.scale,4*FU)
+		end
+	end
+
+	for k,v in pairs(me.activators.comborespawn)
+		if v == nil
+			continue
+		end
+		
+		if v > 0
+			if v > CV_FindVar("respawnitemtime").value*TICRATE
+				v = CV_FindVar("respawnitemtime").value*TICRATE
+			end
+			
+			me.activators.comborespawn[k] = $-1
+			
+			if (HAPPY_HOUR.time == 1)
+				me.activators.comborespawn[k] = 0
+			end
+		elseif v == 0
+		and (me.activators.combo[k] ~= false)
+			me.activators.combo[k] = false
+			table.remove(me.activators.comborespawn,me.activators.comborespawn[k])
+			S_StartSound(me,sfx_sprcom)
+
+			local g = P_SpawnMobjFromMobj(me,0,0,me.height/4,MT_THOK)
+			g.sprite = SPR_CMBB
+			g.frame = A
+			g.tics = TR
+			local scale =  FU/2
+			g.spritexscale = scale
+			g.spriteyscale = scale
+			g.blendmode = AST_ADD
+			g.scale = FixedMul(me.scale,2*FU)
+			g.destscale = FixedDiv(me.scale,4*FU)
+		end
+	end
+	
+	local br = 215*me.scale
+	
+	for p in players.iterate
+		if p and p.valid
+		and p.realmo.health
+		and P_CheckSight(me,p.realmo)
+				
+			if p.realmo.skin ~= TAKIS_SKIN
+				continue
+			end
+			
+			local dx = me.x-p.realmo.x
+			local dy = me.y-p.realmo.y
+			
+			if FixedHypot(dx,dy) > br
+				continue
+			end
+			
+			--thanks Monster Iestyn for this!
+			if (p and p == displayplayer)
+				local found = p.realmo
+				
+				local x,y = ReturnTrigAngles(R_PointToAngle2(me.x,me.y, camera.x,camera.y))
+				if not camera.chase
+					x,y = ReturnTrigAngles(R_PointToAngle2(me.x,me.y, found.x,found.y))
+				end
+				if found.flags2 & MF2_TWOD
+				or twodlevel
+					x,y = ReturnTrigAngles(InvAngle(R_PointToAngle(found.x,found.y)))
+				end
+				
+				--card
+				local card = P_SpawnMobjFromMobj(me,64*x,64*y,me.height/4+(FU*10),MT_UNKNOWN)
+				card.sprite = SPR_HTCD
+				card.tics = 2		
+				if me.activators.cards[found] == true
+					card.frame = B|FF_TRANS50
+				else
+					card.frame = A
+				end
+				
+				card.frame = $|FF_PAPERSPRITE
+				if found.flags2 & MF2_TWOD
+				or twodlevel
+					card.angle = (R_PointToAngle(me.x,me.y))-ANGLE_90
+				else
+					if camera.chase
+						card.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
+					else
+						card.angle = (R_PointToAngle2(me.x,me.y, found.x,found.y))-ANGLE_90					
+					end
+				end
+				--
+
+				--combo
+				local combo = P_SpawnMobjFromMobj(me,64*x,64*y,me.height/4-(FU*10),MT_UNKNOWN)
+				combo.sprite = SPR_CMBB
+				combo.tics = 2		
+				if me.activators.combo[found] == true
+					combo.frame = B|FF_TRANS50
+				else
+					combo.frame = A
+				end
+				local scale =  FU/2
+				combo.spritexscale = scale
+				combo.spriteyscale = scale
+				
+				combo.frame = $|FF_PAPERSPRITE
+				if found.flags2 & MF2_TWOD
+				or twodlevel
+					combo.angle = (R_PointToAngle(me.x,me.y))-ANGLE_90
+				else
+					if camera.chase
+						combo.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
+					else
+						combo.angle = (R_PointToAngle2(me.x,me.y, found.x,found.y))-ANGLE_90
+					end
+				end
+				--
+			end
+		end
+	end
+	
+end,MT_STARPOST)
 
 addHook("MobjDeath",function(t,i,s)
 	if s
@@ -587,14 +766,16 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		if TAKIS_DEBUGFLAG & DEBUG_HAPPYHOUR
 			CONS_Printf(consoleplayer,"New music change:",
 				"HH Music: "..song,
-				"HH End Music: "..songend
+				"HH End Music: "..songend,
+				''
 			)
 			CONS_Printf(consoleplayer,"Nomus",
 				nomus,
-				noendmus
+				noendmus,
+				''
 			)
 			CONS_Printf(consoleplayer,"Changing from "..oldname,"to "..newname,"")
-			CONS_Printf(consoleplayer,"Spec "..tostring(not isspecsong))
+			CONS_Printf(consoleplayer,"Spec "..tostring(not isspecsong),'')
 		end
 		
 		--stop any lap music
@@ -607,10 +788,16 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 					local tics = HAPPY_HOUR.timeleft
 					
 					if tics <= (56*TR)
-					and (hh.noendsong == false)
+					and (noendmus == false)
 						changetohappy = false
 					end
 				end
+			end
+			
+			if TAKIS_DEBUGFLAG & DEBUG_HAPPYHOUR
+				CONS_Printf(consoleplayer,"Change to happy:",
+					tostring(changetohappy)
+				)
 			end
 			
 			if changetohappy
@@ -795,11 +982,12 @@ addHook("MobjMoveCollide",function(shot,mo)
 	
 	if (SPIKE_LIST[mo.type] == true)
 		P_KillMobj(mo,shot,shot.tracer)
+		return
 	end
 	
 	if (CanFlingThing(mo)
 	or (
-		mo.type == MT_PLAYER 
+		mo.type == MT_PLAYER
 		and CanPlayerHurtPlayer(shot.tracer.player,mo.player)
 		--dont kill ourselves though
 		and (mo ~= shot.tracer)
@@ -822,6 +1010,12 @@ addHook("MobjMoveCollide",function(shot,mo)
 				DoFlash(shot.tracer.player,PAL_WHITE,3)
 			end
 		else
+			--dont hurt other shotgunners with chainguns
+			if (mo.player.takistable.transfo & TRANSFO_SHOTGUN)
+			and (CV_TAKIS.chaingun.value)
+				return true
+			end
+			
 			P_KillMobj(mo,shot,shot.tracer)
 			P_InstaThrust(mo,R_PointToAngle2(shot.x,shot.y, mo.x,mo.y),50*shot.scale)
 			local boom = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
@@ -955,51 +1149,6 @@ end
 --
 
 --
-addHook("PreThinkFrame",function()
-	for p in players.iterate
-		if not p
-		or not p.valid
-			continue
-		end
-		
-		--p.HAPPY_HOURscream = {}
-		
-		if not p.takistable
-			continue
-		end
-		
-		local takis = p.takistable
-		
-		--handle input stuff here now because ermmmm
-		--pw_nocontrol stuff
-		if takis.noability
-			takis.noability = 0
-		end
-		if (p.takis_noabil ~= nil)
-			takis.noability = $|p.takis_noabil
-		end
-		
-		TakisButtonStuff(p,takis)
-		
-		if (takis.cosmenu.menuinaction)
-			TakisMenuThinker(p)
-		end
-		
-		if (takis.transfo & TRANSFO_TORNADO)
-		and not (takis.nadocrash)
-			local force = 50
-			--brake a bit
-			if P_GetPlayerControlDirection(p) == 2
-				force = $-((25-p.cmd.forwardmove)/2)
-				force = min(50,$)
-			end
-			p.cmd.forwardmove = force
-			p.cmd.sidemove = $/2
-		end
-		
-	end
-end)
-
 local function choose(...)
 	local args = {...}
 	local choice = P_RandomRange(1,#args)
@@ -1029,7 +1178,7 @@ addHook("MobjThinker",function(s)
 				local y = P_RandomRange(-rad,rad)*FRACUNIT
 				local z = P_RandomRange(0,hei)*FRACUNIT
 				local spark = P_SpawnMobjFromMobj(s,x,y,z,MT_SOAP_SUPERTAUNT_FLYINGBOLT)
-				spark.tracer = s
+				spark.tracer = s.target
 				spark.state = P_RandomRange(S_SOAP_SUPERTAUNT_FLYINGBOLT1,S_SOAP_SUPERTAUNT_FLYINGBOLT5)			
 				spark.blendmode = AST_ADD
 				spark.color = P_RandomRange(SKINCOLOR_SALMON,SKINCOLOR_KETCHUP)
@@ -1072,173 +1221,6 @@ addHook("MobjThinker",function(s)
 		end
 	end
 end,MT_ARMAGEDDON_ORB)
-
-addHook("MobjThinker",function(me)
-	if not me
-	or not me.valid
-		return
-	end
-	
-	if me.activators == nil
-	or (HAPPY_HOUR.time == 1)
-		me.activators = {
-			cards = {},
-			combo = {},
-			cardsrespawn = {},
-			comborespawn = {},
-		}
-		return
-	end
-	
-	for k,v in pairs(me.activators.cardsrespawn)
-		if v == nil
-			continue
-		end
-		
-		if v > 0
-			if v > CV_FindVar("respawnitemtime").value*TICRATE
-				v = CV_FindVar("respawnitemtime").value*TICRATE
-			end
-			
-			me.activators.cardsrespawn[k] = $-1
-			
-			if (HAPPY_HOUR.time == 1)
-				me.activators.cardsrespawn[k] = 0
-			end
-		elseif v == 0
-		and (me.activators.cards[k] ~= false)
-			me.activators.cards[k] = false
-			table.remove(me.activators.cardsrespawn,me.activators.cardsrespawn[k])
-			S_StartSound(me,sfx_sprcar)
-			
-			local g = P_SpawnMobjFromMobj(me,0,0,me.height/4,MT_THOK)
-			g.sprite = SPR_HTCD
-			g.frame = A
-			g.tics = TR
-			g.blendmode = AST_ADD
-			g.scale = FixedMul(me.scale,2*FU)
-			g.destscale = FixedDiv(me.scale,4*FU)
-		end
-	end
-
-	for k,v in pairs(me.activators.comborespawn)
-		if v == nil
-			continue
-		end
-		
-		if v > 0
-			if v > CV_FindVar("respawnitemtime").value*TICRATE
-				v = CV_FindVar("respawnitemtime").value*TICRATE
-			end
-			
-			me.activators.comborespawn[k] = $-1
-			
-			if (HAPPY_HOUR.time == 1)
-				me.activators.comborespawn[k] = 0
-			end
-		elseif v == 0
-		and (me.activators.combo[k] ~= false)
-			me.activators.combo[k] = false
-			table.remove(me.activators.comborespawn,me.activators.comborespawn[k])
-			S_StartSound(me,sfx_sprcom)
-
-			local g = P_SpawnMobjFromMobj(me,0,0,me.height/4,MT_THOK)
-			g.sprite = SPR_CMBB
-			g.frame = A
-			g.tics = TR
-			local scale =  FU/2
-			g.spritexscale = scale
-			g.spriteyscale = scale
-			g.blendmode = AST_ADD
-			g.scale = FixedMul(me.scale,2*FU)
-			g.destscale = FixedDiv(me.scale,4*FU)
-		end
-	end
-	
-	local br = 215*me.scale
-	
-	for p in players.iterate
-		if p and p.valid
-		and p.realmo.health
-		and P_CheckSight(me,p.realmo)
-				
-			if p.realmo.skin ~= TAKIS_SKIN
-				continue
-			end
-			
-			local dx = me.x-p.realmo.x
-			local dy = me.y-p.realmo.y
-			
-			if FixedHypot(dx,dy) > br
-				continue
-			end
-			
-			--thanks Monster Iestyn for this!
-			if (p and p == displayplayer)
-				local found = p.realmo
-				
-				local x,y = ReturnTrigAngles(R_PointToAngle2(me.x,me.y, camera.x,camera.y))
-				if not camera.chase
-					x,y = ReturnTrigAngles(R_PointToAngle2(me.x,me.y, found.x,found.y))
-				end
-				if found.flags2 & MF2_TWOD
-				or twodlevel
-					x,y = ReturnTrigAngles(InvAngle(R_PointToAngle(found.x,found.y)))
-				end
-				
-				--card
-				local card = P_SpawnMobjFromMobj(me,64*x,64*y,me.height/4+(FU*10),MT_UNKNOWN)
-				card.sprite = SPR_HTCD
-				card.tics = 2		
-				if me.activators.cards[found] == true
-					card.frame = B|FF_TRANS50
-				else
-					card.frame = A
-				end
-				
-				card.frame = $|FF_PAPERSPRITE
-				if found.flags2 & MF2_TWOD
-				or twodlevel
-					card.angle = (R_PointToAngle(me.x,me.y))-ANGLE_90
-				else
-					if camera.chase
-						card.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
-					else
-						card.angle = (R_PointToAngle2(me.x,me.y, found.x,found.y))-ANGLE_90					
-					end
-				end
-				--
-
-				--combo
-				local combo = P_SpawnMobjFromMobj(me,64*x,64*y,me.height/4-(FU*10),MT_UNKNOWN)
-				combo.sprite = SPR_CMBB
-				combo.tics = 2		
-				if me.activators.combo[found] == true
-					combo.frame = B|FF_TRANS50
-				else
-					combo.frame = A
-				end
-				local scale =  FU/2
-				combo.spritexscale = scale
-				combo.spriteyscale = scale
-				
-				combo.frame = $|FF_PAPERSPRITE
-				if found.flags2 & MF2_TWOD
-				or twodlevel
-					combo.angle = (R_PointToAngle(me.x,me.y))-ANGLE_90
-				else
-					if camera.chase
-						combo.angle = (R_PointToAngle2(me.x,me.y, camera.x,camera.y))-ANGLE_90
-					else
-						combo.angle = (R_PointToAngle2(me.x,me.y, found.x,found.y))-ANGLE_90
-					end
-				end
-				--
-			end
-		end
-	end
-	
-end,MT_STARPOST)
 
 addHook("BossThinker", function(mo)
 	if TAKIS_NET.bossprefix[mo.type] == nil then return end
@@ -1361,74 +1343,6 @@ addHook("MobjMoveCollide",function(effect,t)
 	end
 	
 end,MT_TAKIS_DRILLEFFECT)
-
---not sure where this thinkframe went
-addHook("ThinkFrame", function ()
-    for p in players.iterate() do
-        if not (p and p.valid) then continue end
-		
-		local takis = p.takistable
-		
-		if takis
-			takis.inwaterslide = p.pflags & PF_SLIDING
-		end
-	end
-end)
-
---i couldve sworn i had a postthink in here
---that may just be thinking this is soap lol
---anyway, thanks to Unmatched Bracket for this code!!!
---:iwantsummadat:
-addHook("PostThinkFrame", function ()
-    for p in players.iterate() do
-        if not (p and p.valid) then continue end
-		if not (p.mo and p.mo.valid) then continue end
-		if not (p.mo.skin == TAKIS_SKIN) then continue end
-		
-		local me = p.realmo
-		local takis = p.takistable
-		
-		if (takis.transfo & TRANSFO_TORNADO)
-			p.drawangle = me.angle+takis.nadoang
-		end
-		
-		if p.powers[pw_nocontrol] then takis.nocontrol = p.powers[pw_nocontrol] end
-		
-		takis.quakeint = 0
-		for k,v in ipairs(takis.quake)
-			if v == nil
-				continue
-			end
-			
-			local q = takis.quake
-			
-			if v.tics
-				v.intensity = $-v.minus
-				takis.quakeint = $+v.intensity
-				v.tics = $-1
-			else
-				table.remove(q,k)
-			end
-		end
-		if takis.quakeint
-		and displayplayer == p
-		and takis.io.quakes
-			P_StartQuake(takis.quakeint,1)
-		end
-	
-		if takis.inwaterslide
-			
-            takis.resettingtoslide = true
-			me.state = S_PLAY_DEAD
-			me.sprite2 = SPR2_SLID
-            me.frame = ($ & ~FF_FRAMEMASK) | (leveltime % 4) / 2
-            p.drawangle = me.angle
-			continue
-        end
-		
-		takis.resettingtoslide = false
-    end
-end)
 
 addHook("MobjThinker",function(ring)
 	if not ring
@@ -2622,7 +2536,9 @@ addHook("MobjThinker",function(mo)
 	
 	local mul = FU*19/22
 	
-	if mo.eflags & MFE_UNDERWATER
+	/*
+	if (mo.eflags & MFE_UNDERWATER|MFE_TOUCHWATER == MFE_UNDERWATER|MFE_TOUCHWATER)
+	and not (mo.eflags & MFE_TOUCHLAVA)
 		mo.tics = -1
 		mo.frame = A
 		mo.sprite = SPR_BUBL
@@ -2635,6 +2551,7 @@ addHook("MobjThinker",function(mo)
 			return
 		end
 	end
+	*/
 	
 	mo.momx,mo.momy,mo.momz = FixedMul($1,mul),FixedMul($2,mul),FixedMul($3,mul)
 end,MT_TAKIS_STEAM)
@@ -2670,6 +2587,15 @@ addHook("MobjThinker",function(drone)
 	end
 	
 	local ticker = (leveltime/2 % 2)
+	if (displayplayer and displayplayer.valid)
+	and (skins[displayplayer.skin].name == TAKIS_SKIN)
+		local takis = displayplayer.takistable
+		
+		if takis
+		and takis.io.flashes == 0
+			ticker = 0
+		end
+	end
 	
 	if drone.timealive == nil
 		drone.timealive = 0
@@ -2708,6 +2634,52 @@ addHook("MobjThinker",function(drone)
 	end
 	
 end,MT_NIGHTSDRONE)
+
+--SUMMIT!
+addHook("GameQuit",function(quit)
+	if not quit then return end
+	
+	S_StopMusic(consoleplayer)
+	S_StartSound(nil,sfx_summit)
+end)
+
+addHook("MobjThinker",function(pong)
+	if not (pong and pong.valid) then return end
+	
+	local timealive = (states[S_TAKIS_PONGLER].tics+1)-(pong.tics)
+	
+	local circle = FixedAngle( (5*FU)*timealive )
+	pong.spritexoffset = sin(circle)*12
+	
+	if timealive <= 10
+		if pong.scalespeed == 0
+			pong.scalespeed = FU/20
+		end
+		pong.scalespeed = $*6/5
+		if timealive <= 8
+			pong.frame = (pong.frame & FF_FRAMEMASK)|numtotrans[9-timealive]
+		else
+			pong.frame = (pong.frame & FF_FRAMEMASK)
+		end
+		
+	elseif timealive >= (states[S_TAKIS_PONGLER].tics+1)-9
+		pong.destscale = 0
+		if pong.scalespeed == 0
+			pong.scalespeed = FU/20
+		end
+		pong.scalespeed = $*6/5
+		
+		if timealive >= (states[S_TAKIS_PONGLER].tics+1)-9
+			local trans = timealive-((states[S_TAKIS_PONGLER].tics+1)-9)
+			pong.frame = (pong.frame & FF_FRAMEMASK)|numtotrans[trans]
+		end
+	else
+		pong.frame = (pong.frame & FF_FRAMEMASK)
+		pong.destscale = 0
+		pong.scalespeed = 0
+	end
+	
+end,MT_TAKIS_PONGLER)
 
 filesdone = $+1
 

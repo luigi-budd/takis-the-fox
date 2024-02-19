@@ -130,6 +130,8 @@
 	-[done but better]make the server execute a command when cheats are activated to
 	 set a var in TAKIS_NET
 	-replace all dust effects with the cool funny takis_steam
+	-[done]the weird *[Splash] bug with dustdevils
+	-make shotgun scatters their own MT_
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -144,7 +146,7 @@
 	-[done]Takis_HH_EndMusic - ending happyhour mus, ignore styles
 	-[done]Takis_HH_NoMusic - disable happyhour mus
 	-[done]Takis_HH_NoEndMusic - disable happyhour end mus
-	-[done]Takis_HH_Timelimit - timelimit (in tics)
+	-[done]Takis_HH_Timelimit - timelimit (in seconds)
 	-[done]Takis_HH_NoInter - disable the intermission screen
 	-[done]Takis_HH_NoHappyHour - disable allhappyhour from doin the lvl
 	-Takis_HH_NoClang - disable mysterious clanging
@@ -245,6 +247,54 @@ local emdex = {
 	[EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5] = 5,
 	[EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6] = 6,
 }
+
+addHook("PreThinkFrame",function()
+	for p in players.iterate
+		if not p
+		or not p.valid
+			continue
+		end
+		
+		--p.HAPPY_HOURscream = {}
+		
+		if not p.takistable
+			continue
+		end
+		
+		local takis = p.takistable
+		
+		--handle input stuff here now because ermmmm
+		--pw_nocontrol stuff
+		
+		--BIG REGRESSION: having this here now causes a bug
+		--with dust devils, constantly playing the [Splash] sound
+		if takis.noability
+			takis.noability = 0
+		end
+		if (p.takis_noabil ~= nil)
+			takis.noability = $|p.takis_noabil
+		end
+		
+		TakisButtonStuff(p,takis)
+		
+		if (takis.cosmenu.menuinaction)
+			TakisMenuThinker(p)
+		end
+		
+		if (takis.transfo & TRANSFO_TORNADO)
+		and not (takis.nadocrash)
+			local force = 50
+			--brake a bit
+			if P_GetPlayerControlDirection(p) == 2
+				force = $-((25-p.cmd.forwardmove)/2)
+				force = min(50,$)
+			end
+			p.cmd.forwardmove = force
+			p.cmd.sidemove = $/2
+		end
+		
+	end
+end)
 
 addHook("PlayerThink", function(p)
 	if not p
@@ -356,12 +406,12 @@ addHook("PlayerThink", function(p)
 			and (takis.notCarried)
 			and not ((p.pflags & (PF_SPINNING|PF_STASIS))
 			or (p.powers[pw_nocontrol] or takis.nocontrol))
-			and not (p.powers[pw_carry] == CR_NIGHTSMODE)
+			and (takis.notCarried)
 			and not (takis.dived and me.state == S_PLAY_GLIDE)
 				p.drawangle = me.angle
 			end
 			
-			if (takis.dived and me.state == S_PLAY_GLIDE)
+		 	if (takis.dived and me.state == S_PLAY_GLIDE)
 				p.drawangle = R_PointToAngle2(0,0,me.momx,me.momy)
 			end
 			
@@ -395,6 +445,7 @@ addHook("PlayerThink", function(p)
 					P_MovePlayer(p)
 					S_StopSoundByID(me,sfx_shgnbs)
 					takis.bashtime = 0
+					takis.bashcooldown = true
 				end
 				
 			else
@@ -581,24 +632,18 @@ addHook("PlayerThink", function(p)
 				else
 					
 					--shotgun shot
-					if (takis.use == 1)
-					and not (takis.shotguncooldown)
+					if ((takis.use and TAKIS_NET.chaingun)
+					or (takis.use == 1 and not TAKIS_NET.chaingun))
+					and not (takis.shotguncooldown and not TAKIS_NET.chaingun)
 					and not (takis.inPain or takis.inFakePain)
 					and not (takis.noability & NOABIL_SHOTGUN
 					or p.pflags & PF_SPINNING)
-						P_Thrust(me,p.drawangle,-10*me.scale)
-						P_MovePlayer(p)
-						
-						takis.shotguncooldown = 18
-						
-						local x,y = ReturnTrigAngles(p.drawangle)
-						
-						/*
-						local sht = P_SpawnMobjFromMobj(me,85*x+me.momx,85*y+me.momy,0,MT_TAKIS_SHOTGUN_HITBOX)
-						sht.tracer = me
-						sht.tics = 5
-						sht.angle = p.drawangle
-						*/
+						if (not TAKIS_NET.chaingun)
+							P_Thrust(me,p.drawangle,thrust*me.scale)
+							P_MovePlayer(p)
+							
+							takis.shotguncooldown = 18
+						end
 						
 						S_StartSound(me,sfx_shgns)
 						
@@ -652,13 +697,9 @@ addHook("PlayerThink", function(p)
 						takis.thokked = true
 						
 						me.state = S_PLAY_GLIDE
-						if (me.momz*takis.gravflip) > 0
-							local momz = FixedDiv(me.momz,me.scale)*takis.gravflip
-							local thrust = min((momz/2)+7*FU,18*FU)
-							L_ZLaunch(me,thrust)
-						else
-							L_ZLaunch(me,7*FU)
-						end
+						local momz = FixedDiv(me.momz,me.scale)*takis.gravflip
+						local thrust = min((momz/2)+7*FU,18*FU)
+						L_ZLaunch(me,thrust)
 					end
 					
 				else
@@ -672,6 +713,7 @@ addHook("PlayerThink", function(p)
 					and (me.state ~= S_PLAY_TAKIS_SLIDE)
 					and not (takis.noability & NOABIL_SHOTGUN)
 					and (takis.notCarried)
+					and not takis.bashcooldown
 						local ang = GetControlAngle(p)
 						if ((me.flags2 & MF2_TWOD)
 						or (twodlevel))
@@ -958,7 +1000,7 @@ addHook("PlayerThink", function(p)
 				and not (takis.noability & NOABIL_SLIDE)
 					S_StartSound(me,sfx_eeugh)
 					S_StartSound(me,sfx_taksld)
-					P_InstaThrust(me,p.drawangle,20*FU+FixedMul(3*takis.accspeed/5,me.scale))
+					P_InstaThrust(me,p.drawangle,FixedMul(20*FU+(4*takis.accspeed/5),me.scale))
 					me.state = S_PLAY_TAKIS_SLIDE
 					p.pflags = $|PF_SPINNING
 					P_MovePlayer(p)
@@ -1638,6 +1680,7 @@ addHook("PlayerThink", function(p)
 					p.charflags = $ &~(SF_CANBUSTWALLS|SF_RUNONWATER)
 					p.powers[pw_strong] = $ &~STR_WALL
 					p.runspeed = skins[TAKIS_SKIN].runspeed
+					takis.clutchingtime = 0
 					if not takis.starman
 						takis.afterimagecolor = 1
 					end
@@ -1646,6 +1689,7 @@ addHook("PlayerThink", function(p)
 				p.charflags = $ &~(SF_CANBUSTWALLS|SF_RUNONWATER)
 				p.powers[pw_strong] = $ &~STR_WALL
 				p.runspeed = skins[TAKIS_SKIN].runspeed
+				takis.clutchingtime = 0
 				if not takis.starman
 					takis.afterimagecolor = 1
 				end
@@ -1654,6 +1698,7 @@ addHook("PlayerThink", function(p)
 			--stuff to do while grounded
 			if takis.onGround
 				takis.coyote = 4
+				takis.bashcooldown = false
 				
 				if (p.pflags & PF_SHIELDABILITY)
 				and (p.powers[pw_shield] == SH_BUBBLEWRAP)
@@ -1685,13 +1730,42 @@ addHook("PlayerThink", function(p)
 				if p.pflags & PF_SPINNING
 				and takis.accspeed >= 10*FU
 				and (me.state == S_PLAY_TAKIS_SLIDE)
-					P_SpawnSkidDust(p,8*me.scale+( FixedMul(takis.accspeed-(10*FU),me.scale)*4/5 ),sfx_s3k64)
-					if takis.accspeed >= 40*FU
-						P_SpawnSkidDust(p,3*me.scale+( FixedMul(takis.accspeed-(10*FU),me.scale)*3/5 ))
+					local chance = P_RandomChance(FU/3)
+					if takis.accspeed >= 30*FU
+						chance = true
 					end
+					if takis.accspeed <= 20*FU
+						chance = false
+					end
+					
+					if chance
+						TakisSpawnDust(me,
+							p.drawangle+FixedAngle(P_RandomRange(-45,45)*FU+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
+							P_RandomRange(0,-50),
+							P_RandomRange(-1,2)*me.scale,
+							{
+								xspread = 0,--(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+								yspread = 0,--(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+								zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+								
+								thrust = P_RandomRange(0,-10)*me.scale,
+								thrustspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+								
+								momz = P_RandomRange(4,0)*P_RandomRange(3,10)*(me.scale/2),
+								momzspread = ((P_RandomChance(FU/2)) and 1 or -1),
+								
+								scale = me.scale,
+								scalespread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+								
+								fuse = 15+P_RandomRange(-5,5),
+							}
+						)
+						S_StartSound(me,sfx_s3k7e)
+					end
+					
 					P_ButteredSlope(me)
 					takis.clutchingtime = $-2
-					takis.noability = $|NOABIL_SHOTGUN
+					takis.noability = $|NOABIL_SHOTGUN|NOABIL_AFTERIMAGE
 				end
 				takis.dived = false
 				if takis.hammerblastjumped >= 3
@@ -1805,20 +1879,41 @@ addHook("PlayerThink", function(p)
 							end
 							local radius = me.scale*16
 							local fa = (i*ANGLE_45)
-							local dust = P_SpawnMobjFromMobj(me,0,0,0,mt)
 							local mz = takis.prevmomz/10
-							dust.momx = FixedMul(FixedMul(sin(fa),radius),mz)
-							dust.momy = FixedMul(FixedMul(cos(fa),radius),mz)
-							dust.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
-							dust.destscale = dust.scale/2
+							local dust = TakisSpawnDust(me,
+								fa,
+								0,
+								P_RandomRange(-1,2)*me.scale,
+								{
+									xspread = 0,
+									yspread = 0,
+									zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+									
+									thrust = 0,
+									thrustspread = 0,
+									
+									momz = P_RandomRange(0,1)*me.scale,
+									momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
+									
+									scale = me.scale,
+									scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+									
+									fuse = 23+P_RandomRange(-2,3),
+								}
+							)
+							dust.momx = FixedMul(FixedMul(sin(fa),radius),mz)/2
+							dust.momy = FixedMul(FixedMul(cos(fa),radius),mz)/2
+							
 							takis.dontlanddust = true
 						end
 					end
 				end
 				
 				--speedpads conserve speed too
-				if P_PlayerTouchingSectorSpecial(p, 3, 5) 
+				if P_PlayerTouchingSectorSpecial(p, 3, 5)
+				and not takis.fakesprung
 					P_Thrust(me,me.angle,takis.prevspeed)
+					takis.fakesprung = true
 				end
 			else
 				if me.eflags & MFE_SPRUNG
@@ -2087,11 +2182,12 @@ addHook("PlayerThink", function(p)
 				if not (takis.inwaterslide)
 					takis.afterimaging = false
 				end
-				TakisResetHammerTime(p)
+				--TakisResetHammerTime(p)
 				takis.dontfootdust = true
 				
 				if (p.powers[pw_carry] == CR_ROLLOUT)
 					if me.state == S_PLAY_FALL
+					or (me.state == S_PLAY_TAKIS_SHOTGUNSTOMP)
 						me.state = S_PLAY_STND
 						P_MovePlayer(p)
 					end
@@ -2384,6 +2480,77 @@ addHook("PlayerThink", function(p)
 		takis.lastss = G_IsSpecialStage(takis.lastmap)
 	end
 	
+end)
+
+--this is really stupid
+addHook("ThinkFrame", function ()
+    for p in players.iterate() do
+        if not (p and p.valid) then continue end
+		
+		local takis = p.takistable
+		
+		if takis
+			takis.inwaterslide = p.pflags & PF_SLIDING
+		end
+	end
+end)
+
+--thanks to Unmatched Bracket for this code!!!
+--:iwantsummadat:
+addHook("PostThinkFrame", function ()
+    for p in players.iterate() do
+        if not (p and p.valid) then continue end
+		if not (p.mo and p.mo.valid) then continue end
+		if not (p.mo.skin == TAKIS_SKIN) then continue end
+		
+		local me = p.realmo
+		local takis = p.takistable
+		
+		if (takis.transfo & TRANSFO_TORNADO)
+			p.drawangle = me.angle+takis.nadoang
+		end
+		
+		if p.powers[pw_nocontrol] then takis.nocontrol = p.powers[pw_nocontrol] end
+		
+		takis.quakeint = 0
+		for k,v in ipairs(takis.quake)
+			if v == nil
+				continue
+			end
+			
+			local q = takis.quake
+			
+			if v.tics
+				v.intensity = $-v.minus
+				takis.quakeint = $+v.intensity
+				v.tics = $-1
+			else
+				table.remove(q,k)
+			end
+		end
+		if takis.quakeint
+		and displayplayer == p
+		and takis.io.quakes
+			P_StartQuake(takis.quakeint,1)
+		end
+		
+		--get rid of ugliness
+		if takis.ballretain
+		and me.state ~= S_PLAY_ROLL
+			me.state = S_PLAY_ROLL
+		end
+		
+		if takis.inwaterslide
+            takis.resettingtoslide = true
+			me.state = S_PLAY_DEAD
+			me.sprite2 = SPR2_SLID
+            me.frame = ($ & ~FF_FRAMEMASK) | (leveltime % 4) / 2
+            p.drawangle = me.angle
+			continue
+        end
+		
+		takis.resettingtoslide = false
+    end
 end)
 
 addHook("PlayerSpawn", function(p)
@@ -3034,6 +3201,10 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 				extraheight = true
 				TakisAwardAchievement(p,ACHIEVEMENT_FIREASS)
 			else
+				takis.fireasstime = $+3
+				if takis.fireasstime > 10*TR
+					takis.fireasstime = 10*TR
+				end
 				return false
 			end
 		end
@@ -3694,12 +3865,12 @@ addHook("MobjMoveCollide",function(tm,t)
 		return
 	end
 	
+	local p = tm.player
+	local takis = p.takistable
+	
 	if not (L_ZCollide(tm,t))
 		return
 	end
-	
-	local p = tm.player
-	local takis = p.takistable
 	
 	if takis
 		
@@ -3816,6 +3987,15 @@ addHook("MobjMoveCollide",function(tm,t)
 		
 			if (t.takis_flingme == false) then return end
 			if not (t and t.valid) then return end
+			
+			for i = 0, 34
+				A_BossScream(t,1,MT_SONIC3KBOSSEXPLODE)
+			end
+			local sfx = P_SpawnGhostMobj(t)
+			sfx.flags2 = $|MF2_DONTDRAW
+			sfx.tics = 3*TR
+			sfx.fuse = 3*TR
+			S_StartSound(sfx,sfx_tkapow)
 			
 			local fling = P_SpawnMobjFromMobj(t,0,0,0,MT_TAKIS_FLINGSOLID)
 			local ang = R_PointToAngle2(t.x,t.y, tm.x,tm.y)

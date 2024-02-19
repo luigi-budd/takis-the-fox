@@ -53,7 +53,6 @@ tm.entries = {
 			"tmcursorstyle",
 			"quakes",
 			"flashes",
-			"additiveai",
 			"clutchstyle",
 			"sharecombos",
 			"dontshowach"
@@ -65,7 +64,6 @@ tm.entries = {
 			"tauntmenucursor",
 			"quakes",
 			"flashes",
-			"additiveafterimages",
 			"clutchstyle",
 			"sharecombos",
 			"dontshowach"
@@ -76,8 +74,7 @@ tm.entries = {
 			"Toggles other characters getting Happpy Hour in PTSR.",
 			"Toggles the cursor in the Taunt Menu. (TF+C1)",
 			"Toggles screen quakes.",
-			"Toggles screen flashes.",
-			"Toggles additive blending for the afterimages.",
+			"Toggles screen flashes and flashing objects.",
 			"Clutch Bar or Clutch Meter.",
 			"Share combos with other Takis.",
 			"Don't show other Takis' achievements."
