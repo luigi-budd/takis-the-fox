@@ -129,9 +129,12 @@
 	-[done]ujl coop score thing for combo sharing
 	-[done but better]make the server execute a command when cheats are activated to
 	 set a var in TAKIS_NET
-	-replace all dust effects with the cool funny takis_steam
+	-[done]replace all dust effects with the cool funny takis_steam
 	-[done]the weird *[Splash] bug with dustdevils
-	-make shotgun scatters their own MT_
+	-[done]make shotgun scatters their own MT_
+	-mt_gunshot sprites
+	-birdword timing and 2nd part
+	-[done]skidding spawn takis dust
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -266,8 +269,6 @@ addHook("PreThinkFrame",function()
 		--handle input stuff here now because ermmmm
 		--pw_nocontrol stuff
 		
-		--BIG REGRESSION: having this here now causes a bug
-		--with dust devils, constantly playing the [Splash] sound
 		if takis.noability
 			takis.noability = 0
 		end
@@ -395,11 +396,9 @@ addHook("PlayerThink", function(p)
 			*/
 			
 			--dude stop!!!
-			/*
 			if (p.charflags & SF_SUPER)
 				p.charflags = $ &~SF_SUPER
 			end
-			*/
 			
 			--forced strafe
 			if takis.io.nostrafe == 0
@@ -639,7 +638,7 @@ addHook("PlayerThink", function(p)
 					and not (takis.noability & NOABIL_SHOTGUN
 					or p.pflags & PF_SPINNING)
 						if (not TAKIS_NET.chaingun)
-							P_Thrust(me,p.drawangle,thrust*me.scale)
+							P_Thrust(me,p.drawangle,-10*me.scale)
 							P_MovePlayer(p)
 							
 							takis.shotguncooldown = 18
@@ -1775,6 +1774,7 @@ addHook("PlayerThink", function(p)
 					takis.lastgroundedpos = {me.x,me.y,me.z}
 				end
 				takis.thokked = false
+				takis.firethokked = false
 				
 				--keep sliding
 				if (takis.c2)
@@ -1825,23 +1825,6 @@ addHook("PlayerThink", function(p)
 									fuse = 15+P_RandomRange(-2,3),
 								}
 							)
-							/*
-							local angle = p.drawangle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
-							local dist = P_RandomRange(0,-10)
-							local x,y = ReturnTrigAngles(angle)
-							local steam = P_SpawnMobjFromMobj(me,
-								dist*x+P_RandomFixed(),
-								dist*y+P_RandomFixed(),
-								P_RandomRange(-1,2)*me.scale+P_RandomFixed(),
-								MT_TAKIS_STEAM
-							)
-							steam.angle = angle
-							steam.scale = me.scale*4/5+(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1))
-							steam.timealive = 1
-							steam.tracer = me
-							steam.destscale = 1
-							steam.fuse = 20
-							*/
 							
 						end
 					else
@@ -1873,10 +1856,6 @@ addHook("PlayerThink", function(p)
 						end
 						P_SetOrigin(me,me.x,me.y,me.z)
 						for i = 0, 8
-							local mt = MT_SPINDUST
-							if me.eflags & MFE_UNDERWATER
-								mt = MT_MEDIUMBUBBLE
-							end
 							local radius = me.scale*16
 							local fa = (i*ANGLE_45)
 							local mz = takis.prevmomz/10
@@ -2098,12 +2077,12 @@ addHook("PlayerThink", function(p)
 				end
 				
 				--give ultiamte combo token
-				if takis.combo.lastcount < TAKIS_NET.partdestroy
-				and takis.combo.count >= TAKIS_NET.partdestroy
+				if takis.combo.lastcount < TAKIS_MISC.partdestroy
+				and takis.combo.count >= TAKIS_MISC.partdestroy
 				and not takis.combo.dropped
 				and (gametype == GT_COOP)
 				and not (maptol & TOL_NIGHTS)
-				and not (TAKIS_NET.inbossmap or TAKIS_NET.inbrakmap)
+				and not (TAKIS_MISC.inbossmap or TAKIS_MISC.inbrakmap)
 					takis.combo.awardable = true
 					takis.HUD.combo.tokengrow = FU/2
 					MeSoundHalfVolume(sfx_rakupp,p)
@@ -2153,7 +2132,7 @@ addHook("PlayerThink", function(p)
 					if not (p.pflags & PF_FINISHED)
 						if not takis.combo.dropped
 							takis.combo.dropped = true
-							if takis.combo.lastcount >= TAKIS_NET.partdestroy
+							if takis.combo.lastcount >= TAKIS_MISC.partdestroy
 								MeSoundHalfVolume(sfx_rakdns,p)
 							end
 						end
@@ -2266,7 +2245,7 @@ addHook("PlayerThink", function(p)
 					end
 				else
 					--exiting and no pf_finished?
-					if TAKIS_NET.inbossmap
+					if TAKIS_MISC.inbossmap
 					and (gametype == GT_COOP)
 					/*
 					or (TAKIS_NET.exitingcount == TAKIS_NET.playercount)
@@ -2930,7 +2909,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		if inf
 		and inf.valid
 			local ang = R_PointToAngle2(mo.x,mo.y, inf.x, inf.y)
-			P_InstaThrust(mo,ang,-5*mo.scale)
+			P_InstaThrust(mo,ang,-GetPainThrust(mo,inf,sor))
 		end
 		L_ZLaunch(mo,(extraheight) and 17*mo.scale or 8*mo.scale)
 		if not extraheight
@@ -3180,6 +3159,12 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		return
 	end
 	
+	if (takis.transfo & TRANSFO_SHOTGUN)
+	and (TAKIS_NET.chaingun)
+	and (inf.type == MT_TAKIS_GUNSHOT)
+		return false
+	end
+
 	if p.nightsfreeroam
 	and p.powers[pw_carry] != CR_NIGHTSMODE
 	and not p.powers[pw_flashing]
@@ -3273,7 +3258,7 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 	
 	if dmgt == DMG_DEATHPIT
 		if p.exiting then return end
-		if TAKIS_NET.inspecialstage then return end
+		if TAKIS_MISC.inspecialstage then return end
 		
 		if takis.timesdeathpitted > 5
 			takis.saveddmgt = DMG_DEATHPIT
@@ -3542,7 +3527,7 @@ end
 addHook("MobjDeath", givecardpieces)
 
 --thing died by takis
-local function hurtbytakis(mo,inf,sor)
+local function hurtbytakis(mo,inf,sor,_,dmgt)
 	
 	if (not mo.health
 	and CanFlingThing(mo,MF_ENEMY))
@@ -3624,6 +3609,7 @@ local function hurtbytakis(mo,inf,sor)
 	if sor.player
 	and sor.player.takistable
 		if CanFlingThing(mo)
+		and (dmgt ~= DMG_NUKE)
 			if sor.player.takistable.dived
 			or sor.player.takistable.thokked
 				sor.player.takistable.dived = false
@@ -3642,12 +3628,18 @@ local function hurtbytakis(mo,inf,sor)
 		or (SPIKE_LIST[mo.type] == true)
 		or (mo.type == MT_PLAYER)
 		and (not mo.ragdoll)
+			if (mo.type ~= MT_PLAYER)
+			and (dmgt == DMG_NUKE)
+			and not (TAKIS_NET.nerfarma)
+				SpawnRagThing(mo,sor)
+			end
+			
 			if not mo.health
 				if not (mo.flags & MF_BOSS)
 					TakisGiveCombo(sor.player,sor.player.takistable,true)
 				else
-					if not (TAKIS_NET.inbossmap
-					or TAKIS_NET.inbrakmap)
+					if not (TAKIS_MISC.inbossmap
+					or TAKIS_MISC.inbrakmap)
 						TakisGiveCombo(sor.player,sor.player.takistable,true)
 					end
 				end
@@ -3744,6 +3736,8 @@ addHook("MobjDeath", function(mo,i,s,dmgt)
 	end
 	
 end,MT_PLAYER)
+
+--double jump
 addHook("AbilitySpecial", function(p)
 	if p.mo.skin ~= TAKIS_SKIN then return end
 	
@@ -3766,8 +3760,6 @@ addHook("AbilitySpecial", function(p)
 	
 	P_SetObjectMomZ(p.mo,15*FU)
 	
-	S_StartSoundAtVolume(me,sfx_takdjm,4*255/5)
-
 	--wind ring
 	if not (takis.hammerblastdown % 6)
 		local ring = P_SpawnMobjFromMobj(me,
@@ -3788,14 +3780,55 @@ addHook("AbilitySpecial", function(p)
 	end
 	
 	p.mo.state = S_PLAY_ROLL
+	if ((takis.transfo & TRANSFO_FIREASS) and (takis.firethokked))
+		p.mo.state = S_PLAY_FALL
+		P_MovePlayer(p)
+		S_StartSound(me,sfx_fire)
+		takis.fireasssmoke = TR/2
+		
+		for i = 0, 8
+			local radius = me.scale*16
+			local fa = (i*ANGLE_45)
+			local mz = 2*FU
+			local dust = TakisSpawnDust(me,
+				fa,
+				0,
+				P_RandomRange(-1,2)*me.scale,
+				{
+					xspread = 0,
+					yspread = 0,
+					zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+					
+					thrust = 0,
+					thrustspread = 0,
+					
+					momz = P_RandomRange(0,1)*me.scale,
+					momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
+					
+					scale = me.scale,
+					scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+					
+					fuse = 23+P_RandomRange(-2,3),
+				}
+			)
+			dust.momx = FixedMul(FixedMul(sin(fa),radius),mz)/2
+			dust.momy = FixedMul(FixedMul(cos(fa),radius),mz)/2
+			
+			takis.dontlanddust = true
+		end
+	else
+		S_StartSoundAtVolume(me,sfx_takdjm,4*255/5)
+	end
+	
 	p.jp = 1
 	p.jt = 5
 	p.pflags = $|(PF_JUMPED|PF_JUMPDOWN|PF_THOKKED|PF_STARTJUMP) & ~(PF_SPINNING|PF_STARTDASH)
 	if takis.isSuper
+	or ((takis.transfo & TRANSFO_FIREASS) and (takis.firethokked == false))
 		p.pflags = $ &~PF_THOKKED
 		takis.thokked = false
+		takis.firethokked = true
 	end
-	
 	return true
 end)
 
@@ -3816,18 +3849,30 @@ addHook("JumpSpecial", function(p)
 	or takis.coyote
 		local maxi = P_RandomRange(8,16)
 		for i = 0, maxi
-			local mt = MT_SPINDUST
-			if me.eflags & MFE_UNDERWATER
-				mt = MT_MEDIUMBUBBLE
-			end
-
-			local radius = me.scale*16
 			local fa = FixedAngle(i*FixedDiv(360*FU,maxi*FU))
-			local dust = P_SpawnMobjFromMobj(me,x,y,0,mt)
-			dust.momx = FixedMul(sin(fa),radius)
-			dust.momy = FixedMul(cos(fa),radius)
-			dust.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
-			dust.destscale = dust.scale/2
+			local dust = TakisSpawnDust(me,
+				fa,
+				0,
+				P_RandomRange(-1,2)*me.scale,
+				{
+					xspread = 0,
+					yspread = 0,
+					zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+					
+					thrust = 0,
+					thrustspread = 0,
+					
+					momz = P_RandomRange(0,1)*me.scale,
+					momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
+					
+					scale = me.scale,
+					scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+					
+					fuse = 12+P_RandomRange(-2,3),
+				}
+			)
+			dust.momx = FixedMul(sin(fa),me.radius)/2
+			dust.momy = FixedMul(cos(fa),me.radius)/2
 		end
 
 		local wind = P_SpawnMobjFromMobj(me,0,0,0,MT_WINDRINGLOL)
@@ -3978,33 +4023,30 @@ addHook("MobjMoveCollide",function(tm,t)
 				return false
 			end
 		--fling solids
-		elseif (t.flags & MF_SOLID|MF_SCENERY == MF_SOLID|MF_SCENERY)
-		and not (t.flags & (MF_SPECIAL|MF_ENEMY|MF_MONITOR|MF_PUSHABLE))
-		and (t.health)
-		and (takis.afterimaging or p.powers[pw_invulnerability] or takis.isSuper)
-		and (t.parent ~= tm)
-		and (t.type ~= MT_PLAYER)
-		
-			if (t.takis_flingme == false) then return end
+		elseif CanFlingSolid(t,tm)
+		and (takis.afterimaging or p.powers[pw_invulnerability] or takis.isSuper or takis.transfo & TRANSFO_BALL)
 			if not (t and t.valid) then return end
+			local j1,j2 = t,tm
+			local tm = j1
+			local t = j2
 			
 			for i = 0, 34
-				A_BossScream(t,1,MT_SONIC3KBOSSEXPLODE)
+				A_BossScream(tm,1,MT_SONIC3KBOSSEXPLODE)
 			end
-			local sfx = P_SpawnGhostMobj(t)
+			local sfx = P_SpawnGhostMobj(tm)
 			sfx.flags2 = $|MF2_DONTDRAW
 			sfx.tics = 3*TR
 			sfx.fuse = 3*TR
 			S_StartSound(sfx,sfx_tkapow)
 			
-			local fling = P_SpawnMobjFromMobj(t,0,0,0,MT_TAKIS_FLINGSOLID)
-			local ang = R_PointToAngle2(t.x,t.y, tm.x,tm.y)
+			local fling = P_SpawnMobjFromMobj(tm,0,0,0,MT_TAKIS_FLINGSOLID)
+			local ang = R_PointToAngle2(tm.x,tm.y, t.x,t.y)
 			fling.angle = ang
-			fling.radius = t.radius
-			fling.height = t.height
-			fling.state = t.state
+			fling.radius = tm.radius
+			fling.height = tm.height
+			fling.state = tm.state
 			fling.fuse = 3*TR
-			fling.color = t.color
+			fling.color = tm.color
 			L_ZLaunch(fling,
 				P_RandomRange(10,15)*tm.scale+P_RandomFixed()
 			)
@@ -4017,30 +4059,48 @@ addHook("MobjMoveCollide",function(tm,t)
 				fling.angle = $+ANGLE_90
 			end
 			
-			SpawnBam(t)
-			DoQuake(p,20*FU,10)
+			SpawnBam(tm)
+			local rad = 600*tm.scale
+			for p2 in players.iterate
+				
+				local m2 = p2.realmo
+				
+				if not m2 or not m2.valid
+					continue
+				end
+				
+				if (FixedHypot(m2.x-tm.x,m2.y-tm.y) <= rad)
+					DoQuake(p,
+						FixedMul(
+							20*FU, FixedDiv( rad-FixedHypot(m2.x-tm.x,m2.y-tm.y),rad )
+						),
+						10
+					)
+				end
+			end
 			S_StartSound(fling,sfx_crumbl)
 			S_StartSound(fling,sfx_wbreak)
 			
 			if (multiplayer)
 				--thok does our bidding for us
-				local thok = P_SpawnMobjFromMobj(t,0,0,0,MT_THOK)
+				local thok = P_SpawnMobjFromMobj(tm,0,0,0,MT_THOK)
 				thok.camefromsolid = true
 				thok.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
 				thok.solid = {
-					type = t.type,
-					state = t.state,
-					pos = {t.x,t.y,t.z},
-					flags = t.flags,
-					flags2 = t.flags2,
-					angle = t.angle,
-					scale = t.scale,
-					color = t.color
+					type = tm.type,
+					state = tm.state,
+					pos = {tm.x,tm.y,tm.z},
+					flags = tm.flags,
+					flags2 = tm.flags2,
+					angle = tm.angle,
+					scale = tm.scale,
+					color = tm.color
 				}
 			end
 			
-			P_RemoveMobj(t)
+			P_RemoveMobj(tm)
 			TakisGiveCombo(p,takis,true)
+			
 			return false
 		end
 		

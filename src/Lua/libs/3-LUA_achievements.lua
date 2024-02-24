@@ -26,6 +26,8 @@ end
 
 rawset(_G,"NUMACHIEVEMENTS",#achs)
 
+local achflags = {}
+
 rawset(_G,"ACHIEVEMENT_PATH","client/summa.dat")
 
 rawset(_G,"TAKIS_ACHIEVEMENTINFO",{

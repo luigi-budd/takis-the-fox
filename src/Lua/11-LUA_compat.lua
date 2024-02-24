@@ -6,6 +6,7 @@ local compat = {
 	mrcemom = false,
 	inatext = false,
 	peptext = false,
+	speckismash = false,
 }
 
 local function printf(...)
@@ -92,6 +93,16 @@ addHook("ThinkFrame",do
 		mrce.CharacterPhysics(TAKIS_SKIN,false,false,1)
 		compat.mrcemom = true
 		printf("Disabled MRCE momentum.")
+	end
+	if (specki and specki.gimmicks.ctf)
+	and not compat.speckismash
+		local ctf = specki.gimmicks.ctf
+		ctf.stuff["takisthefox"] = {
+			jumpheight = 12*FU,
+			weight = FU,
+		}
+		compat.speckismash = true
+		printf("Added Specki stuff.")
 	end
 end)
 

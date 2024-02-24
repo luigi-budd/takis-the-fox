@@ -1,62 +1,89 @@
 local t = TAKIS_NET
-
-rawset(_G,"CV_TAKIS",{})
-CV_TAKIS.nerfarma = CV_RegisterVar({
-	name = "takis_nerfarma",
-	defaultvalue = "false",
-	flags = CV_NETVAR|CV_SHOWMODIF,
-	PossibleValue = CV_TrueFalse
-})
-CV_TAKIS.tauntkills = CV_RegisterVar({
-	name = "takis_tauntkills",
-	defaultvalue = "true",
-	flags = CV_NETVAR|CV_SHOWMODIF,
-	PossibleValue = CV_TrueFalse
-})
-CV_TAKIS.achs = CV_RegisterVar({
-	name = "takis_achs",
-	defaultvalue = "true",
-	flags = CV_NETVAR|CV_SHOWMODIF,
-	PossibleValue = CV_TrueFalse
-})
-CV_TAKIS.collaterals = CV_RegisterVar({
-	name = "takis_collaterals",
-	defaultvalue = "true",
-	flags = CV_NETVAR|CV_SHOWMODIF,
-	PossibleValue = CV_TrueFalse
-})
-CV_TAKIS.heartcards = CV_RegisterVar({
-	name = "takis_heartcards",
-	defaultvalue = "true",
-	flags = CV_NETVAR|CV_SHOWMODIF,
-	PossibleValue = CV_TrueFalse
-})
-CV_TAKIS.hammerquake = CV_RegisterVar({
-	name = "takis_hammerquakes",
-	defaultvalue = "true",
-	flags = CV_NETVAR|CV_SHOWMODIF,
-	PossibleValue = CV_TrueFalse
-})
-CV_TAKIS.chaingun = CV_RegisterVar({
-	name = "takis_chaingun",
-	defaultvalue = "false",
-	flags = CV_NETVAR|CV_SHOWMODIF,
-	PossibleValue = CV_TrueFalse
-})
+local m = TAKIS_MISC
 
 local boolean = {
 	["false"] = false,
 	["true"] = true,
 }
-local function CVtoNET()
-	t.nerfarma = boolean[string.lower(CV_TAKIS.nerfarma.string)]
-	t.tauntkillsenabled = boolean[string.lower(CV_TAKIS.tauntkills.string)]
-	t.noachs = not boolean[string.lower(CV_TAKIS.achs.string)]
-	t.collaterals = boolean[string.lower(CV_TAKIS.collaterals.string)]
-	t.cards = boolean[string.lower(CV_TAKIS.heartcards.string)]
-	t.hammerquakes = boolean[string.lower(CV_TAKIS.hammerquake.string)]
-	t.chaingun = boolean[string.lower(CV_TAKIS.chaingun.string)]
+
+local function debugf(name,cv,tv)
+	if not TAKIS_ISDEBUG then return end
+	if not (TAKIS_DEBUGFLAG & DEBUG_NET) then return end
+	
+	print("\x83TAKIS:\x80 "..name.." = cv: "..cv.." tv: "..tv)
 end
+
+rawset(_G,"CV_TAKIS",{})
+CV_TAKIS.nerfarma = CV_RegisterVar({
+	name = "takis_nerfarma",
+	defaultvalue = "false",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.nerfarma = boolean[string.lower(cv.string)]
+		debugf("nerfarma",string.lower(cv.string),tostring(t.nerfarma))
+	end
+})
+CV_TAKIS.tauntkills = CV_RegisterVar({
+	name = "takis_tauntkills",
+	defaultvalue = "true",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.tauntkillsenabled = boolean[string.lower(cv.string)]
+		debugf("tauntkills",string.lower(cv.string),tostring(t.tauntkillsenabled))
+	end
+})
+CV_TAKIS.achs = CV_RegisterVar({
+	name = "takis_achs",
+	defaultvalue = "true",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.noachs = not boolean[string.lower(cv.string)]
+		debugf("achs",string.lower(cv.string),tostring(not t.achs))
+	end
+})
+CV_TAKIS.collaterals = CV_RegisterVar({
+	name = "takis_collaterals",
+	defaultvalue = "true",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.collaterals = boolean[string.lower(cv.string)]
+		debugf("collaterals",string.lower(cv.string),tostring(t.collaterals))
+	end
+})
+CV_TAKIS.heartcards = CV_RegisterVar({
+	name = "takis_heartcards",
+	defaultvalue = "true",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.cards = boolean[string.lower(cv.string)]
+		debugf("cards",string.lower(cv.string),tostring(t.cards))
+	end
+})
+CV_TAKIS.hammerquake = CV_RegisterVar({
+	name = "takis_hammerquakes",
+	defaultvalue = "true",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.hammerquakes = cv.value == 1 --boolean[string.lower(cv.string)]
+		debugf("hammerquakes",string.lower(cv.string),tostring(t.hammerquakes))
+	end
+})
+CV_TAKIS.chaingun = CV_RegisterVar({
+	name = "takis_chaingun",
+	defaultvalue = "false",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.chaingun = boolean[string.lower(cv.string)]
+		debugf("chaingun",string.lower(cv.string),tostring(t.chaingun))
+	end
+})
 
 local function livesCount()
 	if (gametyperules & GTR_TAG)
@@ -84,7 +111,7 @@ local function livesCount()
 				
 			end
 			
-			t.livescount = lives
+			m.livescount = lives
 		end
 	end
 end
@@ -119,16 +146,14 @@ addHook("MapChange", function(mapid)
 		p.takistable.HUD.bosstitle.tic = 0
 	end
 	
-	t.ideyadrones = {}
+	m.ideyadrones = {}
+	m.inbossmap = false
 end)
 
+--will this synch though?
 addHook("MapLoad", function(mapid)
-	t.inbossmap = false
 	
-	t.numdestroyables = 0
-	
-	t.inspecialstage = G_IsSpecialStage(mapid)
-	t.isretro = (maptol & TOL_MARIO)
+	m.numdestroyables = 0
 	
 	for mt in mapthings.iterate
 		
@@ -137,16 +162,12 @@ addHook("MapLoad", function(mapid)
 				
 			
 			if mobj.type == MT_CYBRAKDEMON
-				t.inbrakmap = true
-			end
-			
-			if mobj.type == MT_EGGMAN_BOX
-				continue
+				m.inbrakmap = true
 			end
 			
 			if (CanFlingThing(mobj))
 			or (SPIKE_LIST[mobj.type] == true)
-				t.numdestroyables = $+1
+				m.numdestroyables = $+1
 			end
 		else
 			continue
@@ -154,7 +175,7 @@ addHook("MapLoad", function(mapid)
 		
 	end
 	
-	t.partdestroy = t.numdestroyables/(t.playercount+2) or 1
+	m.partdestroy = m.numdestroyables/(m.playercount+2) or 1
 	
 end)
 
@@ -168,7 +189,7 @@ local bumpinterval = {
 
 addHook("ThinkFrame", do
 	
-	CVtoNET()
+	--CVtoNET()
 	
 	if usedCheats
 	and not t.usedcheats
@@ -200,8 +221,11 @@ addHook("ThinkFrame", do
 		return
 	end
 	
-	t.inttic = 0
-	t.inbossmap = $ or (mapheaderinfo[gamemap].bonustype == 1)
+	m.inspecialstage = G_IsSpecialStage(gamemap)
+	m.isretro = (maptol & TOL_MARIO)
+	
+	m.inttic = 0
+	m.inbossmap = $ or (mapheaderinfo[gamemap].bonustype == 1)
 	
 	livesCount()
 	
@@ -213,24 +237,25 @@ addHook("ThinkFrame", do
 			if player.exiting
 			or player.spectator 
 			or player.pizzaface
+			or player.ptsr_outofgame
 			or player.playerstate == PST_DEAD
 				exitingCount = $+1
 			end
-			if (skins[player.skin] == TAKIS_SKIN)
+			if (skins[player.skin].name == TAKIS_SKIN)
 				takisCount = $+1
 			end
 		end
 		playerCount = $+1
 	end
 
-	t.exitingcount = exitingCount
-	t.playercount = playerCount
-	t.takiscount = takisCount
+	m.exitingcount = exitingCount
+	m.playercount = playerCount
+	m.takiscount = takisCount
 	
 	if not (leveltime % 3*TR)
 	and ((multiplayer) and not splitscreen)
 	and not (t.noachs)
-		if t.takiscount >= 6
+		if m.takiscount >= 6
 			for p in players.iterate
 				if skins[p.skin].name == TAKIS_SKIN
 				and not (p.takistable.achfile & ACHIEVEMENT_TAKISFEST)
@@ -251,22 +276,22 @@ addHook("ThinkFrame", do
 		end
 	end
 	
-	if t.inbossmap
+	if m.inbossmap
 		local bump = bumpinterval[string.lower(mapheaderinfo[gamemap].musname or '')] or TR
 		if (leveltime % bump) == 0
-			t.cardbump = 10*FU
+			m.cardbump = 10*FU
 		end
 	end
 	
-	if t.cardbump ~= 0 then t.cardbump = $*5/6 end
+	if m.cardbump ~= 0 then m.cardbump = $*5/6 end
 end)
 
 --didnt know stagefailed was passed onto IntermissionThinker
 --until i looked at the source code. this should be documented
 --on the wiki now, thanks to yours truely :))))
 addHook("IntermissionThinker",function(stagefailed)
-	t.inttic = $+1
-	t.stagefailed = stagefailed
+	m.inttic = $+1
+	m.stagefailed = stagefailed
 	
 	for p in players.iterate
 		local takis = p.takistable
@@ -274,14 +299,14 @@ addHook("IntermissionThinker",function(stagefailed)
 		if takis
 		and (skins[p.skin].name == TAKIS_SKIN)
 		and takis.lastss
-			if t.inttic == TR
+			if m.inttic == TR
 				if not stagefailed
 				and string.lower(G_BuildMapTitle(takis.lastmap)) ~= "black hole zone"
 					S_StartSound(nil,sfx_sptclt,p)
 				else
 					S_StartSound(nil,sfx_altdi1,p)
 				end
-			elseif t.inttic == TR+(TR*4/5)
+			elseif m.inttic == TR+(TR*4/5)
 				if All7Emeralds(emeralds)
 					S_StartSound(nil,sfx_tayeah,p)
 				elseif not stagefailed

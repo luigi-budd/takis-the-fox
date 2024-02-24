@@ -16,7 +16,7 @@
 	-katsy - bounce sector detection
 	-Banddy - metal sonic boss portrait, tested hh things mapheader positions
 	-Marilyn - final demo cutscene i used lol
-	-nicholas rickys - helped me with some code in sharecombos
+	-nicholas rickys (saxashitter) - helped me with some code in sharecombos
 	
 	CODE I STOLE (from reusable mods)
 	-SMSReborn - IO code
@@ -64,9 +64,11 @@ local dbgflags = {
 	"SPEEDOMETER",
 	"HURTMSG",
 	"BOSSCARD",
+	"NET",
 }
 for k,v in ipairs(dbgflags)
 	local val = 1<<(k-1)
+	assert(val ~= -1,"\x85Ran out of bits for DEBUG_! (k="..k..")\x80")
 	rawset(_G,"DEBUG_"..v,val)
 	print("Enummed DEBUG_"..v.." ("..val..")")
 	table.insert(constlist,{"DEBUG_"..v,val})
@@ -224,13 +226,9 @@ rawset(_G, "SPIKE_LIST", {
 	[MT_BOMBSPHERE] = true,
 })
 
+--these arent really synched anymore but keeping the old name
+--so stuff doesnt break
 rawset(_G, "TAKIS_NET", {
-	inspecialstage = false,
-	inbossmap = false,
-	inbrakmap = false,
-	isretro = 0,
-	
-	livescount = 0,
 	
 	nerfarma = false,
 	tauntkillsenabled = true,
@@ -240,19 +238,30 @@ rawset(_G, "TAKIS_NET", {
 	hammerquakes = true,
 	chaingun = false,
 	
-	numdestroyables = 0,
-	partdestroy = 0,
+	usedcheats = false,
+	
+})
+
+rawset(_G,"TAKIS_MISC",{
+	inspecialstage = false,
+	inbossmap = false,
+	inbrakmap = false,
+	isretro = 0,
 	
 	exitingcount = 0,
 	playercount = 0,
 	takiscount = 0,
+	
+	livescount = 0,
+	
+	numdestroyables = 0,
+	partdestroy = 0,
 	
 	ideyadrones = {},
 	
 	inttic = 0,
 	stagefailed = true,
 	cardbump = 0,
-	usedcheats = false,
 	
 	--DONT change to happy hour if the song is any one of these
 	specsongs = {
@@ -320,7 +329,9 @@ rawset(_G, "TAKIS_NET", {
 		--the past
 		["srb2 museum zone"] = true,
 	},
-	
+})
+
+rawset(_G,"TAKIS_BOSSCARDS",{
 	--titlecard stuff
 	bossnames = {
 		-- Vanilla SRB2
@@ -434,7 +445,6 @@ rawset(_G, "TAKIS_NET", {
 		MT_FROSTBURN = "EGG",
 		MT_EGGZAP = "EGG",
 	},
-
 })
 
 rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
@@ -562,6 +572,7 @@ rawset(_G, "TakisInitTable", function(p)
 		trophy = 0,
 		gotemeralds = 0,
 		emeraldcutscene = 0,
+		firethokked = false, --fireass 3rd jump
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -638,6 +649,7 @@ rawset(_G, "TakisInitTable", function(p)
 			clutchstyle = 1, --0 for bar, 1 for meter
 			sharecombos = 1,
 			dontshowach = 0, --1 to not show ach messages
+			minhud = 0,
 		},
 		--tf2 taunt menu lol
 		--up to 7 taunts, detected with BT_WEAPONMASK
@@ -1897,8 +1909,27 @@ mobjinfo[MT_TAKIS_PONGLER] = {
 	flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT
 }
 
+SafeFreeslot("MT_TAKIS_GUNSHOT")
+SafeFreeslot("S_TAKIS_GUNSHOT")
+states[S_TAKIS_GUNSHOT] = {
+	sprite = SPR_PGLR,
+	frame = A,
+	action = A_ThrownRing,
+	tics = 1,
+	nextstate = S_TAKIS_GUNSHOT
+}
+mobjinfo[MT_TAKIS_GUNSHOT] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_GUNSHOT,
+	spawnhealth = 1,
+	height = 32*FRACUNIT,
+	radius = 16*FRACUNIT,
+	speed = 120*FRACUNIT,
+	flags = MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY
+}
+
 addHook("NetVars",function(n)
-	TAKIS_NET = n($)
+	--TAKIS_NET = n($)
 	
 	TAKIS_MAX_HEARTCARDS = n($)
 	--TAKIS_DEBUGFLAG = n($)
@@ -1923,7 +1954,6 @@ addHook("NetVars",function(n)
 		HAPPY_HOUR[v] = n($)
 	end
 	TAKIS_ACHIEVEMENTINFO = n($)
-	CV_TAKIS = n($) --should i even do thsi?
 end)
 
 addHook("ThinkFrame",do

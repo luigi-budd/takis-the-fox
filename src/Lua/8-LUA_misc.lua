@@ -964,10 +964,6 @@ addHook("MobjMoveCollide",function(shot,mo)
 		return
 	end
 	
-	if not shot.shotbytakis
-		return
-	end
-	
 	if not L_ZCollide(shot,mo)
 		return
 	end
@@ -976,28 +972,24 @@ addHook("MobjMoveCollide",function(shot,mo)
 		return
 	end
 	
-	if not (shot.tracer and shot.tracer.valid)
-		return
-	end
-	
 	if (SPIKE_LIST[mo.type] == true)
-		P_KillMobj(mo,shot,shot.tracer)
+		P_KillMobj(mo,shot,shot.parent)
 		return
 	end
 	
 	if (CanFlingThing(mo)
 	or (
 		mo.type == MT_PLAYER
-		and CanPlayerHurtPlayer(shot.tracer.player,mo.player)
+		and CanPlayerHurtPlayer(shot.parent.player,mo.player)
 		--dont kill ourselves though
-		and (mo ~= shot.tracer)
+		and (mo ~= shot.parent)
 	))
 	and (mo.health)
 		S_StartSound(mo,sfx_sdmkil)
 		SpawnEnemyGibs(shot,mo)
 		SpawnBam(mo)
 		if (mo.type ~= MT_PLAYER)
-			SpawnRagThing(mo,shot,shot.tracer)
+			SpawnRagThing(mo,shot,shot.parent)
 			if (mo.flags & MF_BOSS)
 				local boom = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
 				boom.flags2 = $|MF2_DONTDRAW
@@ -1007,16 +999,16 @@ addHook("MobjMoveCollide",function(shot,mo)
 				for i = 0,P_RandomRange(10,20)
 					A_BossScream(boom,1,MT_SONIC3KBOSSEXPLODE)
 				end
-				DoFlash(shot.tracer.player,PAL_WHITE,3)
+				DoFlash(shot.parent.player,PAL_WHITE,3)
 			end
 		else
 			--dont hurt other shotgunners with chainguns
 			if (mo.player.takistable.transfo & TRANSFO_SHOTGUN)
-			and (CV_TAKIS.chaingun.value)
-				return true
+			and (TAKIS_NET.chaingun)
+				return false
 			end
 			
-			P_KillMobj(mo,shot,shot.tracer)
+			P_KillMobj(mo,shot,shot.parent)
 			P_InstaThrust(mo,R_PointToAngle2(shot.x,shot.y, mo.x,mo.y),50*shot.scale)
 			local boom = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
 			boom.flags2 = $|MF2_DONTDRAW
@@ -1031,7 +1023,7 @@ addHook("MobjMoveCollide",function(shot,mo)
 		return true
 	end
 	
-end,MT_THROWNSCATTER)
+end,MT_TAKIS_GUNSHOT)
 
 local function gunragdoll(gun,i)
 	local rag = P_SpawnMobjFromMobj(gun,0,0,0,MT_TAKIS_SHOTGUN)
@@ -1079,27 +1071,21 @@ addHook("MobjDeath",function(gun,i,s)
 end,MT_TAKIS_SHOTGUN)
 
 addHook("MobjThinker",function(shot)
-	if not shot.shotbytakis
-		return
-	end
-	
-	S_StopSound(shot)
 	TakisBreakAndBust(nil,shot)
-	
-end,MT_THROWNSCATTER)
+	shot.timealive = $+1
+end,MT_TAKIS_GUNSHOT)
 
 addHook("MobjDeath",function(shot,i,s)
-	if (shot.shotbytakis and not shot.timealive)
+	if (shot.timealive)
 		shot.health = 1
 		return true
 	end
-	if ((i == shot.tracer) or (s == shot.tracer))
-	or ((shot.timealive < 10) and (i and i.valid or s and s.valid))
-	and (shot.shotbytakis)
+	if ((i == shot.parent) or (s == shot.parent))
+	or ((i and i.valid or s and s.valid))
 		shot.health = 1
 		return true
 	end
-end,MT_THROWNSCATTER)
+end,MT_TAKIS_GUNSHOT)
 
 --specials
 
@@ -1127,24 +1113,6 @@ end
 
 for k,type in pairs(types)
 	addHook("MobjSpawn",makespecial,type)
-end
---
-
---cards
-local types2 = {
-	MT_RING,
-	MT_COIN,
-	MT_REDTEAMRING,
-	MT_BLUETEAMRING
-}
-
-
-local function givepieces(mo)
-	mo.takis_givecardpieces = true
-end
-
-for k,type in pairs(types2)
-	addHook("MobjSpawn",givepieces,type)
 end
 --
 
@@ -1223,7 +1191,7 @@ addHook("MobjThinker",function(s)
 end,MT_ARMAGEDDON_ORB)
 
 addHook("BossThinker", function(mo)
-	if TAKIS_NET.bossprefix[mo.type] == nil then return end
+	if TAKIS_BOSSCARDS.bossprefix[mo.type] == nil then return end
 	
 	if (mo.target and mo.target.valid)
 	and (mo.target.player and mo.target.player.valid)
@@ -1268,7 +1236,7 @@ end)
 addHook("MobjSpawn",function(drone)
 	if (maptol & TOL_NIGHTS)
 		drone.dispoffset = -1
-		table.insert(TAKIS_NET.ideyadrones,drone)
+		table.insert(TAKIS_MISC.ideyadrones,drone)
 	end
 end,MT_EGGCAPSULE)
 
@@ -1298,7 +1266,7 @@ addHook("MobjThinker",function(drone)
 			i = $+1
 		end
 		--only on the final mare
-		if coolp.mare ~= #TAKIS_NET.ideyadrones-1
+		if coolp.mare ~= #TAKIS_MISC.ideyadrones-1
 			return
 		end
 		HH_Trigger(drone,coolp,coolp.nightstime)
@@ -1784,12 +1752,12 @@ end,MT_TAKIS_GIB)
 --this is so sa hud!!
 -- https://mb.srb2.org/threads/sonic-adventure-style-hud.27294/
 
-local bossnames = TAKIS_NET.bossnames
-local addonbosses = TAKIS_NET.addonbosses
-local nobosscards = TAKIS_NET.nobosscards
-local noaddonbosscards = TAKIS_NET.noaddonbosscards
-local bossprefix = TAKIS_NET.bossprefix
-local addonbossprefix = TAKIS_NET.addonbossprefix
+local bossnames = TAKIS_BOSSCARDS.bossnames
+local addonbosses = TAKIS_BOSSCARDS.addonbosses
+local nobosscards = TAKIS_BOSSCARDS.nobosscards
+local noaddonbosscards = TAKIS_BOSSCARDS.noaddonbosscards
+local bossprefix = TAKIS_BOSSCARDS.bossprefix
+local addonbossprefix = TAKIS_BOSSCARDS.addonbossprefix
 
 local function setBossMeter(p, boss)
 	local bosscards = p.takistable.HUD.bosscards
@@ -2496,7 +2464,6 @@ local gibbinglist = {
 local function regulargib(mo)
 	if not (mo and mo.valid) then return end
 	mo.takis_metalgibs = false
-	print("metalgib: "..tostring(mo.takis_metalgibs))
 end
 
 for _,type in ipairs(gibbinglist)

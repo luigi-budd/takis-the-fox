@@ -46,7 +46,7 @@ local function drawheartcards(v,p)
 	end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_NET.inspecialstage)
+	or (TAKIS_MISC.inspecialstage)
 	or amiinsrbz
 	or p.takistable.hhexiting
 		return
@@ -62,10 +62,10 @@ local function drawheartcards(v,p)
 	
 	--space allocated for all the cards
 	local bump = 0
-	if (TAKIS_NET.inbossmap)
+	if (TAKIS_MISC.inbossmap)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
-		bump = TAKIS_NET.cardbump
+		bump = TAKIS_MISC.cardbump
 	end
 	local maxspace = 90*FU+bump
 	
@@ -78,7 +78,7 @@ local function drawheartcards(v,p)
 		local j = i
 		
 		local eflag = V_HUDTRANS
-		if (TAKIS_NET.inbossmap)
+		if (TAKIS_MISC.inbossmap)
 		and (takis.HUD.bosscards and takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 		and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
 			eflag = $ &~V_HUDTRANS
@@ -175,7 +175,7 @@ local function drawbosscards(v,p)
 	
 	if (bosscards == nil) then return end
 	if not (bosscards.mo and bosscards.mo.valid) then return end
-	if (bosscards.nocards or TAKIS_NET.nobosscards[bosscards.mo.type] ~= nil) then return end
+	if (bosscards.nocards or TAKIS_BOSSCARDS.nobosscards[bosscards.mo.type] ~= nil) then return end
 	
 	local amiinsrbz = false
 	
@@ -187,7 +187,7 @@ local function drawbosscards(v,p)
 	end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_NET.inspecialstage)
+	or (TAKIS_MISC.inspecialstage)
 	or amiinsrbz
 	or p.takistable.hhexiting
 	or p.takistable.inChaos
@@ -198,14 +198,14 @@ local function drawbosscards(v,p)
 	--space allocated for all the cards
 	local bump = 0
 	if (bosscards.mo.health)
-		bump = TAKIS_NET.cardbump
+		bump = TAKIS_MISC.cardbump
 	end
 	local maxspace = 110*FU+bump
 	
 	--position of the first card
 	local maxx = maxspace
 	
-	if TAKIS_NET.bossprefix[bosscards.mo.type] ~= nil then xoff = 4*FU end
+	if TAKIS_BOSSCARDS.bossprefix[bosscards.mo.type] ~= nil then xoff = 4*FU end
 	
 	--boss cards
 	for i = 1, bosscards.maxcards do
@@ -213,7 +213,7 @@ local function drawbosscards(v,p)
 		local j = i
 		
 		local eflag = V_HUDTRANS
-		if (TAKIS_NET.inbossmap)
+		if (TAKIS_MISC.inbossmap)
 		and (bosscards.mo and bosscards.mo.health)
 			eflag = $ &~V_HUDTRANS
 		end
@@ -367,7 +367,7 @@ local function calcstatusface(p,takis)
 		if takis.HUD.statusface.evilgrintic
 		or (takis.transfo & TRANSFO_SHOTGUN
 		and TAKIS_NET.chaingun
-		and takis.use >= TR)
+		and takis.use >= TR*2)
 			takis.HUD.statusface.state = "EVL_"
 			takis.HUD.statusface.frame = (leveltime/4)%2
 			takis.HUD.statusface.priority = 7
@@ -412,7 +412,7 @@ local function calcstatusface(p,takis)
 	
 	--isnt this just so retro?
 	--god, if only i lived in retroville
-	if TAKIS_NET.isretro
+	if TAKIS_MISC.isretro
 	and not noretrooverride
 		takis.HUD.statusface.frame = 0
 	end
@@ -436,7 +436,7 @@ local function drawface(v,p)
 	end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_NET.inspecialstage)
+	or (TAKIS_MISC.inspecialstage)
 	or amiinsrbz
 	or p.takistable.hhexiting
 		return
@@ -463,7 +463,7 @@ local function drawface(v,p)
 	local pre = "TAK"
 	local scale = 2*FU/5
 	local x,y2 = 0,0
-	if TAKIS_NET.isretro
+	if TAKIS_MISC.isretro
 		pre = "RETR_"
 		scale = $*3
 		x = -17*FU
@@ -496,7 +496,7 @@ local function drawface(v,p)
 		end
 	end
 	
-	if (TAKIS_NET.inbossmap)
+	if (TAKIS_MISC.inbossmap)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
 		eflags = $ &~(V_HUDTRANS|V_HUDTRANSHALF)
@@ -586,12 +586,12 @@ local function drawbossface(v,p)
 	
 	if not (bosscards.mo and bosscards.mo.valid) then return end
 	if not (bosscards.name) then return end
-	if (bosscards.nocards or TAKIS_NET.nobosscards[bosscards.mo.type] ~= nil) then return end
+	if (bosscards.nocards or TAKIS_BOSSCARDS.nobosscards[bosscards.mo.type] ~= nil) then return end
 	if (takis.inChaos) then return end
 	
 	local eflags = 0
 	
-	local pre = TAKIS_NET.bossprefix[bosscards.mo.type]
+	local pre = TAKIS_BOSSCARDS.bossprefix[bosscards.mo.type]
 	local scale = 2*FU/5
 	
 	if pre == nil then return end
@@ -626,7 +626,7 @@ local function drawrings(v,p)
 	if (customhud.CheckType("rings") != modname) return end
 
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_NET.inspecialstage)
+	or (TAKIS_MISC.inspecialstage)
 	or p.takistable.inSRBZ
 	or p.takistable.hhexiting
 	or (p.takis_noabil ~= nil and p.rings == 0)
@@ -748,7 +748,7 @@ local function drawtimer(v,p,altpos)
 	if altpos == nil then altpos = false end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_NET.inspecialstage)
+	or (TAKIS_MISC.inspecialstage)
 	or p.takistable.inSRBZ
 	or HAPPY_HOUR.othergt
 		return
@@ -852,7 +852,7 @@ local function drawscore(v,p)
 	if (customhud.CheckType("score") != modname) return end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_NET.inspecialstage)
+	or (TAKIS_MISC.inspecialstage)
 	or p.takistable.inSRBZ
 	or (p.takis_noabil ~= nil)
 		return
@@ -903,7 +903,7 @@ local function drawscore(v,p)
 	
 	if takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid
 	and not (takis.HUD.bosscards.nocards
-	or TAKIS_NET.nobosscards[takis.HUD.bosscards.mo.type] ~= nil)
+	or TAKIS_BOSSCARDS.nobosscards[takis.HUD.bosscards.mo.type] ~= nil)
 		y = $+30
 	end
 	
@@ -989,7 +989,7 @@ local function drawlivesarea(v,p)
 	if (customhud.CheckType("lives") != modname) return end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_NET.inspecialstage)
+	or (TAKIS_MISC.inspecialstage)
 	or p.takistable.inSRBZ
 	or (p.textBoxInAction)
 	or (TAKIS_DEBUGFLAG & (DEBUG_SPEEDOMETER|DEBUG_BUTTONS))
@@ -1126,7 +1126,7 @@ local function drawlivesarea(v,p)
 			
 			if CV_FindVar("cooplives").value == 3
 			and (netgame or multiplayer)
-				value = TAKIS_NET.livescount
+				value = TAKIS_MISC.livescount
 			end
 			
 			v.drawString(
@@ -1506,7 +1506,7 @@ local function drawcombostuff(v,p,cam)
 	if (TAKIS_DEBUGFLAG & DEBUG_BOSSCARD) then return end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_NET.inspecialstage)
+	or (TAKIS_MISC.inspecialstage)
 		return
 	end
 	
@@ -3860,11 +3860,11 @@ local function drawdebug(v,p)
 			v.drawString(x,y+24,"HP: "..
 				bosscards.mo.health.."/"..
 				bosscards.maxcards..
-				((bosscards.nocards or TAKIS_NET.nobosscards[bosscards.mo.type] ~= nil) and " (Not drawn)" or ''),
-				flags|((bosscards.nocards or TAKIS_NET.nobosscards[bosscards.mo.type] ~= nil) and V_REDMAP or 0),"thin"
+				((bosscards.nocards or TAKIS_BOSSCARDS.nobosscards[bosscards.mo.type] ~= nil) and " (Not drawn)" or ''),
+				flags|((bosscards.nocards or TAKIS_BOSSCARDS.nobosscards[bosscards.mo.type] ~= nil) and V_REDMAP or 0),"thin"
 			)		
 			v.drawString(x,y+32,"face: "..
-				(TAKIS_NET.bossprefix[bosscards.mo.type] or "No face prefix"),
+				(TAKIS_BOSSCARDS.bossprefix[bosscards.mo.type] or "No face prefix"),
 				flags,"thin"
 			)		
 			local strings = prtable("statusface",bosscards.statusface,false)
@@ -3873,11 +3873,125 @@ local function drawdebug(v,p)
 			end
 		end
 		flags = $|V_SNAPTORIGHT &~V_SNAPTOLEFT
-		local strings = prtable("TAKIS_NET.nobosscards",TAKIS_NET.nobosscards,false)
+		local strings = prtable("TAKIS_BOSSCARDS.nobosscards",TAKIS_BOSSCARDS.nobosscards,false)
 		for k,va in ipairs(strings)
 			v.drawString(300-x,y-8+(k*8),va,flags,"thin-right")		
 		end
 		
+	end
+	if (TAKIS_DEBUGFLAG & DEBUG_NET)
+		local dex = 7
+		local cv = {
+			[1] = CV_TAKIS.nerfarma,
+			[2] = CV_TAKIS.tauntkills,
+			[3] = CV_TAKIS.achs,
+			[4] = CV_TAKIS.collaterals,
+			[5] = CV_TAKIS.heartcards,
+			[6] = CV_TAKIS.hammerquake,
+			[7] = CV_TAKIS.chaingun,
+		}
+		local net = {
+			[1] = TAKIS_NET.nerfarma,
+			[2] = TAKIS_NET.tauntkillsenabled,
+			[3] = TAKIS_NET.noachs,
+			[4] = TAKIS_NET.collaterals,
+			[5] = TAKIS_NET.cards,
+			[6] = TAKIS_NET.hammerquakes,
+			[7] = TAKIS_NET.chaingun,
+		}
+		local name = {
+			[1] = "Nerf arma",
+			[2] = "Taunt kills",
+			[3] = "Achs",
+			[4] = "Collaterals",
+			[5] = "Cards",
+			[6] = "Hammer quakes",
+			[7] = "Chaingun",
+		}
+		local boolclr = {
+			[true] = "\x83",
+			[false] = "\x85",
+		}
+		
+		for i = 1,dex
+			local bool = net[i]
+			if i == 3 then
+				bool = not $
+			end
+			local s1 = cv[i].value and " " or ''
+			local s2 = bool and " " or ''
+			local c1 = boolclr[cv[i].value == 1]
+			local c2 = boolclr[bool]
+			v.drawString(100,
+				2+(i*8),
+				"\x86".."CV: "..c1..string.lower(tostring(cv[i].string))..s1..
+				"\x86 NET: "..c2..tostring(bool)..s2.."\x86 - \x80"..
+				name[i],
+				V_HUDTRANS|V_ALLOWLOWERCASE|V_MONOSPACE,
+				"thin"
+			)
+			local ds = (cv[i].value == 1) ~= bool
+			if ds
+				v.drawString(100,
+					2+(i*8),
+					"Desynched!",
+					V_HUDTRANS|V_ALLOWLOWERCASE|V_MONOSPACE|V_YELLOWMAP,
+					"thin-right"
+				)
+			end
+		end
+		
+		--other shit
+		local m = TAKIS_MISC
+		v.drawString(100,66,
+			"FC: "..(m.partdestroy).."/"..(m.numdestroyables).." things",
+			V_HUDTRANS|V_ALLOWLOWERCASE,
+			"thin"
+		)
+		v.drawString(100,74,
+			"count: E "..m.exitingcount..", T "..m.takiscount..", "..m.playercount,
+			V_HUDTRANS|V_ALLOWLOWERCASE,
+			"thin"
+		)
+		v.drawString(100,82,
+			"cardbump: "..L_FixedDecimal(m.cardbump,2),
+			V_HUDTRANS|V_ALLOWLOWERCASE,
+			"thin"
+		)
+		local ss = m.inspecialstage
+		local bm = m.inbossmap
+		local bk = m.inbrakmap
+		local retro = m.isretro == TOL_MARIO
+		drawflag(v,100,90,"spec",
+			V_HUDTRANS|V_ALLOWLOWERCASE,
+			V_GREENMAP,V_REDMAP,
+			"thin",
+			ss
+		)
+		drawflag(v,140,90,"boss",
+			V_HUDTRANS|V_ALLOWLOWERCASE,
+			V_GREENMAP,V_REDMAP,
+			"thin",
+			bm
+		)
+		drawflag(v,100,98,"brak",
+			V_HUDTRANS|V_ALLOWLOWERCASE,
+			V_GREENMAP,V_REDMAP,
+			"thin",
+			bk
+		)
+		drawflag(v,140,98,"retro",
+			V_HUDTRANS|V_ALLOWLOWERCASE,
+			V_GREENMAP,V_REDMAP,
+			"thin",
+			retro
+		)
+		
+		v.drawString(100,106,
+			"lifepool: "..m.livescount,
+			V_HUDTRANS|V_ALLOWLOWERCASE,
+			"thin"
+		)
 	end
 	
 end
@@ -4347,7 +4461,7 @@ addHook("HUD", function(v)
 		
 		if skins[consoleplayer.skin].name == TAKIS_SKIN
 			if takis.lastss
-				if not TAKIS_NET.stagefailed
+				if not TAKIS_MISC.stagefailed
 					hud.disable("intermissiontitletext")
 					
 					local string2 = (All7Emeralds(emeralds)) and "Got them all!" or "Got a Spirit!"
@@ -4365,12 +4479,12 @@ addHook("HUD", function(v)
 				local maxspace = 200
 				
 				local em = takis.lastemeralds
-				if TAKIS_NET.inttic >= TR then em = emeralds end
+				if TAKIS_MISC.inttic >= TR then em = emeralds end
 				
 				for i = 0,maxspirits
 					local patch,flip = v.getSpritePatch(SPR_TSPR,
 						(em & 1<<i == 0) and B or A,
-						(((TAKIS_NET.inttic/4)+i)%8)+1
+						(((TAKIS_MISC.inttic/4)+i)%8)+1
 					)
 					v.drawScaled(
 						60*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i,
@@ -4383,7 +4497,7 @@ addHook("HUD", function(v)
 				end
 				
 				--tween
-				if TAKIS_NET.inttic < TR
+				if TAKIS_MISC.inttic < TR
 					local expectedtime = TR
 					for i = 0,maxspirits
 						--we didnt even get this one
@@ -4393,11 +4507,11 @@ addHook("HUD", function(v)
 						
 						local patch,flip = v.getSpritePatch(SPR_TSPR,
 							A,
-							(((TAKIS_NET.inttic/4)+i)%8)+1
+							(((TAKIS_MISC.inttic/4)+i)%8)+1
 						)
 						
-						local tweenx = ease.outexpo(( FU / expectedtime )*(TAKIS_NET.inttic),160*FU, 60*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i)
-						local tweeny = ease.outexpo(( FU / expectedtime )*(TAKIS_NET.inttic),-300*FU, 104*FU)
+						local tweenx = ease.outexpo(( FU / expectedtime )*(TAKIS_MISC.inttic),160*FU, 60*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i)
+						local tweeny = ease.outexpo(( FU / expectedtime )*(TAKIS_MISC.inttic),-300*FU, 104*FU)
 						
 						v.drawScaled(
 							tweenx,

@@ -1149,7 +1149,6 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			S_StartSound(me,sfx_shgnk)
 			me.color = p.skincolor
 			me.colorized = false
-			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor
 			return
 		end
 		
@@ -1180,8 +1179,6 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			takis.fireballtime = TR
 		end
 		
-		p.jumpfactor = skins[TAKIS_SKIN].jumpfactor*3/2
-		
 		if takis.fireasstime > 3*TR
 			me.color = superred[P_RandomRange(0,5)]
 			me.colorized = true
@@ -1210,7 +1207,6 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			S_StartSound(me,sfx_shgnk)
 			me.color = p.skincolor
 			me.colorized = false
-			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor
 			p.powers[pw_shield] = $ &~SH_PROTECTFIRE
 		end
 		
@@ -1219,7 +1215,6 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 		if takis.fireasstime
 			me.color = p.skincolor
 			me.colorized = false
-			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor
 			takis.fireasstime = 0
 		end
 	end
@@ -1909,7 +1904,9 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if takis.fireasssmoke
 		if not takis.onGround
-			me.sprite2 = SPR2_FASS
+			if not takis.firethokked
+				me.sprite2 = SPR2_FASS
+			end
 			A_BossScream(me,1,MT_TNTDUST)
 			takis.fireasssmoke = $-1
 		else
@@ -1921,7 +1918,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if takis.fireballtime then takis.fireballtime = $-1 end
 	
 	if (p.powers[pw_invulnerability] and
-	TAKIS_NET.isretro)
+	TAKIS_MISC.isretro)
 		takis.starman = true
 		local color = SKINCOLOR_GREEN
 
@@ -1958,6 +1955,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	or (takis.accspeed < 30*FU and takis.clutchingtime > 10)
 	or (p.powers[pw_carry] and p.powers[pw_carry] ~= CR_ROLLOUT)
 	or (p.playerstate ~= PST_LIVE or not me.health)
+	or (takis.hammerblastdown and (me.momz*takis.gravflip > -60*me.scale))
 		takis.noability = $|NOABIL_AFTERIMAGE
 	end
 	if p.powers[pw_carry] == CR_NIGHTSMODE
@@ -2091,10 +2089,37 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		local mname = string.lower(S_MusicName(p) or '') 
 		if (mname ~= HAPPY_HOUR.song
 		or mname ~= HAPPY_HOUR.songend)
-		and (TAKIS_NET.specsongs[mname] ~= true)
+		and (TAKIS_MISC.specsongs[mname] ~= true)
 			S_ChangeMusic(HAPPY_HOUR.song,true,p)
 		end
 	end
+	
+	if (p.skidtime)
+	and (me.state == S_PLAY_SKID)
+		local ang = R_PointToAngle2(0,0, me.momx,me.momy)
+		TakisSpawnDust(me,
+			ang+FixedAngle(P_RandomRange(-25,25)*FU+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
+			P_RandomRange(0,-30),
+			P_RandomRange(-1,2)*me.scale,
+			{
+				xspread = 0,--(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+				yspread = 0,--(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+				zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+				
+				thrust = P_RandomRange(0,-5)*me.scale,
+				thrustspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+				
+				momz = P_RandomRange(4,0)*(me.scale/2),
+				momzspread = ((P_RandomChance(FU/2)) and 1 or -1),
+				
+				scale = me.scale/2,
+				scalespread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+				
+				fuse = 15+P_RandomRange(-5,5),
+			}
+		)
+	end
+	
 	p.alreadyhascombometer = 2
 	
 --shorts end
@@ -2287,8 +2312,8 @@ local function CheckAndCrumble(me, sec)
 			TakisGiveCombo(me.player,me.player.takistable,true)
 		elseif (me.type == MT_TAKIS_HAMMERHITBOX)
 			TakisGiveCombo(me.parent.player,me.parent.player.takistable,true)		
-		elseif (me.type == MT_THROWNSCATTER)
-			TakisGiveCombo(me.tracer.player,me.tracer.player.takistable,true)		
+		elseif (me.type == MT_TAKIS_GUNSHOT)
+			TakisGiveCombo(me.parent.player,me.parent.player.takistable,true)		
 		end
 		EV_CrumbleChain(fof) -- Crumble
 	end
@@ -2342,7 +2367,7 @@ rawset(_G, "CanPlayerHurtPlayer", function(p1,p2,nobs)
 	
 	if not (nobs)
 		--no griefing!
-		if TAKIS_NET.inspecialstage
+		if TAKIS_MISC.inspecialstage
 			return false
 		end
 		
@@ -2619,36 +2644,6 @@ rawset(_G, "TakisHealPlayer", function(p,me,takis,healtype,healamt)
 		
 end)
 
-local function lookforenemy(me,prevangle)
-	local px = me.x
-	local py = me.y
-	local br = 75*me.scale
-	
-	local z = me.z+(7*me.scale)
-	local z2 = me.z-(7*me.scale)
-	
-	local ang = prevangle
-
-	searchBlockmap("objects", function(me, found)
-		if found and found.valid
-		and found.health
-		and P_CheckSight(me,found)
-		and ((found.z >= z2) and (found.z <= z))
-		
-			if ( (found.type == MT_PLAYER)
-			and (CanPlayerHurtPlayer(me.parent2.player,found.player)) )
-			or (found.flags & (MF_MONITOR|MF_ENEMY))
-
-				ang = R_PointToAngle2(found.x,found.y, me.x,me.y)
-				return true, ang
-				
-			end
-		end
-	end, me, px-br, px+br, py-br, py+br)
-	
-	return ang
-end
-
 local monitorctfteam = {
 	[MT_RING_REDBOX] = 1,
 	[MT_RING_BLUEBOX] = 2	
@@ -2693,8 +2688,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 	end
 	
 	if not (tm.flags & MF_BOSS)
-		if (tm.flags & MF_ENEMY)
-		or (tm.takis_flingme)
+		if (CanFlingThing(tm,MF_ENEMY))
 			--spawn ragdoll thing here
 			local ragdoll = P_SpawnMobjFromMobj(tm,0,0,0,MT_TAKIS_BADNIK_RAGDOLL)
 			tm.tics = -1
@@ -2728,8 +2722,6 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 				S_StartSound(ragdoll,sfx_takoww)
 			end
 		elseif (tm.flags & MF_MONITOR)
-			
-			
 			--but are we allowed to break it?
 			if ((tm.type == MT_RING_REDBOX) or
 			(tm.type == MT_RING_BLUEBOX))
@@ -2759,14 +2751,13 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 			f.flags2 = $|MF2_DONTDRAW
 			f.fuse = 2*TR
 			S_StartSound(f,sfx_tkapow)
-			P_RemoveMobj(ragdoll)
+			P_RemoveMobj(ragdoll)		
 		end
 		
 		P_KillMobj(tm,t,source)
 		--S_StopSound(tm)
 		if ((tm) and (tm.valid))
-		and (tm.flags & MF_ENEMY
-		or tm.takis_flingme)
+		and (CanFlingThing(tm,MF_ENEMY))
 			--hide deathstate
 			tm.flags2 = $|MF2_DONTDRAW
 			if tm.tics == -1
@@ -2813,7 +2804,7 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 	if (p.powers[pw_carry] == CR_NIGHTSMODE)
 	or not (gametyperules & GTR_FRIENDLY)
 	or (maptol & TOL_NIGHTS)
-	or (TAKIS_NET.inspecialstage)
+	or (TAKIS_MISC.inspecialstage)
 	or (takis.inChaos)
 		return
 	end
@@ -3438,6 +3429,21 @@ rawset(_G,"TakisPowerfulArma",function(p)
 	end
 	
 	if not (TAKIS_NET.nerfarma)
+		--kill!
+		local px = me.x
+		local py = me.y
+		local br = rad
+		
+		searchBlockmap("objects", function(me, found)
+			if found and found.valid
+			and (found.health)
+				if (CanFlingThing(found,MF_ENEMY|MF_BOSS))
+					P_KillMobj(found,me,me,DMG_NUKE)
+				elseif SPIKE_LIST[found.type] == true
+					P_KillMobj(found,me,me,DMG_NUKE)
+				end
+			end
+		end, me, px-br, px+br, py-br, py+br)			
 		--yes powerful arma is just regular arma lol
 		P_BlackOw(p)
 		S_StartSound(me, sfx_bkpoof)
@@ -3458,7 +3464,7 @@ rawset(_G,"TakisPowerfulArma",function(p)
 			if (FixedHypot(m2.x-me.x,m2.y-me.y) <= rad)
 				if (CanPlayerHurtPlayer(p,p2))
 					TakisAddHurtMsg(p2,HURTMSG_ARMA)
-					P_DamageMobj(m2,me,me)
+					P_DamageMobj(m2,me,me,DMG_NUKE)
 				end
 				DoFlash(p2,PAL_NUKE,20)
 				DoQuake(p2,
@@ -3469,30 +3475,7 @@ rawset(_G,"TakisPowerfulArma",function(p)
 				)
 			end
 		end
-		
-		--kill!
-		local px = me.x
-		local py = me.y
-		local br = rad
-		
-		searchBlockmap("objects", function(me, found)
-			if found and found.valid
-			and (found.health)
-				if (found.type ~= MT_EGGMAN_BOX)
-				or (found.takis_flingme == nil or found.takis_flingme ~= false)
-					if SPIKE_LIST[found.type] == true
-						P_KillMobj(found,me,me)
-					elseif found.flags & (MF_ENEMY|MF_BOSS)
-					or found.takis_flingme
-						P_KillMobj(found,me,me)
-					end
-					
-				end
-			end
-		end, me, px-br, px+br, py-br, py+br)			
-		
-		me = p.mo
-		
+				
 		--sparks
 		for i = 1, 40 do
 			local fa = (i*FixedAngle(9*FU))
@@ -3587,17 +3570,12 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 			shotspread = 0
 		end
 		
-		local shot = P_SPMAngle(me, MT_THROWNSCATTER, p.drawangle + i * ANG1*spread+shotspread, 1, 0)
+		local shot = P_SPMAngle(me, MT_TAKIS_GUNSHOT, p.drawangle + i * ANG1*spread+shotspread, 1, 0)
 		if ((shot) and (shot.valid))
-			shot.tracer = me
-			
-			shot.momx = $*2
-			shot.momy = $*2
-			shot.momz = $*2
-			shot.shotbytakis = true
+			shot.parent = me
+			shot.flags2 = $|MF2_RAILRING
 			shot.timealive = 1
 			P_Thrust(shot,shot.angle,takis.accspeed)
-			S_StopSound(shot)
 			
 		end
 		
@@ -3621,24 +3599,19 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 		
 		local prevaim = p.aiming
 		p.aiming = $ + i * ANG1*spread
-		local shot = P_SPMAngle(me, MT_THROWNSCATTER, p.drawangle+shotspread, 1, 0)
+		local shot = P_SPMAngle(me, MT_TAKIS_GUNSHOT, p.drawangle+shotspread, 1, 0)
 		
 		--extra horiz
 		if ((i == -1) or (i == 1))
 			for j = -1, 1
 				shotspread = FixedAngle( FixedMul( FixedMul( r(), r() ), r() ) * ran) * ssmul
 				
-				local shot = P_SPMAngle(me, MT_THROWNSCATTER, p.drawangle + (j * ANG1*spread)+shotspread, 1, 0)
+				local shot = P_SPMAngle(me, MT_TAKIS_GUNSHOT, p.drawangle + (j * ANG1*spread)+shotspread, 1, 0)
 				if ((shot) and (shot.valid))
-					shot.tracer = me
-					
-					shot.momx = $*2
-					shot.momy = $*2
-					shot.momz = $*2
-					shot.shotbytakis = true
+					shot.parent = me
+					shot.flags2 = $|MF2_RAILRING
 					shot.timealive = 1
 					P_Thrust(shot,shot.angle,takis.accspeed)
-					S_StopSound(shot)
 					
 				end
 				
@@ -3647,14 +3620,10 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 		p.aiming = prevaim
 		
 		if shot and shot.valid
-			shot.tracer = me
+			shot.parent = me
 			shot.flags2 = $|MF2_RAILRING
-			
-			shot.momx = $*2
-			shot.momy = $*2
-			shot.momz = $*2
-			shot.shotbytakis = true
-			S_StopSound(shot)
+			shot.timealive = 1
+			P_Thrust(shot,shot.angle,takis.accspeed)
 			
 		end
 	end
@@ -3981,7 +3950,13 @@ end)
 rawset(_G,"SpawnBam",function(mo)
 	local bam = P_SpawnMobjFromMobj(mo,0,0,0,MT_TNTDUST)
 	bam.state = mobjinfo[MT_MINECART].deathstate 
-	return bam
+	
+	local bam2 = P_SpawnMobjFromMobj(mo,0,0,0,MT_TNTDUST)
+	bam2.state = mobjinfo[MT_MINECART].deathstate 
+	bam2.blendmode = AST_ADD
+	bam2.destscale = bam2.scale*6/5
+	
+	return bam,bam2
 end)
 
 rawset(_G,"TakisChangeHeartCards",function(amt)
@@ -4095,7 +4070,7 @@ local function metalorreggib(mo)
 	
 	if ((mo.flags & MF_ENEMY|MF_BOSS)
 	or (mo.type == MT_TAKIS_BADNIK_RAGDOLL))
-		if (TAKIS_NET.isretro)
+		if (TAKIS_MISC.isretro)
 			spawnmetal = false
 		end
 		if mo.takis_metalgibs ~= nil
@@ -4679,6 +4654,59 @@ rawset(_G,"TakisSpawnPongler",function(mo,ang)
 	pong.angle = ang+ANGLE_90
 	pong.frame = P_RandomRange(A,states[S_TAKIS_PONGLER].var1)
 	return pong
+end)
+
+rawset(_G,"CanFlingSolid",function(t,tm)
+	local flingable = false
+	local flags = MF_SOLID|MF_SCENERY
+	
+	if not (t and t.valid) then return false end
+	
+	if t.flags & (flags) == flags
+		flingable = true
+	end
+	
+	if t.takis_flingme ~= nil
+		if t.takis_flingme == true
+			flingable = true
+		elseif t.takis_flingme == false
+			flingable = false
+		end
+	end
+	
+	if (t.flags & (MF_SPECIAL|MF_ENEMY|MF_MONITOR|MF_PUSHABLE))
+	or (tm and tm.valid and t.parent == tm)
+	or (t.type == MT_PLAYER)
+		flingable = false
+	end
+	
+	return flingable
+	
+end)
+
+rawset(_G,"GetPainThrust",function(mo,inf,sor)
+	local thrust = 4*FU
+	
+	if (inf and inf.valid)
+		if ((inf.flags2 & MF2_SCATTER) and sor)
+			local dist = FixedHypot(FixedHypot(sor.x-mo.x, sor.y-mo.y),sor.z-mo.z)
+			dist = 128*inf.scale - dist/4
+			if dist < 4*inf.scale
+				dist = 4*inf.scale
+			end
+			thrust = dist
+		elseif ((inf.flags2 & MF2_EXPLOSION) and sor)
+			if (inf.flags2 & MF2_RAILRING)
+				thrust = 38*inf.scale
+			else
+				thrust = 30*inf.scale
+			end
+		elseif inf.flags2 & MF2_RAILRING
+			thrust = 45*inf.scale
+		end
+	end
+	return FixedMul(thrust,mo.scale)
+	
 end)
 
 filesdone = $+1
