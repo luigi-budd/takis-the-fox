@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Make date
-      run: echo "THEDATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+      run: echo "THEDATE=$(git rev-parse --abbrev-ref HEAD)-$(date +%Y-%m-%d)" >> $GITHUB_ENV
     - name: Make dummy package lock
       run: echo '{"name":"dummy","version":"1.0.0","lockfileVersion":3,"requires":true,"packages":{}}}' > package-lock.json
     - name: Use Node.js 18.x
