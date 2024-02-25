@@ -173,11 +173,13 @@ addHook("MobjThinker", function(rag)
 		)
 		local px = rag.x
 		local py = rag.y
-		local br = FixedDiv(rag.radius*5/2,2*FU)
+		local br = 300*rag.scale
+		local range = FixedDiv(rag.radius*5/2,2*FU)
 		searchBlockmap("objects", function(rag, found)
 			if found and found.valid
 			and (found.health)
 			and (L_ZCollide(rag,found))
+			and (R_PointToDist2(found.x, found.y, rag.x, rag.y) <= range) 
 				if CanFlingThing(found,MF_ENEMY|MF_BOSS)
 					SpawnEnemyGibs(rag,found)
 					SpawnBam(found)
@@ -758,7 +760,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		local isspecsong
 		isspecsong = string.sub(newname,1,1) == "_"
 		if not isspecsong
-			isspecsong = TAKIS_NET.specsongs[newname]
+			isspecsong = TAKIS_MISC.specsongs[newname]
 		end
 		
 		oldname = string.lower($)
@@ -830,7 +832,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		
 		local newname = string.lower(newname)
 		
-		if (TAKIS_NET.specsongs[newname] ~= true)
+		if (TAKIS_MISC.specsongs[newname] ~= true)
 			return "war",mflags,looping,pos,prefade,fade
 		end
 	end
@@ -969,6 +971,10 @@ addHook("MobjMoveCollide",function(shot,mo)
 	end
 	
 	if not mo.health
+		return
+	end
+	
+	if not (shot.parent and shot.parent.valid)
 		return
 	end
 	
@@ -2031,6 +2037,7 @@ addHook("MobjThinker",function(gem)
 		
 		if (displayplayer
 		and displayplayer.valid)
+		and (displayplayer.realmo and displayplayer.realmo.valid)
 			if skins[displayplayer.skin].name == TAKIS_SKIN
 				gem.flags2 = $ &~MF2_DONTDRAW
 				gem.angle = R_PointToAngle2(gem.x,gem.y,
@@ -2491,14 +2498,6 @@ addHook("MobjThinker",function(mo)
 		mo.flags2 = $|MF2_DONTDRAW
 	else
 		mo.flags2 = $ &~MF2_DONTDRAW
-	end
-	
-	if mo.tracer.skin ~= TAKIS_SKIN
-		mo.flags2 = $|MF2_DONTDRAW
-	end
-	
-	if mo.tracer.flags2 & MF2_DONTDRAW
-		mo.eflags = $|MF2_DONTDRAW
 	end
 	
 	local mul = FU*19/22

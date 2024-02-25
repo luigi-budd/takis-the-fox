@@ -26,7 +26,16 @@ end
 
 rawset(_G,"NUMACHIEVEMENTS",#achs)
 
-local achflags = {}
+local achflags = {
+	"SECRET",
+	"MP",
+}
+for k,v in ipairs(achflags)
+	local val = 1<<(k-1)
+	assert(val ~= -1,"\x85Ran out of bits for AF_! (k="..k..")\x80")
+	rawset(_G,"AF_"..v,val)
+	print("Enummed AF_"..v.." ("..val..")")
+end
 
 rawset(_G,"ACHIEVEMENT_PATH","client/summa.dat")
 
@@ -35,43 +44,50 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		name = "Ultimate Combo",
 		icon = "ACH_COMBO",
 		scale = FU/4,
-		text = "Get a high combo on a".."\n".."map without dropping it."
+		text = "Get a high combo on a".."\n".."map without dropping it.",
+		flags = 0,
 	},
 	[ACHIEVEMENT_BANANA] = {
 		name = "Banana Man",
 		icon = "ACH_BANANA",
 		scale = FU/4,
-		text = "Slip on Soap's banana."
+		text = "Slip on Soap's banana.",
+		flags = 0,
 	},
 	[ACHIEVEMENT_RAKIS] = {
 		name = "Alter Ego",
 		icon = "ACH_RAKIS",
 		scale = FU/4,
-		text = "Who is this guy?"
+		text = "Who is this guy?",
+		flags = AF_MP,
 	},
 	[ACHIEVEMENT_PARTYPOOPER] = {
 		name = "Party Pooper",
 		icon = "ACH_PARTYPOOPER",
 		scale = FU/4,
-		text = "Hurt someone doing a partner\ntaunt."
+		text = "Hurt someone doing a partner\ntaunt.",
+		flags = AF_MP,
 	},
 	[ACHIEVEMENT_TAKISFEST] = {
 		name = "Takis Fest",
 		icon = "ACH_TAKISFEST",
 		scale = FU/4,
-		text = "Have 6 or more Takis in a\nserver."
+		text = "Have 6 or more Takis in a\nserver.",
+		flags = AF_MP,
 	},
 	[ACHIEVEMENT_HOMERUN] = {
 		name = "MLB MVP",
 		icon = "ACH_HOMERUN",
 		scale = FU/4,
-		text = "Hit someone with a Homerun\n".."bat."
+		text = "Hit someone with a Homerun\n".."bat.",
+		flags = AF_MP,
 	},
 	[ACHIEVEMENT_JUMPSCARE] = {
 		name = "That didn't scare me!",
 		icon = "ACH_JUMPSCARE",
 		scale = FU/4,
-		text = "Get jumpscared."
+		text = "Get jumpscared.",
+		flags = AF_MP,
 	},
 	/*
 	[ACHIEVEMENT_HARDCORE] = {
@@ -86,25 +102,29 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		name = "Amatuer Clutcher",
 		icon = "ACH_CLUTCHSPAM",
 		scale = FU/4,
-		text = "Never learn how to Clutch\nproperly."
+		text = "Never learn how to Clutch\nproperly.",
+		flags = 0,
 	},
 	[ACHIEVEMENT_COMBOALMOST] = {
 		name = "Almost had it..!",
 		icon = "ACH_PLACEHOLDER",
 		scale = FU/4,
-		text = "Start a new combo just\n".."after losing a high one."
+		text = "Start a new combo just\n".."after losing a high one.",
+		flags = 0,
 	},
 	[ACHIEVEMENT_BOOMSTICK] = {
 		name = "Behold, my Boomstick!",
 		icon = "ACH_BOOMSTICK",
 		scale = FU/4,
-		text = "Acquire the shotgun."
+		text = "Acquire the shotgun.",
+		flags = 0,
 	},
 	[ACHIEVEMENT_BOWLINGBALL] = {
 		name = "Let's Go Bowling!",
 		icon = "ACH_BOOMSTICK",
 		scale = FU/4,
-		text = "Turn into the Ball\nTransfomation."
+		text = "Turn into the Ball\nTransfomation.",
+		flags = 0,
 	},
 	/*
 	[ACHIEVEMENT_TORNADO] = {
@@ -119,25 +139,28 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		icon = "ACH_TORNADO",
 		scale = FU/4,
 		text = "Turn into the Fireass\nTransfomation.",
+		flags = 0,
 	},
 	[ACHIEVEMENT_SPIRIT] = {
 		name = "Spirits get!",
 		icon = "ACH_SPIRITS",
 		scale = FU/4,
 		text = "Retrieve all the lost spirits!",
+		flags = 0,
 	},
 	[ACHIEVEMENT_BRAKMAN] = {
 		name = "Tougher than the rest!",
 		icon = "ACH_BRAKMAN",
 		scale = FU/4,
 		text = "Deal the finishing blow\nto Brak Eggman.",
+		flags = 0,
 	},
 	[ACHIEVEMENT_OFFICER] = {
 		name = "That's the one, officer!",
 		icon = "ACH_OFFICER",
 		scale = FU/4,
 		text = "Get hit over 100 times.",
-		secret = true,
+		flags = AF_SECRET
 	},
 })
 

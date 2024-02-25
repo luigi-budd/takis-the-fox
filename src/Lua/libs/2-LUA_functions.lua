@@ -526,59 +526,58 @@ rawset(_G, "TakisHUDStuff", function(p)
 
 	local score = p.score
 	if hud.flyingscore.tics
+	and takis.io.minhud == 0
 		score = p.score-hud.flyingscore.lastscore
 	end
 	random = dorandom()
 	
-	if not paused
-		if score > hud.flyingscore.scorenum
-			if (score-hud.flyingscore.scorenum >= 5)
-				hud.flyingscore.scorenum = $+5
-				
-				random = dorandom()
-				hud.flyingscore.xshake = getdec(random) --v.RandomFixed()*random
-				random = dorandom()
-				hud.flyingscore.yshake = getdec(random) --v.RandomFixed()*random
-				
-				for i = 1,1000
-					if (score-hud.flyingscore.scorenum >= 5*(i+1))
-						
-						hud.flyingscore.scorenum = $+5
-						
-						random = dorandom(v)
-						hud.flyingscore.xshake = $+getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
-						random = dorandom(v)
-						hud.flyingscore.yshake = $+getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
+	if score > hud.flyingscore.scorenum
+		if (score-hud.flyingscore.scorenum >= 5)
+			hud.flyingscore.scorenum = $+5
+			
+			random = dorandom()
+			hud.flyingscore.xshake = getdec(random) --v.RandomFixed()*random
+			random = dorandom()
+			hud.flyingscore.yshake = getdec(random) --v.RandomFixed()*random
+			
+			for i = 1,1000
+				if (score-hud.flyingscore.scorenum >= 5*(i+1))
 					
-					end
-				end
-			else
-				hud.flyingscore.scorenum = $+score-hud.flyingscore.scorenum
-			end
-		elseif score < hud.flyingscore.scorenum
-			if (hud.flyingscore.scorenum-score >= 5)
-				hud.flyingscore.scorenum = $-5
-				
-				random = dorandom()
-				hud.flyingscore.xshake = -getdec(random)
-				random = dorandom()
-				hud.flyingscore.yshake = -getdec(random)
-				
-				for i = 1,1700
-					if (hud.flyingscore.scorenum-score >= 5*(i+1))
-						
-						hud.flyingscore.scorenum = $-5
-						
-						random = dorandom()
-						hud.flyingscore.xshake = $-getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
-						random = dorandom()
-						hud.flyingscore.yshake = $-getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
+					hud.flyingscore.scorenum = $+5
 					
-					end
+					random = dorandom(v)
+					hud.flyingscore.xshake = $+getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
+					random = dorandom(v)
+					hud.flyingscore.yshake = $+getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
+				
 				end
-			else
-				hud.flyingscore.scorenum = $-(hud.flyingscore.scorenum-score)
 			end
+		else
+			hud.flyingscore.scorenum = $+score-hud.flyingscore.scorenum
+		end
+	elseif score < hud.flyingscore.scorenum
+		if (hud.flyingscore.scorenum-score >= 5)
+			hud.flyingscore.scorenum = $-5
+			
+			random = dorandom()
+			hud.flyingscore.xshake = -getdec(random)
+			random = dorandom()
+			hud.flyingscore.yshake = -getdec(random)
+			
+			for i = 1,1700
+				if (hud.flyingscore.scorenum-score >= 5*(i+1))
+					
+					hud.flyingscore.scorenum = $-5
+					
+					random = dorandom()
+					hud.flyingscore.xshake = $-getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
+					random = dorandom()
+					hud.flyingscore.yshake = $-getdec(random) --FixedDiv(v.RandomFixed(),2*FU)*random
+				
+				end
+			end
+		else
+			hud.flyingscore.scorenum = $-(hud.flyingscore.scorenum-score)
 		end
 	end
 		
@@ -593,6 +592,68 @@ rawset(_G, "TakisHUDStuff", function(p)
 	and takis.combo.time
 		hud.combo.fillnum = ease.outquad(FU/5,$,takis.combo.time*FU)
 	end
+	
+	local lives = p.lives
+	if (CV_FindVar("cooplives").value == 3)
+	and (netgame or multiplayer)
+		lives = TAKIS_MISC.livescount
+	end
+	
+	if lives ~= takis.lastlives
+		takis.oldlives = takis.lastlives
+		if not hud.lives.tweentic
+			hud.lives.tweentic = 5*TR
+		else
+			if hud.lives.tweentic < 4*TR
+				hud.lives.tweentic = 4*TR
+			end
+		end
+	end
+	
+	if not (gametyperules & GTR_FRIENDLY)
+		if not hud.lives.tweentic
+			hud.lives.tweentic = 5*TR
+		else
+			if hud.lives.tweentic < 2*TR+1
+				hud.lives.tweentic = 2*TR+1
+			end
+		end
+	end
+	
+	if hud.lives.tweenwait == 0
+		if hud.lives.tweentic
+			local minx = -55*FU
+			local maxx = 15*FU
+			
+			local etin = TR/2
+			local intic = (5*TR)-hud.lives.tweentic
+			
+			if intic <= TR/2
+				hud.lives.tweenx = ease.outback((FU/etin)*intic,minx, maxx, FU*3/2)
+			else
+				hud.lives.tweenx = maxx
+			end
+			
+			if intic == TR
+			and takis.oldlives ~= lives
+				takis.oldlives = lives
+				hud.lives.bump = FU*3/2
+			end
+			
+			if intic >= 4*TR
+				hud.lives.tweenx = ease.inquad((FU/etin)*(4*TR-intic), maxx, minx)
+			end
+			
+			hud.lives.tweentic = $-1
+		else
+			hud.lives.tweenx = -55*FU
+		end
+		
+	else
+		hud.lives.tweenwait = $-1
+	end
+	
+	if hud.lives.bump then hud.lives.bump = $*4/5 end
 	
 	--red
 	if hud.combo.fillnum <= TAKIS_MAX_COMBOTIME*FU/4
@@ -2118,6 +2179,10 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 				fuse = 15+P_RandomRange(-5,5),
 			}
 		)
+	end
+	
+	if p.spectator
+		takis.dontlanddust = true
 	end
 	
 	p.alreadyhascombometer = 2
@@ -4708,5 +4773,65 @@ rawset(_G,"GetPainThrust",function(mo,inf,sor)
 	return FixedMul(thrust,mo.scale)
 	
 end)
+
+--well... dont mind if i do
+--CRIPSHYCHARS
+rawset(_G, "TakisSpawnDustRing", function(mo, speed, thrust, num, alwaysabove)
+	local momz = mo.momz
+	if alwaysabove
+		momz = -P_MobjFlip(mo)*abs($)
+	end
+	if abs(momz) < mo.scale
+		momz = $ < 0 and -mo.scale or mo.scale
+	end
+		
+	local forwardangle = R_PointToAngle2(0, 0, mo.momx, mo.momy)
+	local sideangle = forwardangle + ANGLE_90
+	local vangle = R_PointToAngle2(0, 0, FixedHypot(mo.momx, mo.momy), momz)
+	
+	local cosine = cos(vangle)
+	local sine = sin(vangle)
+	
+	local radius = FixedDiv(mo.height, mo.scale) >> 1
+	local xspawn = -FixedMul(FixedMul(cos(forwardangle), cosine), radius)
+	local yspawn = -FixedMul(FixedMul(sin(forwardangle), cosine), radius)
+	local zspawn = -FixedMul(sine, radius)
+	
+	local hthrust = 0
+	local vthrust = 0
+	if thrust
+		hthrust = FixedMul(thrust, cosine)
+		vthrust = FixedMul(thrust, sine)
+	end
+	
+	cosine = FixedMul($, speed)
+	sine = FixedMul($, speed)
+	
+	num = $ or 16
+	for i = 1, num
+		local dust = P_SpawnMobjFromMobj(mo, xspawn, yspawn, radius, MT_TAKIS_STEAM)
+		
+		local a = FixedAngle(i*FixedDiv(360*FU,num*FU)) + forwardangle
+		
+		local forwardthrust = FixedMul(cos(a), sine)
+		local sidethrust = FixedMul(sin(a), speed)
+		local zthrust = FixedMul(cosine, cos(a))
+		
+		dust.z = $ + zspawn
+		
+		P_Thrust(dust, forwardangle, forwardthrust - hthrust)
+		P_Thrust(dust, sideangle, sidethrust)
+		dust.momz = -zthrust - vthrust
+		
+		dust.fuse = 20
+		dust.timealive = 1
+		dust.tracer = mo
+		dust.destscale = 1
+		dust.startfuse = dust.fuse
+		dust.rollangle = $+(ANGLE_180*(P_RandomChance(FU/2) and 1 or 0))
+		
+	end
+end)
+
 
 filesdone = $+1

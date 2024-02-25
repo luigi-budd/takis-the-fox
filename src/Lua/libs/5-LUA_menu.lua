@@ -40,10 +40,10 @@ tm.entries = {
 			"Taunt Menu Cursor",
 			"Quakes",
 			"Flashes",
-			"Additive Afterimages",
 			"Clutch Meter Style",
 			"Share Combos",
 			"Don't Show Ach. Messages",
+			"MinHud",
 		},
 		table = "takis.io",
 		values = {
@@ -55,7 +55,8 @@ tm.entries = {
 			"flashes",
 			"clutchstyle",
 			"sharecombos",
-			"dontshowach"
+			"dontshowach",
+			"minhud",
 		},
 		commands = {
 			"nostrafe",
@@ -66,7 +67,8 @@ tm.entries = {
 			"flashes",
 			"clutchstyle",
 			"sharecombos",
-			"dontshowach"
+			"dontshowach",
+			"minhud",
 		},
 		hints = {
 			"Toggles forced strafing.",
@@ -77,7 +79,8 @@ tm.entries = {
 			"Toggles screen flashes and flashing objects.",
 			"Clutch Bar or Clutch Meter.",
 			"Share combos with other Takis.",
-			"Don't show other Takis' achievements."
+			"Don't show other Takis' achievements.",
+			"Toggles Minimal HUD elements for Takis.",
 		}
 	},
 	[3] = {

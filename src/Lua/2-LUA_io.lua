@@ -9,7 +9,7 @@
 --Y7GDSUYFHIDJPK AAAAAAAAAAAHHHHHHHHH!!!!!!!!
 
 --if you use this manually and mess something up, its not my fault!
-COM_AddCommand("takis_load", function(p,sig, a1,a2,a4,t1,t2,a5,a6,a7,a10,a11,a12,timeshit)
+COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a10,a11,a12,timeshit)
 	
 	if sig ~= TAKIS_ACHIEVEMENTINFO.luasig
 		CONS_Printf(p,"\x85"+"Do not use this command manually!")
@@ -20,6 +20,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a4,t1,t2,a5,a6,a7,a10,a11,a12
 
 	a1 = tonumber($) --Turn all of you to numbers!
 	a2 = tonumber($)
+	a3 = tonumber($)
 	a4 = tonumber($)
 	--quick taunts
 	t1 = tonumber($)
@@ -51,6 +52,14 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a4,t1,t2,a5,a6,a7,a10,a11,a12
 		takis.io.nohappyhour = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading No Happy Hour! Defaulting to 0...")
+	end
+	
+	if a3 == 1
+		takis.io.minhud = 1
+	elseif a3 == 0
+		takis.io.minhud = 0
+	else
+		CONS_Printf(p,"\x85"+"Error loading MinHud! Defaulting to 0...")
 	end
 	
 	if a4 == 1
@@ -161,6 +170,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	
 	a1 = t.nostrafe
 	a2 = t.nohappyhour
+	a3 = t.minhud
 	a4 = t.morehappyhour
 	t1 = tay.tauntquick1
 	t2 = tay.tauntquick2
@@ -178,7 +188,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 		t.hasfile = true
 		
 		local file = io.openlocal("client/takisthefox/config.dat", "w+")
-		file:write(" "..a1.." "..a2.." "..a4.." "..t1.." "
+		file:write(" "..a1.." "..a2.." "..a3.." "..a4.." "..t1.." "
 			..t2.." "..a5.." "..a6.." "..a7.." "
 			..a10.." "..a11.." "..a12.." "..timeshit
 		)

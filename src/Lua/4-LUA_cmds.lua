@@ -398,5 +398,28 @@ COM_AddCommand("takis_takistutorial", function(p)
 	
 end,COM_ADMIN)
 
+COM_AddCommand("takis_minhud", function(p)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if not (p.takistable)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	if p.takistable.io.minhud
+		p.takistable.io.minhud = 0
+		prn(p,skins[TAKIS_SKIN].realname.." will now have normal HUD.")
+	else
+		p.takistable.io.minhud = 1
+		prn(p,skins[TAKIS_SKIN].realname.." will now have minimal HUD.")
+	end
+	
+	TakisSaveStuff(p)
+end)
+
+
 
 filesdone = $+1

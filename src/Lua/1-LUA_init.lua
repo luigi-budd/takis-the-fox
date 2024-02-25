@@ -531,6 +531,8 @@ rawset(_G, "TakisInitTable", function(p)
 		prevz = 0,
 		lastrank = 1,
 		lastmomz = 0,
+		lastlives = p.lives,
+		oldlives = p.lives,
 		recovwait = 0,
 		dropdashstale = 0,
 		dropdashstaletime = 0,
@@ -649,7 +651,7 @@ rawset(_G, "TakisInitTable", function(p)
 			clutchstyle = 1, --0 for bar, 1 for meter
 			sharecombos = 1,
 			dontshowach = 0, --1 to not show ach messages
-			minhud = 0,
+			minhud = 0, --guess what this one does, you wont believe it
 		},
 		--tf2 taunt menu lol
 		--up to 7 taunts, detected with BT_WEAPONMASK
@@ -819,6 +821,12 @@ rawset(_G, "TakisInitTable", function(p)
 			showingletter = false,
 			hudname = '',
 			cfgnotifstuff = 0,
+			lives = {
+				tweenx = -55*FU,
+				tweentic = 5*TR,
+				tweenwait = TR*3/2,
+				bump = 0,
+			},
 			menutext = {
 				tics = 0,
 			},

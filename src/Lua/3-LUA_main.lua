@@ -689,7 +689,8 @@ addHook("PlayerThink", function(p)
 						P_InstaThrust(me,ang,FixedMul(20*FU+(3*takis.accspeed/5),me.scale))
 						
 						p.drawangle = ang
-						CreateWindRing(p,me)
+						--CreateWindRing(p,me)
+						TakisSpawnDustRing(me,16*me.scale,0)
 
 						p.pflags = $|PF_THOKKED &~(PF_JUMPED)
 						takis.dived = true
@@ -1006,7 +1007,7 @@ addHook("PlayerThink", function(p)
 					if not ((p.cmd.forwardmove) and (p.cmd.sidemove))
 					and takis.accspeed < 13*FU
 						takis.slidetime = max(1,$)
-						P_InstaThrust(me,p.drawangle,15*FU)
+						P_InstaThrust(me,p.drawangle,15*me.scale)
 					end
 					
 				end
@@ -1066,6 +1067,7 @@ addHook("PlayerThink", function(p)
 				and (takis.transfo & TRANSFO_SHOTGUN)
 				and not (takis.tossflag)
 				and (takis.shotgunforceon == false)
+				and not (takis.hammerblastdown)
 					TakisDeShotgunify(p)
 				end
 				
@@ -1362,21 +1364,35 @@ addHook("PlayerThink", function(p)
 					--dust effect
 					if not (me.eflags & MFE_TOUCHWATER)
 					and not (takis.shotgunned)
-						for i = 0, 16
-							local mt = MT_SPINDUST
-							if me.eflags & MFE_UNDERWATER
-								mt = MT_MEDIUMBUBBLE
-							end
-
+						local maxi = 16+abs(takis.lastmomz*takis.gravflip/me.scale/5)
+						for i = 0, maxi
 							local radius = me.scale*16
-							local fa = (i*ANGLE_22h)
-							local x = cos(me.angle)
-							local y = sin(me.angle)
-							local dust = P_SpawnMobjFromMobj(me,25*x,25*y,0,mt)
-							dust.momx = FixedMul(sin(fa),radius)
-							dust.momy = FixedMul(cos(fa),radius)
-							dust.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
-							dust.destscale = dust.scale/2
+							local fa = FixedAngle(i*(FixedDiv(360*FU,maxi*FU)))
+							local mz = takis.lastmomz/7
+							local dust = TakisSpawnDust(me,
+								fa,
+								0,
+								P_RandomRange(-1,2)*me.scale,
+								{
+									xspread = 0,
+									yspread = 0,
+									zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+									
+									thrust = 0,
+									thrustspread = 0,
+									
+									momz = P_RandomRange(0,1)*me.scale,
+									momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
+									
+									scale = me.scale,
+									scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+									
+									fuse = 23+P_RandomRange(-2,3),
+								}
+							)
+							dust.momx = FixedMul(FixedMul(sin(fa),radius),mz)/2
+							dust.momy = FixedMul(FixedMul(cos(fa),radius),mz)/2
+							
 						end
 					end
 					
@@ -2375,6 +2391,11 @@ addHook("PlayerThink", function(p)
 			takis.lastmomz = me.momz
 			--these are stupid
 			takis.lastskincolor = p.skincolor
+			takis.lastlives = p.lives
+			if CV_FindVar("cooplives").value == 3
+			and (netgame or multiplayer)
+				takis.lastlives = TAKIS_MISC.livescount
+			end
 		else
 		
 			--just switched
@@ -3161,7 +3182,7 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 	
 	if (takis.transfo & TRANSFO_SHOTGUN)
 	and (TAKIS_NET.chaingun)
-	and (inf.type == MT_TAKIS_GUNSHOT)
+	and ((inf and inf.valid) and inf.type == MT_TAKIS_GUNSHOT)
 		return false
 	end
 
@@ -3227,7 +3248,7 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		if inf
 		and inf.valid
 			local ang = R_PointToAngle2(mo.x,mo.y, inf.x, inf.y)
-			P_InstaThrust(mo,ang,-5*mo.scale)
+			P_InstaThrust(mo,ang,GetPainThrust(mo,inf,sor))
 		end
 		L_ZLaunch(mo,(extraheight) and 17*mo.scale or 8*mo.scale)
 		if not extraheight
@@ -3760,8 +3781,17 @@ addHook("AbilitySpecial", function(p)
 	
 	P_SetObjectMomZ(p.mo,15*FU)
 	
-	--wind ring
-	if not (takis.hammerblastdown % 6)
+	p.mo.state = S_PLAY_ROLL
+	if ((takis.transfo & TRANSFO_FIREASS) and (takis.firethokked))
+		p.mo.state = S_PLAY_FALL
+		P_MovePlayer(p)
+		S_StartSound(me,sfx_fire)
+		takis.fireasssmoke = TR/2
+		
+		TakisSpawnDustRing(me,16*me.scale,-3*me.scale,8)
+		
+	else
+		--wind ring
 		local ring = P_SpawnMobjFromMobj(me,
 			0,0,-5*me.scale*takis.gravflip,MT_WINDRINGLOL
 		)
@@ -3777,46 +3807,7 @@ addHook("AbilitySpecial", function(p)
 			ring.colorized = true
 			ring.color = SKINCOLOR_WHITE
 		end
-	end
 	
-	p.mo.state = S_PLAY_ROLL
-	if ((takis.transfo & TRANSFO_FIREASS) and (takis.firethokked))
-		p.mo.state = S_PLAY_FALL
-		P_MovePlayer(p)
-		S_StartSound(me,sfx_fire)
-		takis.fireasssmoke = TR/2
-		
-		for i = 0, 8
-			local radius = me.scale*16
-			local fa = (i*ANGLE_45)
-			local mz = 2*FU
-			local dust = TakisSpawnDust(me,
-				fa,
-				0,
-				P_RandomRange(-1,2)*me.scale,
-				{
-					xspread = 0,
-					yspread = 0,
-					zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
-					
-					thrust = 0,
-					thrustspread = 0,
-					
-					momz = P_RandomRange(0,1)*me.scale,
-					momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
-					
-					scale = me.scale,
-					scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
-					
-					fuse = 23+P_RandomRange(-2,3),
-				}
-			)
-			dust.momx = FixedMul(FixedMul(sin(fa),radius),mz)/2
-			dust.momy = FixedMul(FixedMul(cos(fa),radius),mz)/2
-			
-			takis.dontlanddust = true
-		end
-	else
 		S_StartSoundAtVolume(me,sfx_takdjm,4*255/5)
 	end
 	
