@@ -207,6 +207,7 @@ local function drawbosscards(v,p)
 	local maxx = maxspace
 	
 	if TAKIS_BOSSCARDS.bossprefix[bosscards.mo.type] ~= nil then xoff = 4*FU end
+	if takis.io.minhud then xoff = -20*FU end
 	
 	--boss cards
 	for i = 1, bosscards.maxcards do
@@ -489,7 +490,7 @@ local function drawface(v,p)
 	local expectedtime = TR
 	
 	if HAPPY_HOUR.time and HAPPY_HOUR.time < 3*TR
-	and (takis.io.nohappyhour == 0)
+	and HH_CanDoHappyStuff(p)
 		local tics = HAPPY_HOUR.time
 		
 		if (tics < 2*TR)
@@ -512,7 +513,7 @@ local function drawface(v,p)
 		scale,
 		headpatch,
 		V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER|eflags,
-		v.getColormap((me and me.valid and me.colorized) and TC_RAINBOW or nil,headcolor)
+		v.getColormap((me and me.valid and me.colorized or p.spectator) and TC_RAINBOW or nil,headcolor)
 	)
 
 end
@@ -591,6 +592,7 @@ local function drawbossface(v,p)
 	if not (bosscards.name) then return end
 	if (bosscards.nocards or TAKIS_BOSSCARDS.nobosscards[bosscards.mo.type] ~= nil) then return end
 	if (takis.inChaos) then return end
+	if (takis.io.minhud) then return end
 	
 	local eflags = 0
 	
@@ -792,6 +794,12 @@ local function drawtimer(v,p,altpos)
 		if not p.exiting then return end
 	end
 	
+	if (takis.io.minhud)
+	and (p.takis_noabil ~= nil)
+	and not p.exiting
+		return
+	end
+	
 	if flash
 		flashflag = V_REDMAP
 	end
@@ -858,7 +866,6 @@ local function drawtimer(v,p,altpos)
 		end
 	end
 	
-	local timething = (takis.io.minhud == 0 and not takis.inBattle) and "Time" or ''
 	if (takis.io.minhud)
 	and not takis.inBattle
 		timex = 100
@@ -875,7 +882,8 @@ local function drawtimer(v,p,altpos)
 	
 	v.drawString(timex, timey, hours..extrac..minutes..":"..spad..seconds.."."..tictrn..tpad,flag,((takis.inBattle) and "thin-center" or "thin-right"))
 	if not takis.inBattle
-		v.drawString(timetx, timey, timething..extra,flag,"thin")
+	and (takis.io.minhud == 0)
+		v.drawString(timetx, timey, "Time"..extra,flag,"thin")
 	end
 	if extrastring ~= ''
 	and (takis.io.minhud == 0)
@@ -1025,6 +1033,29 @@ end
 
 --LIVES ----------
 
+local function getnamemap(name)
+	local map = V_YELLOWMAP
+	if name == "Rakis"
+	or name == "Raykis"
+	or name == "Sjakis"
+		map = V_REDMAP
+	elseif name == "Taykis"
+	or name == "Takeys"
+		map = V_GREENMAP
+	elseif name == "Blukis"
+		map = V_BLUEMAP
+	elseif name == "Golkis"
+		map = (leveltime/4 % 3 == 0) and V_YELLOWMAP or ((leveltime/4 % 3 == 1 or leveltime/4 % 3 == 3) and V_BROWNMAP or V_ORANGEMAP)
+	elseif name == "Rakeys"
+		map = V_MAGENTAMAP
+	elseif name == "Poyo"
+		map = V_INVERTMAP
+	elseif name == "Jsakis"
+		map = V_AZUREMAP
+	end
+	return map
+end
+
 local function drawlivesbutton(v,p,x,y,flags)
 	local me = p.mo
 	local takis = p.takistable
@@ -1032,7 +1063,20 @@ local function drawlivesbutton(v,p,x,y,flags)
 	local disp = 0
 	
 	if takis.HUD.lives.tweentic
-		disp = $-20*FU
+		local et = TR/2
+		local tic = (5*TR)-takis.HUD.lives.tweentic
+		local low = 0
+		local high = 25*FU
+		
+		if tic <= TR/2
+			disp = ease.outback((FU/et)*tic,low, high, FU*3/2)
+		elseif tic >= 4*TR+TR/2
+			disp = ease.inquad((FU/et)*((4*TR+TR/2)-tic), high, low)
+		else
+			disp = high
+		end
+		
+		disp = -$
 	end
 	
 	if (takis.clutchcombo)
@@ -1084,8 +1128,40 @@ local function drawlivesbutton(v,p,x,y,flags)
 
 end
 
---source lol
--- https:--github.com/STJr/SRB2/blob/eb1492fe6e501001a2271fa133bd76c0b0612715/src/st_stuff.c#L812
+local function drawemeralds(v,emeraldpics,x,y,scale,f,pemeralds)
+	--epic source :iwantsummadat:
+	-- https://github.com/STJr/SRB2/blob/master/src/hu_stuff.c#L2754
+	
+	if (pemeralds & EMERALD1)
+		v.drawScaled(x  , y-6*FU, scale, emeraldpics[0], f);
+	end
+	
+	if (pemeralds & EMERALD2)
+		v.drawScaled(x+4*FU, y-3*FU, scale, emeraldpics[1], f);
+	end
+
+	if (pemeralds & EMERALD3)
+		v.drawScaled(x+4*FU, y+3*FU, scale, emeraldpics[2], f);
+	end
+
+	if (pemeralds & EMERALD4)
+		v.drawScaled(x  , y+6*FU, scale, emeraldpics[3], f);
+	end
+
+	if (pemeralds & EMERALD5)
+		v.drawScaled(x-4*FU, y+3*FU, scale, emeraldpics[4], f);
+	end
+
+	if (pemeralds & EMERALD6)
+		v.drawScaled(x-4*FU, y-3*FU, scale, emeraldpics[5], f);
+	end
+
+	if (pemeralds & EMERALD7)
+		v.drawScaled(x  , y  , scale, emeraldpics[6], f);	
+	end
+	
+end
+
 local function drawlivesarea(v,p)
 
 	if (customhud.CheckType("lives") != modname) return end
@@ -1150,7 +1226,14 @@ local function drawlivesarea(v,p)
 	end
 	
 	local color = v.getColormap((colorized) and TC_RAINBOW or nil,(p.spectator) and SKINCOLOR_CLOUDY or p.skincolor)
-	local textmap = V_YELLOWMAP
+	local textmap = getnamemap(takis.HUD.hudname)
+	
+	--this is juuust wide enough to peak out from the side
+	if takis.HUD.lives.tweentic
+		v.drawScaled(x,y,FU,v.cachePatch("TA_LIVESBACK"),
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANSHALF)
+		)
+	end
 	
 	if p.spectator
 		flags = $|V_HUDTRANSHALF
@@ -1232,132 +1315,41 @@ local function drawlivesarea(v,p)
 		"thin-fixed-right"
 	)
 	
-	/*
-	local disp = -20
-	
-	
-	if not (modeattacking)
-	
-		textmap = $|(V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER|V_ALLOWLOWERCASE)
-		v.drawString(
-			hudinfo[HUD_LIVES].x+58,hudinfo[HUD_LIVES].y,
-			takis.HUD.hudname,
-			textmap,
-			"thin-right"
-		)
-	
-	else
-		disp = $-10
-	end
-	
-	--i guess i gotta draw the stones too
 	if (G_RingSlingerGametype())
-		disp = $-5
-		local workx = hudinfo[HUD_LIVES].x+1
-		local additive = 0
-		
 		local emeraldpics = {
-			v.cachePatch("CHAOS1"),
-			v.cachePatch("CHAOS2"),
-			v.cachePatch("CHAOS3"),
-			v.cachePatch("CHAOS4"),
-			v.cachePatch("CHAOS5"),
-			v.cachePatch("CHAOS6"),
-			v.cachePatch("CHAOS7"),
+			[0] = v.cachePatch("TEMER1"),
+			[1] = v.cachePatch("TEMER2"),
+			[2] = v.cachePatch("TEMER3"),
+			[3] = v.cachePatch("TEMER4"),
+			[4] = v.cachePatch("TEMER5"),
+			[5] = v.cachePatch("TEMER6"),
+			[6] = v.cachePatch("TEMER7"),
 		}
 		
-		if ((p.powers[pw_invulnerability]) and (p.powers[pw_sneakers] == p.powers[pw_invulnerability] ))
-			if (not((leveltime/2)%2))
-				additive = V_ADD
-			end
-			
-			for i = 1, 7
-				v.drawScaled(
-					workx*FU,
-					(hudinfo[HUD_LIVES].y-7)*FU,
-					FU/4,
-					emeraldpics[i],
-					V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER|additive
-				)
-				workx = $+9
-			end
-		else
-		
-			for i = 0, 7
-				if (p.powers[pw_emeralds] & (1<<i))
-					v.drawScaled(
-						workx*FU,
-						(hudinfo[HUD_LIVES].y-9)*FU,
-						FU/4,
-						emeraldpics[i+1],
-						V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER
-					)
-				end
-				workx = $+9
-			end
-		 
+		if (leveltime & 1)
+		and p.powers[pw_invulnerability]
+		and (p.powers[pw_sneakers] ==
+		p.powers[pw_invulnerability])
+			drawemeralds(v,
+				emeraldpics,
+				x+63*FU,
+				y-10*FU,
+				FU/2,
+				(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS),
+				127		--allemeralds
+			)		
+			return
 		end
 		
-	end
-	
-	--draw the buttons
-	if modeattacking
-		disp = $-2
-	end
-	
-	if (takis.clutchcombo)
-	and (takis.io.clutchstyle == 0)
-		disp = $-20
-	end
-	
-	if (takis.transfo & TRANSFO_SHOTGUN)
-	and (takis.shotgunforceon == false)
-		local bflag = V_HUDTRANS
-		if takis.hammerblastdown then bflag = V_HUDTRANSHALF end
-		v.drawScaled(hudinfo[HUD_LIVES].x*FU, (hudinfo[HUD_LIVES].y+disp)*FU, (FU/2)+(FU/12), v.cachePatch("TB_C3"), V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|bflag)
-		v.drawString(hudinfo[HUD_LIVES].x+20, hudinfo[HUD_LIVES].y+(disp+5), "De-Shotgun",V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS, "thin")	
-		disp = $-20
-	end
-	
-	if (p.powers[pw_shield] ~= SH_NONE)
-		local shieldflag = V_HUDTRANSHALF
-		shieldflag = (not(takis.noability&NOABIL_SHIELD)) and V_HUDTRANS or V_HUDTRANSHALF
-		
-		v.drawScaled(hudinfo[HUD_LIVES].x*FU, (hudinfo[HUD_LIVES].y+disp)*FU, (FU/2)+(FU/12), v.cachePatch("TB_C2"), V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|shieldflag)
-		v.drawString(hudinfo[HUD_LIVES].x+20, hudinfo[HUD_LIVES].y+(disp+5), "Shield Ability",V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS, "thin")
-		disp = $-20
-	end
-	
-	if (p.powers[pw_carry] == CR_MINECART)
-		v.drawScaled(hudinfo[HUD_LIVES].x*FU, (hudinfo[HUD_LIVES].y+disp)*FU, (FU/2)+(FU/12), v.cachePatch("TB_C1"), V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER)
-		v.drawString(hudinfo[HUD_LIVES].x+20, hudinfo[HUD_LIVES].y+(disp+5), "Break Minecart",V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS, "thin")
-	end
-	
-	if (takis.nocontrol and takis.taunttime)
-	and (takis.tauntid ~= 6)
-		v.drawScaled(hudinfo[HUD_LIVES].x*FU,
-			(hudinfo[HUD_LIVES].y+disp)*FU,
-			(FU/2)+(FU/12),
-			v.cachePatch("TB_C1"),
-			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
-		)
-		v.drawString(hudinfo[HUD_LIVES].x+20,
-			hudinfo[HUD_LIVES].y+(disp+5),
-			"Cancel Taunt",
-			V_ALLOWLOWERCASE|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER|V_HUDTRANS,
-			"thin"
+		drawemeralds(v,
+			emeraldpics,
+			x+63*FU,
+			y-10*FU,
+			FU/2,
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS),
+			p.powers[pw_emeralds]
 		)
 	end
-		
-	if TAKIS_ISDEBUG
-		v.drawString(hudinfo[HUD_LIVES].x+60,
-			hudinfo[HUD_LIVES].y,
-			"w.i.p.",
-			V_HUDTRANS|V_REDMAP|V_SNAPTOLEFT|V_SNAPTOBOTTOM,
-			"thin"
-		)
-	end
-	*/
 	
 end
 
@@ -1385,7 +1377,7 @@ local function drawclutches(v,p,cam)
 			local bary = hudinfo[HUD_LIVES].y+20
 			local color = SKINCOLOR_CRIMSON
 			local pre = "CLTCHBAR_"
-			
+				
 			if (takis.clutchtime <= 11)
 			and (takis.clutchtime > 0)
 				color = SKINCOLOR_GREEN
@@ -1624,7 +1616,8 @@ local function drawmincombo(v,p)
 		
 		local waveforce = FU*3
 		local ay = FixedMul(waveforce,sin(FixedAngle(leveltime*2*FU)))
-		v.drawScaled(backx,
+		local ax = FixedMul(waveforce,cos(FixedAngle(leveltime*2*FU)))
+		v.drawScaled(backx+ax,
 			backy+ay,
 			scale*2,
 			v.cachePatch(pre.."BAR"),
@@ -2177,21 +2170,13 @@ local function drawhappyhour(v,p)
 
 	if (customhud.CheckType("PTSR_itspizzatime") != modname) and (HAPPY_HOUR.othergt) then return end
 	
-	if ((skins[p.skin].name ~= TAKIS_SKIN)
-	and (p.takistable.io.morehappyhour == 0))
-	and (HAPPY_HOUR.othergt)
+	if not HH_CanDoHappyStuff(p)
 		return
 	end
 	
 	local takis = p.takistable
 	
-	local dontdo = false
-	if (HAPPY_HOUR.othergt)
-		dontdo = takis.io.nohappyhour == 1
-	end
-	
 	if (HAPPY_HOUR.time) and (HAPPY_HOUR.time <= 5*TR)
-	and not (dontdo)
 	and (HAPPY_HOUR.gameover == false)
 		local date = os.date("*t")
 		
@@ -2359,8 +2344,7 @@ local function drawpizzatips(v,p)
 
 	if (customhud.CheckType("PTSR_tooltips") != modname) return end
 	
-	if (skins[p.skin].name ~= TAKIS_SKIN)
-	and (p.takistable.io.morehappyhour == 0)
+	if not HH_CanDoHappyStuff(p)
 		return
 	end
 	
@@ -2368,8 +2352,6 @@ local function drawpizzatips(v,p)
 	local h = takis.HUD.ptsr
 	
 	if (takis.hhexiting) then return end
-	
-	h.xoffset = 0
 	
 	if not (HAPPY_HOUR.othergt and HAPPY_HOUR.happyhour)
 		return
@@ -2539,8 +2521,7 @@ local function drawpizzatimer(v,p)
 
 	if (customhud.CheckType("PTSR_bar") != modname) return end
 	
-	if (skins[p.skin].name ~= TAKIS_SKIN)
-	and (p.takistable.io.morehappyhour == 0)
+	if not HH_CanDoHappyStuff(p)
 		return
 	end
 	
@@ -3057,6 +3038,46 @@ local function drawcosmenu(v,p)
 					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
 					"thin-fixed"
 				)
+				
+				local disp = 0
+				if has == 0
+					v.drawString(300*FU-x,y,
+						"You have this.",
+						V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
+						"thin-fixed-right"
+					)
+					disp = 8*FU
+				end
+				if (ach.flags & AF_MP)
+					v.drawString(300*FU-x,y+disp,
+						"MP only",
+						V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
+						"thin-fixed-right"
+					)					
+					
+					local leg = v.stringWidth(" MP only",V_ALLOWLOWERCASE,"thin")*FU
+					
+					v.drawScaled(300*FU-x-leg,y+disp,
+						FU,
+						v.cachePatch("TA_NETGAME"),
+						V_SNAPTOLEFT|V_SNAPTOTOP
+					)					
+				end
+				if (ach.flags & AF_SP)
+					v.drawString(300*FU-x,y+disp,
+						"SP only",
+						V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
+						"thin-fixed-right"
+					)					
+					
+					local leg = v.stringWidth(" SP only",V_ALLOWLOWERCASE,"thin")*FU
+					
+					v.drawScaled(300*FU-x-leg,y+disp,
+						FU,
+						v.cachePatch("TA_SINGLEP"),
+						V_SNAPTOLEFT|V_SNAPTOTOP
+					)					
+				end
 				
 			else
 				local x = pos.x*FU
@@ -3812,7 +3833,12 @@ local function drawdebug(v,p)
 			"trig: {x="..(th.x or "nil")..",y="..(th.y or "nil")..",z="..(th.z or "nil")..",f="..(tostring(th.flip) or "nil").."}",
 			V_ALLOWLOWERCASE|((not th.valid) and V_REDMAP or 0),"thin"
 		)
-		
+		v.drawString(100,
+			46+(8*(#strings)),
+			"candoshit: "..tostring( HH_CanDoHappyStuff(p) ),
+			V_ALLOWLOWERCASE,
+			"thin"
+		)
 		
 	end
 	--not exactly aligned but whatever
@@ -4053,7 +4079,7 @@ local function drawdebug(v,p)
 		)
 		
 		v.drawString(hudinfo[HUD_LIVES].x*FU,
-			(ypos-668)*FU,
+			(ypos-68)*FU,
 			p.thrustfactor.." thrust",
 			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
 			"thin-fixed"

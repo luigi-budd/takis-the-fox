@@ -151,13 +151,10 @@ rawset(_G, "TakisAnimateHappyHour", function(p)
 		hud.timeshake = 0
 	end
 	
-	local dontdo = false
-	if (HAPPY_HOUR.othergt)
-		dontdo = takis.io.nohappyhour == 1
-	end
+	local cando = HH_CanDoHappyStuff(p)
 	
 	if HAPPY_HOUR.time and HAPPY_HOUR.time <= 5*TR	
-	and not (dontdo)
+	and (cando)
 		
 		local tics = HAPPY_HOUR.time
 		if tics == 1
@@ -239,13 +236,10 @@ rawset(_G, "TakisHappyHourThinker", function(p)
 	local me = p.realmo
 	
 	--happy hour hud and stuff
-	local dontdo2 = false
-	if (HAPPY_HOUR.othergt)
-		dontdo2 = takis.io.nohappyhour == 1
-	end
+	local cando = HH_CanDoHappyStuff(p)
 	
 	if HAPPY_HOUR.happyhour
-	and not (dontdo2)
+	and (cando)
 	and not HAPPY_HOUR.gameover
 		local tics = HAPPY_HOUR.time
 		
@@ -325,13 +319,35 @@ rawset(_G, "TakisHUDStuff", function(p)
 	local me = p.realmo
 	
 	hud.hudname = skins[TAKIS_SKIN].hudname
-	if p.skincolor == SKINCOLOR_GREEN
+	if p.skincolor == SKINCOLOR_SALMON
+		hud.hudname = "Rakis"
+		
+	elseif p.skincolor == SKINCOLOR_GREEN
 		hud.hudname = "Taykis"
 	elseif p.skincolor == SKINCOLOR_RED
 	and not ((p.skincolor == skincolor_redteam) and G_GametypeHasTeams())
+		hud.hudname = "Raykis"
+	
+	elseif p.skincolor == SKINCOLOR_SHAMROCK
+		hud.hudname = "Takeys"
+	elseif p.skincolor == SKINCOLOR_SIBERITE
+		hud.hudname = "Rakeys"
+		
+	--jsmoothie!!!!
+	elseif p.skincolor == SKINCOLOR_AZURE
+		hud.hudname = "Jsakis"
+	elseif p.skincolor == SKINCOLOR_PINK
+		hud.hudname = "Sjakis"
+		
+	elseif p.skincolor == SKINCOLOR_BLUE
+	and not ((p.skincolor == skincolor_blueteam) and G_GametypeHasTeams())
+		hud.hudname = "Blukis"
+	elseif p.skincolor == SKINCOLOR_YELLOW
 		hud.hudname = "Yakis"
-	elseif p.skincolor == SKINCOLOR_SALMON
-		hud.hudname = "Rakis"
+	elseif p.skincolor == SKINCOLOR_GOLDENROD
+		hud.hudname = "Golkis"
+	elseif p.skincolor == SKINCOLOR_BLACK
+		hud.hudname = "Poyo"
 	end
 		
 	if hud.menutext.tics
@@ -610,7 +626,19 @@ rawset(_G, "TakisHUDStuff", function(p)
 		end
 	end
 	
+	--take a peak at your lives by holding fn
+	if takis.firenormal >= TR
+		if not hud.lives.tweentic
+			hud.lives.tweentic = 5*TR
+		else
+			if hud.lives.tweentic < TR+TR*3/2
+				hud.lives.tweentic = TR+TR*3/2
+			end
+		end		
+	end
+	
 	if not (gametyperules & GTR_FRIENDLY)
+	and not p.spectator
 		if not hud.lives.tweentic
 			hud.lives.tweentic = 5*TR
 		else
@@ -2147,6 +2175,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if HAPPY_HOUR.happyhour
 	and HAPPY_HOUR.othergt
+	and HH_CanDoHappyStuff(p)
 		local mname = string.lower(S_MusicName(p) or '') 
 		if (mname ~= HAPPY_HOUR.song
 		or mname ~= HAPPY_HOUR.songend)
@@ -4515,6 +4544,8 @@ rawset(_G,"TakisDoClutch",function(p)
 			)
 		end
 	end
+	
+	takis.noability = $ &~NOABIL_AFTERIMAGE
 	
 	/*
 	local angle = ang + ANGLE_45

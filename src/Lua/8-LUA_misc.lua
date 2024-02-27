@@ -47,7 +47,7 @@ addHook("MobjThinker", function(ai)
 		return
 	end
 	
-	local p = ai.target.player or server
+	local p = ai.target.player
 	local me = p.mo
 	
 	--bruh
@@ -63,7 +63,7 @@ addHook("MobjThinker", function(ai)
 	ai.spriteyscale = ai.takis_spriteyscale or FU
 	ai.rollangle = ai.takis_rollangle or 0
 	
-	ai.frame = ai.takis_frame|FF_TRANS30
+	--ai.frame = ai.takis_frame|FF_TRANS30
 	
 	ai.colorized = true
 	if not ai.timealive
@@ -72,22 +72,8 @@ addHook("MobjThinker", function(ai)
 		ai.timealive = $+1
 	end
 	
-	/*
-	if p.takistable.io.additiveai
-		local transnum = numtotrans[((ai.timealive*2/3)+1) %9]
-		ai.frame = $|transnum
-	else
-		if ai.timealive % 6 <= 2
-			ai.frame = $|FF_TRANS10
-		else
-			if P_RandomChance(FU/2)
-				ai.frame = $|FF_TRANS70
-			else
-				ai.frame = $|FF_TRANS50
-			end
-		end
-	end
-	*/
+	local transnum = numtotrans[((ai.timealive*2/3)+1) %9]
+	ai.frame = ai.takis_frame|transnum
 	
 	if (displayplayer and displayplayer.valid)
 		if not (camera.chase)
@@ -106,8 +92,6 @@ addHook("MobjThinker", function(ai)
 			ai.flags2 = $ &~MF2_DONTDRAW
 		end
 	end
-	
-	ai.blendmode = AST_ADD
 	
 	local fuselimit = 5
 
@@ -737,15 +721,7 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		end
 	end
 	
-	local dohhmus = true
-	if (consoleplayer.takistable.io.nohappyhour == 1)
-		dohhmus = false
-	end
-	
-	if (skins[consoleplayer.skin].name ~= TAKIS_SKIN)
-	and (consoleplayer.takistable.io.morehappyhour == 0)
-		dohhmus = false
-	end
+	local dohhmus = HH_CanDoHappyStuff(consoleplayer)
 	
 	--print(" s "..tostring(HAPPY_HOUR.happyhour))
 	if (HAPPY_HOUR.happyhour and not HAPPY_HOUR.gameover)
@@ -2072,6 +2048,7 @@ end,MT_GOTEMERALD)
 local function emeraldcollectspirit(gem)
 	if not (gem and gem.valid) then return end
 	if emeraldslist[gem.frame & FF_FRAMEMASK] == nil then return end
+	if G_RingSlingerGametype() then return end
 	
 	if not gem.emeraldcolor
 		gem.emeraldcolor = emeraldslist[gem.frame & FF_FRAMEMASK]

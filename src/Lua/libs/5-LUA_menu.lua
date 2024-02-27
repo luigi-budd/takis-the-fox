@@ -146,10 +146,12 @@ if (TAKIS_ISDEBUG)
 			"Instant exit",
 			"Panic!",
 			"Shotgunify",
+			"Test Map",
 			"\x82".."Debug Flags:",
 		},
 		table = "_G",
 		values = {
+			nil,
 			nil,
 			nil,
 			nil,
@@ -159,12 +161,14 @@ if (TAKIS_ISDEBUG)
 			"leave",
 			"panic 3 2",
 			"shotgun",
+			"testmap",
 			nil,
 		},
 		hints = {
 			"Leave the level instantly.",
 			"Triggers Happy Hour with 3 minutes.",
 			"Instant shotgunify.",
+			"Warp to Test Room.",
 			"Clientside debug flags.",
 		}
 	}
@@ -180,17 +184,19 @@ if (TAKIS_ISDEBUG)
 		"DEATH",
 		"SPEEDOMETER",
 		"HURTMSG",
+		"BOSSCARD",
+		"NET",
 	}
 	for k,v in ipairs(dbgflags)
-		tm.entries[5].text[4+k] = v
+		tm.entries[5].text[5+k] = v
 	end
 	for k,v in ipairs(dbgflags)
-		tm.entries[5].commands[4+k] = "setdebug "..v
+		tm.entries[5].commands[5+k] = "setdebug "..v
 	end
 	addHook("ThinkFrame",do
 		for i = 1,#dbgflags
 			local bit = 1<<(i-1)
-			tm.entries[5].values[4+i] = (TAKIS_DEBUGFLAG&bit)==bit
+			tm.entries[5].values[5+i] = (TAKIS_DEBUGFLAG&bit)==bit
 		end
 	end)
 	

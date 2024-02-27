@@ -28,7 +28,7 @@
 	-[done]dont kill team boxes on other teams
 	-[done]conga?
 	-[done]string the combo bar into 1, long graphic, use cropped to crop?
-	-[done]tf2 taunt menu
+	-[done]tf2 taunt menu1
 	-[scrapped]countdown nums for drawtimer
 	-[done?]instant finishes in multiplayer, prob after a special stage, most
 	 noticable in stages with capsules
@@ -135,6 +135,8 @@
 	-mt_gunshot sprites
 	-birdword timing and 2nd part
 	-[done]skidding spawn takis dust
+	-[done]no afterimages when clutching out of a slide
+	-[done]no pt happy hour is broken
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -274,6 +276,8 @@ addHook("PreThinkFrame",function()
 		end
 		if (p.takis_noabil ~= nil)
 			takis.noability = $|p.takis_noabil
+			takis.lastminhud = takis.io.minhud
+			takis.io.minhud = 0
 		end
 		
 		TakisButtonStuff(p,takis)
@@ -2611,6 +2615,14 @@ addHook("PlayerSpawn", function(p)
 	if takis
 		local me = p.realmo
 		
+		if takis.lastmap == 1000
+		and G_BuildMapTitle(1000) == "Red Room"
+		and takis.lastminhud ~= nil
+			takis.io.minhud = takis.lastminhud
+			takis.lastminhud = nil
+			print("AA")
+		end
+		
 		if takis.cosmenu.menuinaction
 			TakisMenuOpenClose(p)
 		end
@@ -3631,11 +3643,12 @@ local function hurtbytakis(mo,inf,sor,_,dmgt)
 	and sor.player.takistable
 		if CanFlingThing(mo)
 		and (dmgt ~= DMG_NUKE)
-			if sor.player.takistable.dived
-			or sor.player.takistable.thokked
-				sor.player.takistable.dived = false
-				sor.player.takistable.thokked = false
-				sor.player.pflags = $ &~PF_THOKKED
+			if (inf and inf.valid and inf.player and inf.player.valid)
+			and (inf.player.takistable.dived
+			or inf.player.takistable.thokked)
+				inf.player.takistable.dived = false
+				inf.player.takistable.thokked = false
+				inf.player.pflags = $ &~PF_THOKKED
 			end
 			/*
 			if inf.type == MT_THROWNSCATTER

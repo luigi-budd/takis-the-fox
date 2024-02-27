@@ -7,6 +7,7 @@ local compat = {
 	inatext = false,
 	peptext = false,
 	speckismash = false,
+	ptsrhook = false,
 }
 
 local function printf(...)
@@ -94,15 +95,27 @@ addHook("ThinkFrame",do
 		compat.mrcemom = true
 		printf("Disabled MRCE momentum.")
 	end
-	if (specki and specki.gimmicks.ctf)
+	if (specki and specki.gimmicks.smash)
 	and not compat.speckismash
-		local ctf = specki.gimmicks.ctf
+		local ctf = specki.gimmicks.smash
 		ctf.stuff["takisthefox"] = {
 			jumpheight = 12*FU,
 			weight = FU,
 		}
 		compat.speckismash = true
 		printf("Added Specki stuff.")
+	end
+	if (PTSR
+	and PTSR_AddHook)
+	and not compat.ptsrhook
+		PTSR_AddHook("onbonus",function(touch)
+			if not (touch and touch.valid) then return end
+			if touch.skin ~= TAKIS_SKIN then return end
+			
+		end)
+		
+		compat.ptsrhook = true
+		printf("Added PTSR stuff.")
 	end
 end)
 

@@ -290,6 +290,7 @@ rawset(_G,"TAKIS_MISC",{
 		["rnk_p"] = true,
 		["rnk_s"] = true,
 		["p_int"] = true,
+		["ot_ph"] = true,
 	},
 	
 	inescapable = {
@@ -575,6 +576,7 @@ rawset(_G, "TakisInitTable", function(p)
 		gotemeralds = 0,
 		emeraldcutscene = 0,
 		firethokked = false, --fireass 3rd jump
+		lastminhud = nil,
 		
 		nadocount = 0,
 		nadotic = 0,

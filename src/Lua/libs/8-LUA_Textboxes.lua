@@ -124,7 +124,6 @@ function TB.AdvanceBox(player)
     
 	S_StartSound(nil,sfx_tb_cls,player)
     if player.textBox.current != 0
-		print(player.textBox.current)
 		if lasttree
 			if player.textBox.tree[lasttree].advancescript then
 				player.textBox.tree[lasttree].advancescript(player)
@@ -1083,6 +1082,8 @@ TAKIS_TEXTBOXES.gmap1000 = {
 			script = function(p)
 				if p.takis_noabil
 					p.takis_noabil = 0
+					p.takistable.io.loaded = false
+					TakisLoadStuff(p)
 				end
 			end,
 			move = true,

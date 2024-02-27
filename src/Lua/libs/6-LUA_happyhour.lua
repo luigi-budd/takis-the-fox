@@ -126,6 +126,24 @@ rawset(_G,"HH_Reset",function()
 	
 end)
 
+rawset(_G,"HH_CanDoHappyStuff",function(p)
+	local should = false
+	if hh.othergt
+		--summa
+		local do2 = false
+		if skins[p.skin].name ~= TAKIS_SKIN
+			do2 = (p.takistable.io.morehappyhour == 1) and true or false
+		else
+			do2 = (p.takistable.io.nohappyhour == 0) and true or false
+		end
+		
+		should = do2
+	else
+		should = true
+	end
+	return should
+end)
+
 addHook("MapChange",HH_Reset)
 
 addHook("ThinkFrame",do

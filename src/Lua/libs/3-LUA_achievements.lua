@@ -29,6 +29,7 @@ rawset(_G,"NUMACHIEVEMENTS",#achs)
 local achflags = {
 	"SECRET",
 	"MP",
+	"SP",
 }
 for k,v in ipairs(achflags)
 	local val = 1<<(k-1)
@@ -153,7 +154,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		icon = "ACH_BRAKMAN",
 		scale = FU/4,
 		text = "Deal the finishing blow\nto Brak Eggman.",
-		flags = 0,
+		flags = AF_SP,
 	},
 	[ACHIEVEMENT_OFFICER] = {
 		name = "That's the one, officer!",
@@ -183,11 +184,16 @@ COM_AddCommand("sonadow", function(p, check, num)
 	p.takistable.achfile = tonumber(num)
 end)
 
+local achinf = TAKIS_ACHIEVEMENTINFO
+
 rawset(_G, "TakisSaveAchievements", function(p)
 	if (p ~= consoleplayer) then return end
 	
 	--dont overwrite our existing achs if we havent loaded them yet
 	if not p.takistable.io.loadedach
+		if TAKIS_DEBUGFLAG & DEBUG_ACH
+			print("\x83TAKIS:\x80 "..p.name..": denied saving achs because not loaded")
+		end
 		return
 	end
 	
@@ -232,6 +238,9 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	if p.bot == BOT_2PAI
 	or p.bot == BOT_MPAI
 	or (p.takis_noabil)
+		if TAKIS_DEBUGFLAG & DEBUG_ACH
+			print("\x83TAKIS:\x80 "..p.name..": denied "..achinf[achieve].name.." because bot or in tut")
+		end
 		return
 	end
 	
@@ -253,6 +262,25 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	
 	--we already have the achievement
 	if (number & (achieve))
+		if TAKIS_DEBUGFLAG & DEBUG_ACH
+			print("\x83TAKIS:\x80 "..p.name..": denied "..achinf[achieve].name.." because already owned")
+		end
+		return
+	end
+	
+	if (achinf[achieve].flags & AF_MP)
+	and not (netgame or multiplayer)
+		if TAKIS_DEBUGFLAG & DEBUG_ACH
+			print("\x83TAKIS:\x80 "..p.name..": denied "..achinf[achieve].name.." because not in MP")
+		end
+		return
+	end
+	
+	if (achinf[achieve].flags & AF_SP)
+	and (netgame or multiplayer)
+		if TAKIS_DEBUGFLAG & DEBUG_ACH
+			print("\x83TAKIS:\x80 "..p.name..": denied "..achinf[achieve].name.." because not in SP")
+		end
 		return
 	end
 	

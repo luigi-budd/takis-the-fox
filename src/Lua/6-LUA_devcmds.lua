@@ -496,6 +496,44 @@ COM_AddCommand("pong", function(p)
 	
 end,COM_ADMIN)
 
+COM_AddCommand("testmap", function(p)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if not (p.takistable)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	if G_BuildMapTitle(1003) ~= "Test Room"
+		prn(p,"Test map has been replaced, cannot teleport.")
+		return	
+	end
+	
+	G_SetCustomExitVars(1003,2)
+	G_ExitLevel()
+	
+end,COM_ADMIN)
+
+COM_AddCommand('powerstone', function(p, arg)
+	if arg == nil
+		return
+	else
+		if arg == 'all' then arg = '1234567' end
+		local previous = p.powers[pw_emeralds]
+		p.powers[pw_emeralds] = 0
+		local bit = 1
+		for i=1,7 do
+			if string.find(arg, tostring(i)) ~= nil then
+				p.powers[pw_emeralds] = $ | bit
+			end
+			bit = $ * 2
+		end
+	end
+end, COM_ADMIN)
+
 /*
 COM_AddCommand("_gmodify", function(p,gdex,value,vty)
 	local dex = _G[gdex]
