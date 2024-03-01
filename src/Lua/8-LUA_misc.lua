@@ -158,7 +158,7 @@ addHook("MobjThinker", function(rag)
 		local px = rag.x
 		local py = rag.y
 		local br = 300*rag.scale
-		local range = FixedDiv(rag.radius*5/2,2*FU)
+		local range = rag.radius--*5/2 --FixedDiv(rag.radius*5/2,2*FU)
 		searchBlockmap("objects", function(rag, found)
 			if found and found.valid
 			and (found.health)

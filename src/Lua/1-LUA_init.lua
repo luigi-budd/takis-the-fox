@@ -263,6 +263,8 @@ rawset(_G,"TAKIS_MISC",{
 	stagefailed = true,
 	cardbump = 0,
 	
+	scoreboard = {},
+	
 	--DONT change to happy hour if the song is any one of these
 	specsongs = {
 		["_1up"] = true,
@@ -577,6 +579,8 @@ rawset(_G, "TakisInitTable", function(p)
 		emeraldcutscene = 0,
 		firethokked = false, --fireass 3rd jump
 		lastminhud = nil,
+		placement = 0,
+		lastplacement = 0,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -718,6 +722,7 @@ rawset(_G, "TakisInitTable", function(p)
 			jump = 0,
 			
 			achcur = 0,
+			achpage = 0,
 			
 			hintfade = 3*TR+18,
 		},
@@ -1151,7 +1156,7 @@ SafeFreeslot("sfx_shgns")
 sfxinfo[sfx_shgns].caption = "\x85".."BLAMMO!!\x80"
 --shotgun kill/detransfo
 SafeFreeslot("sfx_shgnk")
-sfxinfo[sfx_shgnk].caption = "/"
+sfxinfo[sfx_shgnk].caption = "Detransfo"
 SafeFreeslot("sfx_tsplat")
 sfxinfo[sfx_tsplat].caption = "\x82Splat!\x80"
 SafeFreeslot("sfx_achern")
@@ -1220,7 +1225,7 @@ SafeFreeslot("sfx_s_tak3")
 sfxinfo[sfx_s_tak3].caption = "/"
 
 SafeFreeslot("sfx_trnsfo")
-sfxinfo[sfx_trnsfo].caption = "/"
+sfxinfo[sfx_trnsfo].caption = "Transfo"
 SafeFreeslot("sfx_tknado")
 sfxinfo[sfx_tknado].caption = "Tornado spin"
 SafeFreeslot("sfx_tkfndo")
@@ -1298,12 +1303,35 @@ states[S_PLAY_TAKIS_TORNADO] = {
     tics = -1,
 }
 
+SafeFreeslot("S_PLAY_TAKIS_RESETSTATE")
+states[S_PLAY_TAKIS_RESETSTATE] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_WALK,
+	action = function(mo)
+		local flip = P_MobjFlip(mo)
+		if not P_IsObjectOnGround(mo)
+			if mo.momz*flip < 0
+				mo.state = S_PLAY_FALL
+			else
+				mo.state = S_PLAY_JUMP
+			end
+		else
+			mo.state = S_PLAY_WALK
+		end
+		if mo.player.skidtime
+			mo.state = S_PLAY_SKID
+		end
+		P_MovePlayer(mo.player)
+	end,
+    tics = 0,
+}
+
 SafeFreeslot("S_PLAY_TAKIS_SHOULDERBASH")
 states[S_PLAY_TAKIS_SHOULDERBASH] = {
     sprite = SPR_PLAY,
     frame = SPR2_PLHD, --SPR2_SGBS,
     tics = TR,
-    nextstate = S_PLAY_STND
+    nextstate = S_PLAY_TAKIS_RESETSTATE
 }
 SafeFreeslot("S_PLAY_TAKIS_SHOULDERBASH_JUMP")
 states[S_PLAY_TAKIS_SHOULDERBASH_JUMP] = {
@@ -1334,7 +1362,7 @@ states[S_PLAY_TAKIS_SMUGASSGRIN] = {
     sprite = SPR_PLAY,
     frame = SPR2_TAKI,
     tics = -1,
-    nextstate = S_PLAY_STND
+    nextstate = S_PLAY_TAKIS_RESETSTATE
 }
 
 SafeFreeslot("S_TAKIS_SWEAT1")

@@ -15,13 +15,21 @@ local achs = {
 	"BOWLINGBALL",
 --	"TORNADO",
 	"FIREASS",
+	"PANCAKE",
 	"SPIRIT",
 	"BRAKMAN",
+	"HAPPYEXIT",
+	
+	--pg 2
 	"OFFICER",
+	"RIPANDTEAR",
+	
 }
 for k,v in ipairs(achs)
-	rawset(_G,"ACHIEVEMENT_"..string.upper(v),1<<(k-1))
-	print("Rawset Ach. ACHIEVEMENT_"..string.upper(v).." with val "..1<<(k-1))
+	local val = 1<<(k-1)
+	assert(val ~= -1,"\x85Ran out of bits for ACHIEVEMENT_! (k="..k..")\x80")
+	rawset(_G,"ACHIEVEMENT_"..string.upper(v),val)
+	print("Rawset Ach. ACHIEVEMENT_"..string.upper(v).." with val "..val)
 end
 
 rawset(_G,"NUMACHIEVEMENTS",#achs)
@@ -122,7 +130,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 	},
 	[ACHIEVEMENT_BOWLINGBALL] = {
 		name = "Let's Go Bowling!",
-		icon = "ACH_BOOMSTICK",
+		icon = "ACH_BOWLING",
 		scale = FU/4,
 		text = "Turn into the Ball\nTransfomation.",
 		flags = 0,
@@ -137,9 +145,16 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 	*/
 	[ACHIEVEMENT_FIREASS] = {
 		name = "Wood-Fired Takis",
-		icon = "ACH_TORNADO",
+		icon = "ACH_FIREASS",
 		scale = FU/4,
 		text = "Turn into the Fireass\nTransfomation.",
+		flags = 0,
+	},
+	[ACHIEVEMENT_PANCAKE] = {
+		name = "Batter up!",
+		icon = "ACH_BATTERUP",
+		scale = FU/4,
+		text = "Turn into the Pancake\nTransfomation.",
 		flags = 0,
 	},
 	[ACHIEVEMENT_SPIRIT] = {
@@ -156,11 +171,27 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		text = "Deal the finishing blow\nto Brak Eggman.",
 		flags = AF_SP,
 	},
+	[ACHIEVEMENT_HAPPYEXIT] = {
+		name = "It's Happy Hour!",
+		icon = "ACH_PLACEHOLDER",
+		scale = FU/4,
+		text = "Exit a stage with Happy Hour.",
+		flags = AF_SP,
+	},
+	
+	--pg 2
 	[ACHIEVEMENT_OFFICER] = {
 		name = "That's the one, officer!",
 		icon = "ACH_OFFICER",
 		scale = FU/4,
 		text = "Get hit over 100 times.",
+		flags = AF_SECRET
+	},
+	[ACHIEVEMENT_RIPANDTEAR] = {
+		name = "Rip and Tear",
+		icon = "ACH_OFFICER",
+		scale = FU/4,
+		text = "Use the Chaingun Shotgun.",
 		flags = AF_SECRET
 	},
 })

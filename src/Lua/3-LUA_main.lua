@@ -158,6 +158,8 @@
 	-[done]Takis_HH_Exit_[x,y,z] - exit pos
 	-[done]Takis_HH_Trig_[x,y,z] - trigger pos
 	
+	--OTHER SHIT
+	-update map for new transfos and fix stuff
 	
 */
 
@@ -646,6 +648,12 @@ addHook("PlayerThink", function(p)
 							P_MovePlayer(p)
 							
 							takis.shotguncooldown = 18
+						else
+							if takis.use == 1
+								P_Thrust(me,p.drawangle,-10*me.scale)
+								P_MovePlayer(p)
+								TakisAwardAchievement(p,ACHIEVEMENT_RIPANDTEAR)
+							end
 						end
 						
 						S_StartSound(me,sfx_shgns)
@@ -1910,6 +1918,7 @@ addHook("PlayerThink", function(p)
 				
 				--speedpads conserve speed too
 				if P_PlayerTouchingSectorSpecial(p, 3, 5)
+				and takis.onGround
 				and not takis.fakesprung
 					P_Thrust(me,me.angle,takis.prevspeed)
 					takis.fakesprung = true
@@ -1975,6 +1984,7 @@ addHook("PlayerThink", function(p)
 					S_StartSound(me,sfx_tsplat)
 					S_StartSound(me,sfx_trnsfo)
 					takis.transfo = $|TRANSFO_PANCAKE
+					TakisAwardAchievement(p,ACHIEVEMENT_PANCAKE)
 				end
 				takis.pancaketime = 10*TR
 				
@@ -2467,6 +2477,19 @@ addHook("PlayerThink", function(p)
 			end
 		end
 		
+		takis.placement = 0
+		for k,v in ipairs(TAKIS_MISC.scoreboard)
+			if v == p
+				takis.placement = k
+				break
+			else
+				continue
+			end
+		end
+		if takis.placement ~= takis.lastplacement
+			takis.HUD.lives.bump = FU*3/2
+		end
+		
 		--holding FN, C3, C2 open menu
 		if (takis.firenormal >= TR)
 		and (takis.c3 >= TR)
@@ -2482,6 +2505,7 @@ addHook("PlayerThink", function(p)
 		takis.lastmap = gamemap
 		takis.lastgt = gametype
 		takis.lastss = G_IsSpecialStage(takis.lastmap)
+		takis.lastplacement = takis.placement
 	end
 	
 end)

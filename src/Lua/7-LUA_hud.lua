@@ -1066,7 +1066,7 @@ local function drawlivesbutton(v,p,x,y,flags)
 		local et = TR/2
 		local tic = (5*TR)-takis.HUD.lives.tweentic
 		local low = 0
-		local high = 25*FU
+		local high = 35*FU
 		
 		if tic <= TR/2
 			disp = ease.outback((FU/et)*tic,low, high, FU*3/2)
@@ -1082,8 +1082,13 @@ local function drawlivesbutton(v,p,x,y,flags)
 	if (takis.clutchcombo)
 	and (takis.io.clutchstyle == 0)
 		disp = $-2*FU
-		if takis.HUD.lives.tweentic
+	end
+	
+	if (modeattacking)
+		if p.pflags & PF_AUTOBRAKE
 			disp = $-10*FU
+		else
+			disp = $-5*FU
 		end
 	end
 	
@@ -1162,6 +1167,20 @@ local function drawemeralds(v,emeraldpics,x,y,scale,f,pemeralds)
 	
 end
 
+local placetext = {
+	[1] = ",",
+	[2] = ":",
+	[3] = "!",
+}
+
+local placetext2 = {
+	[","] = "ST",
+	[":"] = "ND",
+	["!"] = "RD",
+	["?"] = "TH",
+}
+
+--i guess we could put placements here in match
 local function drawlivesarea(v,p)
 
 	if (customhud.CheckType("lives") != modname) return end
@@ -1306,6 +1325,52 @@ local function drawlivesarea(v,p)
 				
 			prevw = $+(patch.width*scale*4/10)
 		end
+	else
+		--match placements
+		if G_RingSlingerGametype()
+		and not (
+			(gametyperules & GTR_LIVES)
+			or G_GametypeHasTeams()
+			or (gametyperules & GTR_TAG)
+		)
+		or HAPPY_HOUR.othergt
+		and not p.spectator
+			local top3 = takis.placement and takis.placement < 4
+			local scorenum = top3 and "CMBCFP" or "CMBCF"
+			local score = takis.placement
+			score = $..(placetext[takis.placement] or "?")
+			local scale = FU
+			
+			local prevw
+			if not prevw then prevw = 0 end
+			
+			local textwidth = 0
+			for i = 1,string.len(score)
+				local n = string.sub(score,i,i)
+				local patch = v.cachePatch("CMBCF"+n)
+				if placetext2[n] ~= nil
+					patch = v.cachePatch("CMBCF"..placetext2[n])
+				end
+				textwidth = $+(patch.width*scale*4/10)		
+			end
+			
+			for i = 1,string.len(score)
+				local sc = FixedDiv(scale,2*FU)
+				local n = string.sub(score,i,i)
+				local patch = v.cachePatch(scorenum+n)
+				if placetext2[n] ~= nil
+					patch = v.cachePatch("CMBCF"..placetext2[n])
+				end
+				v.drawScaled(x+prevw-textwidth+50*FU,
+					y-(patch.height*sc)+6*FU-(FU/2)-takis.HUD.lives.bump,
+					sc,
+					patch,
+					flags
+				)
+					
+				prevw = $+(patch.width*scale*4/10)
+			end
+		end
 	end
 	
 	v.drawString(x+52*FU,
@@ -1372,9 +1437,34 @@ local function drawclutches(v,p,cam)
 	local me = p.mo
 	
 	if (takis.io.clutchstyle == 0)
+		local y = hudinfo[HUD_LIVES].y*FU
+		
+		if takis.HUD.lives.tweentic
+			local et = TR/2
+			local tic = (5*TR)-takis.HUD.lives.tweentic
+			local low = hudinfo[HUD_LIVES].y*FU
+			local high = hudinfo[HUD_LIVES].y*FU-35*FU
+			
+			if tic <= TR/2
+				y = ease.outback((FU/et)*tic,low, high, FU*3/2)
+			elseif tic >= 4*TR+TR/2
+				y = ease.inquad((FU/et)*((4*TR+TR/2)-tic), high, low)
+			else
+				y = high
+			end
+			
+		end
+		if (modeattacking)
+			if p.pflags & PF_AUTOBRAKE
+				y = $-10*FU
+			else
+				y = $-5*FU
+			end
+		end
+	
 		if takis.clutchtime > 0
-			local barx = hudinfo[HUD_LIVES].x
-			local bary = hudinfo[HUD_LIVES].y+20
+			local barx = hudinfo[HUD_LIVES].x*FU
+			local bary = y+20*FU
 			local color = SKINCOLOR_CRIMSON
 			local pre = "CLTCHBAR_"
 				
@@ -1384,7 +1474,7 @@ local function drawclutches(v,p,cam)
 			end
 			
 			
-			v.draw(barx, bary, v.cachePatch(pre.."BACK"),
+			v.drawScaled(barx, bary, FU, v.cachePatch(pre.."BACK"),
 				V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_HUDTRANS|V_PERPLAYER
 			)
 			
@@ -1397,7 +1487,7 @@ local function drawclutches(v,p,cam)
 			end
 			local scale = FU
 			
-			v.drawCropped(barx*FU,bary*FU,scale,scale,
+			v.drawCropped(barx,bary,scale,scale,
 				v.cachePatch(pre.."FILL"),
 				V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_HUDTRANS|V_PERPLAYER, 
 				v.getColormap(nil,color),
@@ -1405,21 +1495,20 @@ local function drawclutches(v,p,cam)
 				width,v.cachePatch(pre.."FILL").height*FU
 			)
 			
-			v.draw(barx, bary, v.cachePatch(pre.."MARK"),
+			v.drawScaled(barx, bary, FU, v.cachePatch(pre.."MARK"),
 				V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_HUDTRANS|V_PERPLAYER
 			)
 		end
 		--clutch combo
 		if takis.clutchcombo
-			local y = 0
-			if (modeattacking)
-				y = -10
-			end
-			if takis.HUD.lives.tweentic
-				y = -30
-			end
-		
-			v.drawString(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y+10+y, takis.clutchcombo.."x BOOSTS",V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE)			
+			
+			v.drawString(hudinfo[HUD_LIVES].x*FU,
+				y+10*FU,
+				takis.clutchcombo.."x BOOSTS",
+				V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
+				"fixed"
+			)
+			
 		end
 	elseif (takis.io.clutchstyle == 1)
 		--chrispy chars
@@ -2840,7 +2929,7 @@ local function drawcosmenu(v,p)
 	--this will overflow in 15 minutes + some change
 	local timer = FixedDiv(leveltime*FU,2*FU) or 1
 	local bgoffx = FixedDiv(timer,2*FU)%(bgp.width*s)
-	local bgoffy = FixedDiv(timer,2*FU)%(bgp.height*s)
+	local bgoffy = FixedDiv(timer,4*FU)%(bgp.height*s)
 	for i = 0,(v.width()/bgp.width)--+1
 		for j = 0,(v.height()/bgp.height)--+1
 			--Complicated
@@ -2963,13 +3052,19 @@ local function drawcosmenu(v,p)
 			end
 		--achs page
 		else
+			local maxach = 16
 			local number = consoleplayer.takistable.achfile
-			for i = 0,NUMACHIEVEMENTS-1
+			for i = 0,maxach-1
+				--bits to shift up by
+				local j = i+(menu.achpage*maxach)
+				
+				if j > NUMACHIEVEMENTS-1 then break end
+				
 				local has = V_60TRANS
 				local t = TAKIS_ACHIEVEMENTINFO
-				local ach = t[1<<i]
+				local ach = t[1<<j]
 				
-				if (number & (1<<i))
+				if (number & (1<<j))
 				and not (TAKIS_NET.usedcheats)
 					has = 0
 				end
@@ -2977,15 +3072,32 @@ local function drawcosmenu(v,p)
 				local x = pos.x*FU+((140*FU)*(i%2))
 				local y = pos.y*FU+10*FU+(17*FU*(i/2))
 				
+				if ach == nil
+					local icon = v.cachePatch("ACH_INVALID")
+					v.drawScaled(x,
+						y,
+						FU/4,
+						icon,
+						V_SNAPTOLEFT|V_SNAPTOTOP
+					)
+					v.drawString(x+FU+(icon.width*FU/4),
+						y,
+						"Invalid Achievement",
+						V_REDMAP|V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+						"thin-fixed"
+					)
+					continue
+				end
+			
 				v.drawScaled(x,
 					y,
 					ach.scale or FU,
-					(number & (1<<i)) and v.cachePatch(ach.icon) or ((ach.flags & AF_SECRET and has) and v.cachePatch("ACH_SPLACEHOLDER") or v.cachePatch("ACH_PLACEHOLDER")),
+					(number & (1<<j)) and v.cachePatch(ach.icon) or ((ach.flags & AF_SECRET and has) and v.cachePatch("ACH_SPLACEHOLDER") or v.cachePatch("ACH_PLACEHOLDER")),
 					V_SNAPTOLEFT|V_SNAPTOTOP|has
 				)
 				v.drawString(x+FU+(v.cachePatch(ach.icon).width*(ach.scale or FU)),
 					y,
-					(ach.flags & AF_SECRET and has) and "Secret Achievement" or (ach.name or "Ach. Enum "..(1<<i)),
+					(ach.flags & AF_SECRET and has) and "Secret Achievement" or (ach.name or "Ach. Enum "..(1<<j)),
 					(V_GRAYMAP and has or 0)|V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
 					"thin-fixed"
 				)
@@ -3001,84 +3113,108 @@ local function drawcosmenu(v,p)
 			if not (TAKIS_NET.usedcheats)
 				--draw a bigger version so you can see the icon
 				local x = pos.x*FU
-				local y = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))
+				local y = pos.y*FU+10*FU+(17*FU*((maxach+1)/2))
 				
 				local t = TAKIS_ACHIEVEMENTINFO
-				local num = menu.achcur
+				local num,num2 = menu.achcur,menu.achcur
+				num = $+(menu.achpage*maxach)
 				local ach = t[1<<num]
 				local has = V_60TRANS
 				if (number & (1<<num))
 					has = 0
 				end
-			
-				local curx = pos.x*FU+((140*FU)*(num%2))
-				local cury = pos.y*FU+10*FU+(17*FU*(num/2))
+				
+				local curx = pos.x*FU+((140*FU)*(num2%2))
+				local cury = pos.y*FU+10*FU+(17*FU*(num2/2))
 				v.drawScaled(curx,cury,FU,
 					v.cachePatch("TA_MENUACHCUR"),
 					V_SNAPTOLEFT|V_SNAPTOTOP,
 					v.getColormap(nil,SKINCOLOR_SUPERGOLD4)
 				)
 				
-				--ok draw the ach
-				v.drawScaled(x,
-					y,
-					(ach.scale or FU)*2,
-					(number & (1<<num)) and v.cachePatch(ach.icon) or ((ach.flags & AF_SECRET and has) and v.cachePatch("ACH_SPLACEHOLDER") or v.cachePatch("ACH_PLACEHOLDER")),
-					V_SNAPTOLEFT|V_SNAPTOTOP|has
-				)
-				v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
-					y,
-					(ach.flags & AF_SECRET and has) and "Secret Achievement" or (ach.name or "Ach. Enum "..(1<<i)),
-					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
-					"fixed"
-				)
-				v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
-					y+(8*FU),
-					(ach.flags & AF_SECRET and has) and " " or (ach.text or "Flavor text goes here"),
-					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
-					"thin-fixed"
+				local x2 = pos.x*FU
+				local y2 = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))				
+				v.drawString(300*FU-x2,y2+16*FU,
+					"(Jump) Set "..(menu.achpage+1).."/"..((NUMACHIEVEMENTS > 16) and "2" or "1"),
+					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
+					"thin-fixed-right"
 				)
 				
-				local disp = 0
-				if has == 0
-					v.drawString(300*FU-x,y,
-						"You have this.",
-						V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
-						"thin-fixed-right"
+				if ach == nil
+					local icon = v.cachePatch("ACH_INVALID")
+					v.drawScaled(x,
+						y,
+						FU/2,
+						icon,
+						V_SNAPTOLEFT|V_SNAPTOTOP
 					)
-					disp = 8*FU
+					v.drawString(x+FU+(icon.width*FU/2),
+						y,
+						"Invalid Achievement",
+						V_REDMAP|V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+						"fixed"
+					)
+				else
+					--ok draw the ach
+					v.drawScaled(x,
+						y,
+						(ach.scale or FU)*2,
+						(number & (1<<num)) and v.cachePatch(ach.icon) or ((ach.flags & AF_SECRET and has) and v.cachePatch("ACH_SPLACEHOLDER") or v.cachePatch("ACH_PLACEHOLDER")),
+						V_SNAPTOLEFT|V_SNAPTOTOP|has
+					)
+					v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
+						y,
+						(ach.flags & AF_SECRET and has) and "Secret Achievement" or (ach.name or "Ach. Enum "..(1<<i)),
+						V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+						"fixed"
+					)
+					v.drawString(x+FU+(v.cachePatch(ach.icon).width*((ach.scale or FU)*2)),
+						y+(8*FU),
+						(ach.flags & AF_SECRET and has) and " " or (ach.text or "Flavor text goes here"),
+						V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_RETURN8,
+						"thin-fixed"
+					)
+					
+					local disp = 0
+					if has == 0
+						v.drawString(300*FU-x,y,
+							"You have this.",
+							V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
+							"thin-fixed-right"
+						)
+						disp = 8*FU
+					end
+					if (ach.flags & AF_MP)
+						v.drawString(300*FU-x,y+disp,
+							"MP only",
+							V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
+							"thin-fixed-right"
+						)					
+						
+						local leg = v.stringWidth(" MP only",V_ALLOWLOWERCASE,"thin")*FU
+						
+						v.drawScaled(300*FU-x-leg,y+disp,
+							FU,
+							v.cachePatch("TA_NETGAME"),
+							V_SNAPTOLEFT|V_SNAPTOTOP
+						)					
+					end
+					if (ach.flags & AF_SP)
+						v.drawString(300*FU-x,y+disp,
+							"SP only",
+							V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
+							"thin-fixed-right"
+						)					
+						
+						local leg = v.stringWidth(" SP only",V_ALLOWLOWERCASE,"thin")*FU
+						
+						v.drawScaled(300*FU-x-leg,y+disp,
+							FU,
+							v.cachePatch("TA_SINGLEP"),
+							V_SNAPTOLEFT|V_SNAPTOTOP
+						)					
+					end
 				end
-				if (ach.flags & AF_MP)
-					v.drawString(300*FU-x,y+disp,
-						"MP only",
-						V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
-						"thin-fixed-right"
-					)					
-					
-					local leg = v.stringWidth(" MP only",V_ALLOWLOWERCASE,"thin")*FU
-					
-					v.drawScaled(300*FU-x-leg,y+disp,
-						FU,
-						v.cachePatch("TA_NETGAME"),
-						V_SNAPTOLEFT|V_SNAPTOTOP
-					)					
-				end
-				if (ach.flags & AF_SP)
-					v.drawString(300*FU-x,y+disp,
-						"SP only",
-						V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
-						"thin-fixed-right"
-					)					
-					
-					local leg = v.stringWidth(" SP only",V_ALLOWLOWERCASE,"thin")*FU
-					
-					v.drawScaled(300*FU-x-leg,y+disp,
-						FU,
-						v.cachePatch("TA_SINGLEP"),
-						V_SNAPTOLEFT|V_SNAPTOTOP
-					)					
-				end
-				
 			else
 				local x = pos.x*FU
 				local y = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))				
@@ -3481,6 +3617,203 @@ local function drawbosstitles(v,p)
 		if G_BuildMapTitle(gamemap) ~= nil
 			v.drawString(160,190,G_BuildMapTitle(gamemap),V_YELLOWMAP|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE|trans,"thin-center")
 		end
+	end
+	
+end
+
+local function drawtransfotimer(v,p,cam)
+	if (customhud.CheckType("takis_transfotimer") != modname) return end	
+	
+	if (skins[p.skin].name ~= TAKIS_SKIN)
+		return
+	end
+	
+	local takis = p.takistable
+	local me = p.realmo	
+	
+	if not (takis.transfo & (TRANSFO_PANCAKE|TRANSFO_FIREASS))
+		return
+	end
+	
+	if takis.io.minhud
+		v.drawString(15*FU,55*FU,
+			"Transfo:",
+			V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_HUDTRANS,
+			"thin-fixed"
+		)
+		
+		local pre = "MINFOB_"
+		local back = v.cachePatch(pre.."BACK")
+		local fill = v.cachePatch(pre.."FILL")
+		
+		local color = v.getColormap(nil,me.color)
+		local color2 = v.getColormap(nil,p.skincolor)
+		
+		local max = 10*TR*FU
+		local time = 0
+		local time2 = 0
+		local type = 0
+		local type2 = 0
+		
+		v.drawScaled(54*FU,56*FU,FU,
+			back,
+			V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS
+		)
+		
+		if takis.transfo & TRANSFO_PANCAKE
+			if takis.pancaketime > takis.fireasstime
+				time = takis.pancaketime*FU
+				type = 0
+			else
+				time2 = takis.pancaketime*FU
+				type2 = 0
+			end
+		end
+		if takis.transfo & TRANSFO_FIREASS
+			if takis.fireasstime > takis.pancaketime
+				time = takis.fireasstime*FU
+				type = 1
+			else
+				time2 = takis.fireasstime*FU
+				type2 = 1
+			end
+		end
+		
+		local erm = FixedDiv(time,max)
+		local width = FixedMul(erm,fill.width*FU)
+		if width < 0 then
+			width = 0
+		end
+		
+		local erm2 = FixedDiv(time2,max)
+		local width2 = FixedMul(erm2,fill.width*FU)
+		if width2 < 0 then
+			width2 = 0
+		end
+		
+		v.drawCropped(54*FU,56*FU,FU,FU,
+			fill,
+			V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS, 
+			(type == 1) and color or color2,
+			0,0,
+			width,fill.height*FU
+		)
+		
+		v.drawCropped(54*FU,56*FU,FU,FU,
+			fill,
+			V_SNAPTOLEFT|V_SNAPTOTOP|V_HUDTRANS, 
+			(type2 == 1) and color or color2,
+			0,0,
+			width2,fill.height*FU
+		)
+		
+	else
+	
+		local pre = "TRANSFOM_"
+		local flip = 1
+		local bubble = v.cachePatch(pre.."BAR")
+		local fill = v.cachePatch(pre.."FILL")
+		local mark = v.cachePatch(pre.."TIC")
+		local x, y, scale
+		local cutoff = function(y) return false end
+		
+		if cam.chase and not (p.awayviewtics and not (me.flags2 & MF2_TWOD))
+			x, y, scale = R_GetScreenCoords(v, p, cam, me)
+			scale = $*2
+			if me.eflags & MFE_VERTICALFLIP
+			and p.pflags & PF_FLIPCAM
+				y = 200*FRACUNIT - $
+			else
+				flip = P_MobjFlip(me)
+			end
+			scale = FixedMul($,me.scale)
+		else
+			x, y, scale = 160*FRACUNIT, (10 + bubble.height >> 1)*FRACUNIT, FRACUNIT*2
+		end
+		
+		scale = FixedDiv($,2*FU)
+		
+		if splitscreen
+			if p == secondarydisplayplayer
+				cutoff = function(y) return y < (bubble.height*scale >> 1) end
+			else
+				cutoff = function(y) return y > 200*FRACUNIT + (bubble.height*scale >> 1) end
+			end
+		end
+		
+		if not cutoff(y)
+			
+			local color = v.getColormap(nil,me.color)
+			local color2 = v.getColormap(nil,p.skincolor)
+			local invc  = v.getColormap(nil,ColorOpposite(p.skincolor))
+			
+			x = $-(bubble.width*scale/2)
+			y = $+25*scale
+			
+			local max = 10*TR*FU
+			local time = 0 --(10*TR - (leveltime % (TR*10)))*FU
+			local time2 = 0
+			local type = 0
+			local type2 = 0
+			
+			if takis.transfo & TRANSFO_PANCAKE
+				if takis.pancaketime > takis.fireasstime
+					time = takis.pancaketime*FU
+					type = 0
+				else
+					time2 = takis.pancaketime*FU
+					type2 = 0
+				end
+			end
+			if takis.transfo & TRANSFO_FIREASS
+				if takis.fireasstime > takis.pancaketime
+					time = takis.fireasstime*FU
+					type = 1
+				else
+					time2 = takis.fireasstime*FU
+					type2 = 1
+				end
+			end
+			
+			local erm = FixedDiv(time,max)
+			local width = FixedMul(erm,fill.width*FU)
+			if width < 0 then
+				width = 0
+			end
+			
+			local erm2 = FixedDiv(time2,max)
+			local width2 = FixedMul(erm2,fill.width*FU)
+			if width2 < 0 then
+				width2 = 0
+			end
+			
+			v.drawCropped(x,y,scale,scale,
+				fill,
+				V_HUDTRANS|V_PERPLAYER, 
+				(type == 1) and color or color2,
+				0,0,
+				width,fill.height*FU
+			)
+			
+			v.drawCropped(x,y,scale,scale,
+				fill,
+				V_HUDTRANS|V_PERPLAYER, 
+				(type2 == 1) and color or color2,
+				0,0,
+				width2,fill.height*FU
+			)
+			
+			v.drawScaled(x, y, scale, bubble, V_PERPLAYER|V_HUDTRANS)
+			if time2
+				local offset = FixedMul(FixedMul(fill.width*FU,erm2),scale)+scale
+				v.drawScaled(x+4*scale+offset, y+3*scale, scale, mark, V_PERPLAYER|V_HUDTRANS,invc)
+			end
+			
+			local offset = FixedMul(FixedMul(fill.width*FU,erm),scale)+scale
+			v.drawScaled(x+4*scale+offset, y+3*scale, scale, mark, V_PERPLAYER|V_HUDTRANS,invc)
+			
+		end
+		
 	end
 	
 end
@@ -4333,6 +4666,7 @@ customhud.SetupItem("takis_happyhourtime", 	modname/*,	,	"game",	10*/)
 customhud.SetupItem("textspectator", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_nadocount",	 	modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_tutbuttons",	 	modname/*,	,	"game",	10*/)
+customhud.SetupItem("takis_transfotimer", 	modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
 
 addHook("HUD", function(v,p,cam)
@@ -4380,6 +4714,7 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("textspectator", 		modname)
 			customhud.SetupItem("takis_nadocount", 		modname)
 			customhud.SetupItem("takis_tutbuttons", 	modname)
+			customhud.SetupItem("takis_transfotimer", 	modname)
 			customhud.SetupItem("bossmeter",			modname)
 
 			if takis.io.nohappyhour == 0
@@ -4427,6 +4762,7 @@ addHook("HUD", function(v,p,cam)
 			if not hasstat
 				drawrings(v,p)
 				drawtimer(v,p)
+				drawtransfotimer(v,p,cam)
 			end
 			drawlivesarea(v,p)
 			drawcombostuff(v,p,cam)
@@ -4469,6 +4805,7 @@ addHook("HUD", function(v,p,cam)
 				drawcosmenu(v,p)
 			end
 			drawhappyhour(v,p)
+			
 			
 			if (takis.shotguntuttic)
 				local string = ''

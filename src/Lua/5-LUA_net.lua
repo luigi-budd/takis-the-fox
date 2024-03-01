@@ -232,22 +232,33 @@ addHook("ThinkFrame", do
 	local playerCount = 0
 	local exitingCount = 0
 	local takisCount = 0
-	for player in players.iterate
-		if player.valid
-			if player.exiting
-			or player.spectator 
-			or player.pizzaface
-			or player.ptsr_outofgame
-			or player.playerstate == PST_DEAD
+	m.scoreboard = {}
+	for p in players.iterate
+		if p.valid
+			if p.exiting
+			or p.spectator 
+			or p.pizzaface
+			or p.ptsr_outofgame
+			or p.playerstate == PST_DEAD
 				exitingCount = $+1
 			end
-			if (skins[player.skin].name == TAKIS_SKIN)
+			if (skins[p.skin].name == TAKIS_SKIN)
 				takisCount = $+1
 			end
+			
+			if not p.spectator
+				table.insert(m.scoreboard,p)
+			end
+			playerCount = $+1
 		end
-		playerCount = $+1
 	end
-
+	table.sort(m.scoreboard, function(a,b)
+		local p1 = a
+		local p2 = b
+		if p1.score > p2.score then
+			return true
+		end
+	end)
 	m.exitingcount = exitingCount
 	m.playercount = playerCount
 	m.takiscount = takisCount

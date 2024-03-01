@@ -626,19 +626,13 @@ rawset(_G, "TakisHUDStuff", function(p)
 		end
 	end
 	
+	if (not (gametyperules & GTR_FRIENDLY)
+	and not p.spectator)
 	--take a peak at your lives by holding fn
-	if takis.firenormal >= TR
-		if not hud.lives.tweentic
-			hud.lives.tweentic = 5*TR
-		else
-			if hud.lives.tweentic < TR+TR*3/2
-				hud.lives.tweentic = TR+TR*3/2
-			end
-		end		
-	end
-	
-	if not (gametyperules & GTR_FRIENDLY)
-	and not p.spectator
+	or takis.firenormal >= TR
+	or modeattacking
+	or takis.lastskincolor ~= p.skincolor
+	or HAPPY_HOUR.othergt
 		if not hud.lives.tweentic
 			hud.lives.tweentic = 5*TR
 		else
@@ -669,7 +663,11 @@ rawset(_G, "TakisHUDStuff", function(p)
 			end
 			
 			if intic >= 4*TR
-				hud.lives.tweenx = ease.inquad((FU/etin)*(4*TR-intic), maxx, minx)
+				if intic > 4*TR+etin
+					hud.lives.tweenx = minx
+				else
+					hud.lives.tweenx = ease.inquad((FU/etin)*(4*TR-intic), maxx, minx)
+				end
 			end
 			
 			hud.lives.tweentic = $-1
@@ -1242,6 +1240,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 		end
 		
 		if P_PlayerTouchingSectorSpecial(p,1,3)
+		and takis.onGround
 			if takis.fireasstime < 10*TR
 				takis.fireasstime = $+4
 			end			
@@ -2046,6 +2045,9 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	or (p.playerstate ~= PST_LIVE or not me.health)
 	or (takis.hammerblastdown and (me.momz*takis.gravflip > -60*me.scale))
 		takis.noability = $|NOABIL_AFTERIMAGE
+		if (takis.accspeed < 30*FU and takis.clutchingtime > 10)
+			me.state = S_PLAY_TAKIS_RESETSTATE
+		end
 	end
 	if p.powers[pw_carry] == CR_NIGHTSMODE
 		takis.noability = $|NOABIL_SLIDE &~NOABIL_AFTERIMAGE
@@ -3825,6 +3827,10 @@ rawset(_G,"TakisMenuThinker",function(p)
 				S_StartSound(nil,sfx_menu1,p)
 			end
 		end
+		if menu.jump == 1
+		and (NUMACHIEVEMENTS > 16)
+			menu.achpage = 1-$
+		end
 		return
 	end
 	
@@ -4505,8 +4511,9 @@ rawset(_G,"TakisDoClutch",function(p)
 	
 	--TODO replace with clutchstart
 	if takis.onGround
-		me.state = S_PLAY_RUN
+		me.state = S_PLAY_DASH
 		P_MovePlayer(p)
+		p.panim = PA_RUN
 	end
 	takis.clutchtime = 23
 	takis.clutchspamtime = 23
