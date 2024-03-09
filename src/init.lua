@@ -1,33 +1,80 @@
+--reminder that this mod is "ASK ME" reusability, despite what 
+--the discussion page says
 
 -- "Terrible Character..."
 
---TODO: rewrite this
 if (VERSION == 202) and (SUBVERSION < 12)
 	local special = P_RandomChance(FRACUNIT/13)
-
-	local function deprecated(v)
+	local ticker = 0
 	
-		v.fadeScreen(0xFF00, 20)
-		v.drawString(130, 60, "Your copy of SRB2 outdated!",V_ORANGEMAP|V_ALLOWLOWERCASE, "thin")
-		v.drawString(130, 60+8, "This mod requires 2.2.12+,",V_ORANGEMAP|V_ALLOWLOWERCASE, "thin")
-		v.drawString(130, 60+8+8, "please update your game!",V_ORANGEMAP|V_ALLOWLOWERCASE, "thin")
+	addHook("ThinkFrame",do
+		ticker = $+1
 		
-		local patch = v.cachePatch("PIRATESOAP")
-		local size = FU/5
-		local x = 0
+		for p in players.iterate
+			if skins[p.skin].name == "takisthefox"
+				R_SetPlayerSkin(p,0)
+			end
+		end
+	end)
+	
+	local function dep(v)
+		local waveforce = FU*3
+		local ay = FixedMul(waveforce,sin(FixedAngle(ticker*5*FU)))
 		
-		if special
-			patch = v.cachePatch("HOLYMOLY")
-			size = 3*FU/5
-			x = 30*FU
+		local box = v.cachePatch("BLACK_BOX_NUMBER_23423423")
+		local x = 160*FU-(box.width*FU/2)
+		local y = ay+80*FU--(box.height/2)
+		
+		
+		local txt = {
+			"Your version of \x82SRB2",
+			"is \x85outdated!",
+			"Please update to",
+			"\x82".."2.2.12+\x80!"
+		}
+		
+		v.fadeScreen(0xFF00,20)
+		
+		v.drawScaled(x,y,FU,box,V_50TRANS)
+		
+		local shitter = v.cachePatch("TA_POOPSHIT")
+		v.drawScaled(x+(shitter.width*FU/2),
+			y+(shitter.height*FU/2),
+			FU/2,
+			shitter,
+			0
+		)
+		
+		v.drawString(x+(box.width*FU/2)-2*FU,
+			y+2*FU,
+			"takis:",
+			V_GREENMAP,
+			"fixed"
+		)
+		
+		for k,va in ipairs(txt)
+			v.drawString(x+(box.width*FU/2)-2*FU,
+				y+2*FU+(k*8*FU),
+				va,
+				V_ALLOWLOWERCASE,
+				"thin-fixed"
+			)
 		end
 		
-		v.drawScaled(50*FU+x, 35*FU, size, patch)
 	end
-	hud.add(deprecated, "title")
-	hud.add(deprecated, "game")
 	
-	error("\x85".."Your copy of 2.2 (".."2.2."..SUBVERSION..") is too outdated for this mod.\x80", 0)
+	local hudlist = {
+		"title",
+		"game",
+		"intermission",
+		"scores",
+	}
+	
+	for _,type in pairs(hudlist)
+		addHook("HUD",dep,type)
+	end
+	
+	S_StartSound(nil,sfx_skid)
 	return
 end
 

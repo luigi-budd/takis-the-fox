@@ -681,6 +681,7 @@ addHook("MapLoad", function(mapid)
 	if G_BuildMapTitle(gamemap) == nil then return end
 	if (TAKIS_MISC.inescapable[string.lower(G_BuildMapTitle(gamemap))] == true) then return end
 	if (mapheaderinfo[gamemap].takis_hh_nohappyhour) then return end
+	if (not TAKIS_NET.happytime) then return end
 	
 	if not hastakis then return end
 	
@@ -696,6 +697,7 @@ addHook("MapLoad", function(mapid)
 		--exit
 		if mt.type == mobjinfo[MT_HHEXIT].doomednum
 			hasdoor = true
+			door = mt.mobj
 		end
 	end	
 	
@@ -787,6 +789,7 @@ addHook("MapLoad", function(mapid)
 	if not hassign
 	and (door and door.valid)
 		P_RemoveMobj(door)
+		hasdoor = false
 		return
 	end
 	

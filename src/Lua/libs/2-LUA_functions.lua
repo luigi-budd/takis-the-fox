@@ -348,6 +348,8 @@ rawset(_G, "TakisHUDStuff", function(p)
 		hud.hudname = "Golkis"
 	elseif p.skincolor == SKINCOLOR_BLACK
 		hud.hudname = "Poyo"
+	elseif p.skincolor == SKINCOLOR_CARBON
+		hud.hudname = "Speckis"
 	end
 		
 	if hud.menutext.tics
@@ -629,7 +631,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 	if (not (gametyperules & GTR_FRIENDLY)
 	and not p.spectator)
 	--take a peak at your lives by holding fn
-	or takis.firenormal >= TR
+	or ((takis.firenormal >= TR) and not (takis.c2 or takis.c3))
 	or modeattacking
 	or takis.lastskincolor ~= p.skincolor
 	or HAPPY_HOUR.othergt
@@ -948,62 +950,6 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			takis.transfo = $ &~TRANSFO_PANCAKE
 		end
 	end
-	if (takis.transfo & TRANSFO_ELEC)
-		if takis.electime
-			if (leveltime % 3) == 0
-				me.color = SKINCOLOR_SUPERGOLD1
-			else
-				me.color = SKINCOLOR_JET
-			end
-			
-			local rad = me.radius/FRACUNIT
-			local hei = me.height/FRACUNIT
-			local x = P_RandomRange(-rad,rad)*FRACUNIT
-			local y = P_RandomRange(-rad,rad)*FRACUNIT
-			local z = P_RandomRange(0,hei)*FRACUNIT
-			local spark = P_SpawnMobjFromMobj(me,x,y,z,MT_SOAP_SUPERTAUNT_FLYINGBOLT)
-			spark.tracer = me
-			spark.state = P_RandomRange(S_SOAP_SUPERTAUNT_FLYINGBOLT1,S_SOAP_SUPERTAUNT_FLYINGBOLT5)			
-			spark.blendmode = AST_ADD
-			spark.color = P_RandomRange(SKINCOLOR_SUPERGOLD1,SKINCOLOR_SUPERGOLD5)
-			spark.angle = p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT ))
-
-			me.colorized = true
-			
-			if (me.state ~= S_PLAY_DEAD)
-				me.state = S_PLAY_DEAD
-				me.frame = A
-				me.sprite2 = SPR2_FASS
-			end
-			
-			--so the instathrust doesnt move us by an inch
-			p.cmd.forwardmove = max($,10)
-			
-			if (takis.justHitFloor)
-				local range = 235
-				L_ZLaunch(me,4*FU)
-				p.drawangle = $+(FixedAngle(
-					P_RandomRange(-range,range)*FU+P_RandomFixed()
-					)
-				)
-				P_InstaThrust(me,p.drawangle,14*me.scale)
-			end
-			
-			if not takis.onGround
-				me.momz = $-(me.scale/2*takis.gravflip)
-			end
-			
-			p.powers[pw_nocontrol] = 2
-			p.pflags = $|PF_FULLSTASIS
-			takis.electime = $-1
-		else
-			me.color = p.skincolor
-			me.colorized = false
-			me.state = S_PLAY_WALK
-			P_MovePlayer(p)
-			takis.transfo = $ &~TRANSFO_ELEC
-		end
-	end
 	if (takis.transfo & TRANSFO_TORNADO)
 		local sfx_nado = sfx_tknado
 		local sfx_nado2 = sfx_tkfndo
@@ -1239,18 +1185,18 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			return
 		end
 		
-		if P_PlayerTouchingSectorSpecial(p,1,3)
-		and takis.onGround
-			if takis.fireasstime < 10*TR
-				takis.fireasstime = $+4
-			end			
+		local mintime = 3*TR
+		local blinktime = TR
+		
+		if takis.fireregen
+			takis.fireregen = $-1
 		else
-			if takis.fireasstime == 3*TR
+			if takis.fireasstime == mintime
 				S_StartSound(me,sfx_steam2)
 			end
 		end
 		
-		if takis.fireasstime > 3*TR
+		if takis.fireasstime > mintime
 			local flame = P_SpawnMobjFromMobj(me,
 				P_RandomRange(-me.radius/me.scale,me.radius/me.scale)*me.scale+P_RandomFixed(),
 				P_RandomRange(-me.radius/me.scale,me.radius/me.scale)*me.scale+P_RandomFixed(),
@@ -1267,11 +1213,11 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			takis.fireballtime = TR
 		end
 		
-		if takis.fireasstime > 3*TR
+		if takis.fireasstime > mintime
 			me.color = superred[P_RandomRange(0,5)]
 			me.colorized = true
 		else
-			if takis.fireasstime > TR
+			if takis.fireasstime > blinktime
 				if not (takis.fireasstime/2 % 2)
 					me.color = p.skincolor
 					me.colorized = false
@@ -1298,12 +1244,70 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			p.powers[pw_shield] = $ &~SH_PROTECTFIRE
 		end
 		
-		takis.fireasstime = $-1
+		if not takis.fireregen
+			takis.fireasstime = $-1
+		end	
 	else
 		if takis.fireasstime
 			me.color = p.skincolor
 			me.colorized = false
 			takis.fireasstime = 0
+		end
+	end
+	if (takis.transfo & TRANSFO_ELEC)
+		if takis.electime
+			if (leveltime % 3) == 0
+				me.color = SKINCOLOR_SUPERGOLD1
+			else
+				me.color = SKINCOLOR_JET
+			end
+			
+			local rad = me.radius/FRACUNIT
+			local hei = me.height/FRACUNIT
+			local x = P_RandomRange(-rad,rad)*FRACUNIT
+			local y = P_RandomRange(-rad,rad)*FRACUNIT
+			local z = P_RandomRange(0,hei)*FRACUNIT
+			local spark = P_SpawnMobjFromMobj(me,x,y,z,MT_SOAP_SUPERTAUNT_FLYINGBOLT)
+			spark.tracer = me
+			spark.state = P_RandomRange(S_SOAP_SUPERTAUNT_FLYINGBOLT1,S_SOAP_SUPERTAUNT_FLYINGBOLT5)			
+			spark.blendmode = AST_ADD
+			spark.color = P_RandomRange(SKINCOLOR_SUPERGOLD1,SKINCOLOR_SUPERGOLD5)
+			spark.angle = p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT ))
+
+			me.colorized = true
+			
+			if (me.state ~= S_PLAY_DEAD)
+				me.state = S_PLAY_DEAD
+				me.frame = A
+				me.sprite2 = SPR2_FASS
+			end
+			
+			--so the instathrust doesnt move us by an inch
+			p.cmd.forwardmove = max($,10)
+			
+			if (takis.justHitFloor)
+				local range = 235
+				L_ZLaunch(me,4*FU)
+				p.drawangle = $+(FixedAngle(
+					P_RandomRange(-range,range)*FU+P_RandomFixed()
+					)
+				)
+				P_InstaThrust(me,p.drawangle,14*me.scale)
+			end
+			
+			if not takis.onGround
+				me.momz = $-(me.scale/2*takis.gravflip)
+			end
+			
+			p.powers[pw_nocontrol] = 2
+			p.pflags = $|PF_FULLSTASIS
+			takis.electime = $-1
+		else
+			me.color = p.skincolor
+			me.colorized = false
+			me.state = S_PLAY_WALK
+			P_MovePlayer(p)
+			takis.transfo = $ &~TRANSFO_ELEC
 		end
 	end
 end)
@@ -2039,16 +2043,15 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		takis.starman = false
 	end
 	
+	local insuperspeed = (takis.hammerblastdown and (me.momz*takis.gravflip <= -60*me.scale))
 	if (p.pflags & PF_SPINNING)
 	or (takis.accspeed < 30*FU and takis.clutchingtime > 10)
 	or (p.powers[pw_carry] and p.powers[pw_carry] ~= CR_ROLLOUT)
 	or (p.playerstate ~= PST_LIVE or not me.health)
 	or (takis.hammerblastdown and (me.momz*takis.gravflip > -60*me.scale))
 		takis.noability = $|NOABIL_AFTERIMAGE
-		if (takis.accspeed < 30*FU and takis.clutchingtime > 10)
-			me.state = S_PLAY_TAKIS_RESETSTATE
-		end
 	end
+	if insuperspeed then takis.noability = $ &~NOABIL_AFTERIMAGE end
 	if p.powers[pw_carry] == CR_NIGHTSMODE
 		takis.noability = $|NOABIL_SLIDE &~NOABIL_AFTERIMAGE
 	end
@@ -2214,6 +2217,11 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if p.spectator
 		takis.dontlanddust = true
+	end
+	
+	if takis.ropeletgo
+		takis.noability = $|NOABIL_HAMMER
+		takis.ropeletgo = $-1
 	end
 	
 	p.alreadyhascombometer = 2
@@ -2923,6 +2931,7 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 			return
 		end
 		
+		takis.combo.pacifist = false
 		takis.combo.count = $+1
 		local cc = takis.combo.count
 		if (HAPPY_HOUR.othergt)
@@ -3194,6 +3203,13 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 			end
 			
 		elseif takis.saveddmgt == DMG_DEATHPIT
+			if p.deadtimer == 1
+				local momz = takis.lastmomz
+				if momz < -30*me.scale*takis.gravflip
+					momz = -30*me.scale*takis.gravflip
+				end
+				me.momz = momz
+			end
 			return
 		end
 	end
@@ -3822,7 +3838,15 @@ rawset(_G,"TakisMenuThinker",function(p)
 		end
 		if menu.down == 1
 		or menu.down >= TR/2
-			if menu.achcur ~= NUMACHIEVEMENTS-1
+			local off = (menu.achpage*16)
+			local max = 0
+			if (NUMACHIEVEMENTS > 16)
+				max = (menu.achpage == 1) and 15 or NUMACHIEVEMENTS-off
+			else
+				max = 15
+			end
+			
+			if menu.achcur ~= max
 				menu.achcur = $+1
 				S_StartSound(nil,sfx_menu1,p)
 			end
@@ -4509,7 +4533,6 @@ rawset(_G,"TakisDoClutch",function(p)
 		d2.angle = R_PointToAngle2(me.x+me.momx, me.y+me.momy, d2.x, d2.y) --+ ANG5
 	end
 	
-	--TODO replace with clutchstart
 	if takis.onGround
 		me.state = S_PLAY_DASH
 		P_MovePlayer(p)

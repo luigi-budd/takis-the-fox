@@ -84,6 +84,22 @@ CV_TAKIS.chaingun = CV_RegisterVar({
 		debugf("chaingun",string.lower(cv.string),tostring(t.chaingun))
 	end
 })
+CV_TAKIS.happytime = CV_RegisterVar({
+	name = "takis_happyhour",
+	defaultvalue = "true",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.happytime = boolean[string.lower(cv.string)]
+		debugf("happytime",string.lower(cv.string),tostring(t.happytime))
+		if not (netgame or multiplayer)
+			print("Happy Hour in SP is "..
+				(t.happytime and "enabled" or "disabled")
+				..", restart the map for changes to take effect"
+			)
+		end
+	end
+})
 
 local function livesCount()
 	if (gametyperules & GTR_TAG)
@@ -154,6 +170,7 @@ end)
 addHook("MapLoad", function(mapid)
 	
 	m.numdestroyables = 0
+	m.partdestroy = 0
 	
 	for mt in mapthings.iterate
 		
@@ -175,16 +192,19 @@ addHook("MapLoad", function(mapid)
 		
 	end
 	
-	m.partdestroy = m.numdestroyables/(m.playercount+2) or 1
+	if m.numdestroyables ~= 0
+		m.partdestroy = m.numdestroyables/(m.playercount+2) or 1
+	end
 	
 end)
 
+--in milliseconds
 local bumpinterval = {
-	["vsboss"] = 18,
-	["vsalt"] = 13,
-	["vsmetl"] = 11,
-	["vsbrak"] = 10,
-	["vsfang"] = 15
+	["vsboss"] = 440,	--136 bpm
+	["vsalt"] = 370,	--160 bpm
+	["vsmetl"] = 320,	--184 bpm
+	["vsbrak"] = 270,	--108 bpm 8/8
+	["vsfang"] = 410	--145 bpm
 }
 
 addHook("ThinkFrame", do
@@ -288,8 +308,15 @@ addHook("ThinkFrame", do
 	end
 	
 	if m.inbossmap
-		local bump = bumpinterval[string.lower(mapheaderinfo[gamemap].musname or '')] or TR
-		if (leveltime % bump) == 0
+		local pos = S_GetMusicPosition()
+		local bump = bumpinterval[string.lower(mapheaderinfo[gamemap].musname or '')] or MUSICRATE
+		print("things",
+			pos,
+			bump,
+			(pos % bump)
+		)
+		if (pos % bump) <= 10
+		and m.cardbump == 0
 			m.cardbump = 10*FU
 		end
 	end

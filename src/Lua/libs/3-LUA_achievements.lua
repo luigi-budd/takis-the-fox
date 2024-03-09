@@ -1,4 +1,3 @@
---pretty buggy, maybe rewrite?
 
 local achs = {
 	"COMBO",
@@ -23,6 +22,7 @@ local achs = {
 	--pg 2
 	"OFFICER",
 	"RIPANDTEAR",
+	"PACIFIST",
 	
 }
 for k,v in ipairs(achs)
@@ -46,6 +46,7 @@ for k,v in ipairs(achflags)
 	print("Enummed AF_"..v.." ("..val..")")
 end
 
+--dat
 rawset(_G,"ACHIEVEMENT_PATH","client/summa.dat")
 
 rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
@@ -194,6 +195,13 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		text = "Use the Chaingun Shotgun.",
 		flags = AF_SECRET
 	},
+	[ACHIEVEMENT_PACIFIST] = {
+		name = "Pacifist",
+		icon = "ACH_OFFICER",
+		scale = FU/4,
+		text = "Clear a level wihout getting\n".."a single combo.",
+		flags = AF_SP
+	},
 })
 
 TAKIS_ACHIEVEMENTINFO.luasig = "iamlua"..P_RandomFixed()
@@ -210,8 +218,9 @@ COM_AddCommand("sonadow", function(p, check, num)
 	end
 	
 	if TAKIS_ISDEBUG
-		print("\x83TAKIS:\x80 Loaded achs for "..p.name)
+		print("\x83TAKIS:\x80 Loaded achs for "..p.name.." ("..num..")")
 	end
+	
 	p.takistable.achfile = tonumber(num)
 end)
 

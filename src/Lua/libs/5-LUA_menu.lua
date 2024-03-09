@@ -108,6 +108,7 @@ tm.entries = {
 			"Ragdoll collaterals",
 			"Heartcards",
 			"Hammer quakes",
+			"Toggle Happy Hour",
 		},
 		values = {
 			"nerfarma",
@@ -116,6 +117,7 @@ tm.entries = {
 			"collaterals",
 			"cards",
 			"hammerquakes",
+			"happytime",
 		},
 		--must be consvar_t, must be on/off, yes/no, true/false
 		cvars = {
@@ -125,6 +127,7 @@ tm.entries = {
 			CV_TAKIS.collaterals,
 			CV_TAKIS.heartcards,
 			CV_TAKIS.hammerquake,
+			CV_TAKIS.happytime,
 		},
 		hints = {
 			"Toggles Powerful Arma & normal Arma for Takis.",
@@ -132,7 +135,8 @@ tm.entries = {
 			"Toggles Takis being able to get achievements.",
 			"Toggles ragdolls being able to kill other things.",
 			"Toggles things dropping Heart Cards on death.",
-			"Toggles Takis' Hammer Blast causing quakes when landing."
+			"Toggles Takis' Hammer Blast causing quakes when landing.",
+			"Toggles Singleplayer Happy Hour.\nRestart map for changes to take place.",
 		}
 	},
 }

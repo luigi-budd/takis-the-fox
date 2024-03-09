@@ -353,6 +353,7 @@ local function calcstatusface(p,takis)
 			or (me.state == S_PLAY_PAIN)
 			or (takis.HUD.statusface.painfacetic))
 			or (me.pizza_out or me.pizza_in)
+			or (takis.pitanim)
 			and me.sprite2 ~= SPR2_SLID
 				takis.HUD.statusface.state = "PAIN"
 				takis.HUD.statusface.frame = (leveltime%4)/2
@@ -1049,6 +1050,7 @@ local function getnamemap(name)
 	elseif name == "Rakeys"
 		map = V_MAGENTAMAP
 	elseif name == "Poyo"
+	or name == "Speckis"
 		map = V_INVERTMAP
 	elseif name == "Jsakis"
 		map = V_AZUREMAP
@@ -1090,6 +1092,11 @@ local function drawlivesbutton(v,p,x,y,flags)
 		else
 			disp = $-5*FU
 		end
+	end
+	
+	if (takis.firenormal)
+	and not takis.HUD.lives.tweentic
+		disp = $-35*FU
 	end
 	
 	if (takis.transfo & TRANSFO_SHOTGUN)
@@ -1327,13 +1334,13 @@ local function drawlivesarea(v,p)
 		end
 	else
 		--match placements
-		if G_RingSlingerGametype()
+		if ((G_RingSlingerGametype()
 		and not (
 			(gametyperules & GTR_LIVES)
 			or G_GametypeHasTeams()
 			or (gametyperules & GTR_TAG)
-		)
-		or HAPPY_HOUR.othergt
+		))
+		or HAPPY_HOUR.othergt)
 		and not p.spectator
 			local top3 = takis.placement and takis.placement < 4
 			local scorenum = top3 and "CMBCFP" or "CMBCF"
@@ -1380,7 +1387,11 @@ local function drawlivesarea(v,p)
 		"thin-fixed-right"
 	)
 	
+	local disp = 0
+	
 	if (G_RingSlingerGametype())
+		disp = 15*FU
+		
 		local emeraldpics = {
 			[0] = v.cachePatch("TEMER1"),
 			[1] = v.cachePatch("TEMER2"),
@@ -1391,6 +1402,7 @@ local function drawlivesarea(v,p)
 			[6] = v.cachePatch("TEMER7"),
 		}
 		
+		local stop
 		if (leveltime & 1)
 		and p.powers[pw_invulnerability]
 		and (p.powers[pw_sneakers] ==
@@ -1403,18 +1415,95 @@ local function drawlivesarea(v,p)
 				(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS),
 				127		--allemeralds
 			)		
-			return
+			stop = true
 		end
 		
-		drawemeralds(v,
-			emeraldpics,
-			x+63*FU,
-			y-10*FU,
-			FU/2,
-			(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS),
-			p.powers[pw_emeralds]
-		)
+		if not stop
+			drawemeralds(v,
+				emeraldpics,
+				x+63*FU,
+				y-10*FU,
+				FU/2,
+				(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS),
+				p.powers[pw_emeralds]
+			)
+		end
 	end
+
+	--lives fill
+	if (takis.firenormal)
+	--?
+	--and not (takis.HUD.lives.tweentic)
+		local openingmenu = false
+		if (takis.c2 or takis.c3) then openingmenu = true end
+		
+		local fn = min(takis.firenormal,TR)
+		local c2 = min(takis.c2,TR)
+		local c3 = min(takis.c3,TR)
+		
+		local timetic = FixedDiv(fn*FU,TR*FU)
+		
+		if openingmenu
+			timetic = FixedDiv(
+				(fn*FU)+(c2*FU)+(c3*FU),
+				3*TR*FU
+			)
+		end
+		
+		local percent = FixedMul(100*FU,timetic)
+		
+		local pre = "TA_LIVESFILL_"
+		local erm = FixedDiv(percent,100*FU)
+		local height = v.cachePatch(pre.."FILL").height*FU - FixedMul(erm,v.cachePatch(pre.."FILL").height*FU)
+		if height < 0 then
+			height = 0
+		end
+		local scale = FU
+		
+		--back
+		v.drawCropped(x+80*FU+disp,y-10*FU,scale,scale,
+			v.cachePatch(pre.."BACK"),
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANSHALF), 
+			nil,
+			0,0,
+			v.cachePatch(pre.."FILL").width*FU,
+			height
+		)		
+		
+		v.drawCropped(x+80*FU+disp,y-10*FU+FixedMul(height,scale),scale,scale,
+			v.cachePatch(pre.."FILL"),
+			V_ADD|(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANSHALF), 
+			v.getColormap(0,openingmenu and SKINCOLOR_GREEN or SKINCOLOR_WHITE),
+			0,height,
+			v.cachePatch(pre.."FILL").width*FU,
+			v.cachePatch(pre.."FILL").height*FU
+		)
+		
+		local string = L_FixedDecimal(percent,1).."%"
+		v.drawString(
+			x+80*FU+disp,
+			y-13*FU,
+			string,
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS),
+			"thin-fixed-center"
+		)
+		
+		local showing = takis.HUD.lives.tweentic > 0
+		if (5*TR)-takis.HUD.lives.tweentic > 4*TR+(TR/2)
+			showing = false
+		end
+		
+		if not (showing and not openingmenu)
+			v.drawString(
+				x+95*FU,
+				y-13*FU,
+				openingmenu and "Open menu" or "Show lives",
+				(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS|V_ALLOWLOWERCASE),
+				"thin-fixed"
+			)		
+		end
+	end
+	
 	
 end
 
@@ -1460,6 +1549,10 @@ local function drawclutches(v,p,cam)
 			else
 				y = $-5*FU
 			end
+		end
+		if (takis.firenormal)
+		and not takis.HUD.lives.tweentic
+			y = $-35*FU
 		end
 	
 		if takis.clutchtime > 0
@@ -3133,8 +3226,7 @@ local function drawcosmenu(v,p)
 				)
 				
 				local x2 = pos.x*FU
-				local y2 = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))				
-				v.drawString(300*FU-x2,y2+16*FU,
+				v.drawString(300*FU-x2,y+16*FU,
 					"(Jump) Set "..(menu.achpage+1).."/"..((NUMACHIEVEMENTS > 16) and "2" or "1"),
 					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
 					"thin-fixed-right"
@@ -3716,6 +3808,7 @@ local function drawtransfotimer(v,p,cam)
 		local mark = v.cachePatch(pre.."TIC")
 		local x, y, scale
 		local cutoff = function(y) return false end
+		local bottom = false
 		
 		if cam.chase and not (p.awayviewtics and not (me.flags2 & MF2_TWOD))
 			x, y, scale = R_GetScreenCoords(v, p, cam, me)
@@ -3728,7 +3821,7 @@ local function drawtransfotimer(v,p,cam)
 			end
 			scale = FixedMul($,me.scale)
 		else
-			x, y, scale = 160*FRACUNIT, (10 + bubble.height >> 1)*FRACUNIT, FRACUNIT*2
+			x, y, scale, bottom = 160*FRACUNIT, (130 - bubble.height >> 1)*FRACUNIT, FRACUNIT*2, true
 		end
 		
 		scale = FixedDiv($,2*FU)
@@ -3787,9 +3880,10 @@ local function drawtransfotimer(v,p,cam)
 				width2 = 0
 			end
 			
+			local snap = (bottom) and V_SNAPTOBOTTOM or 0
 			v.drawCropped(x,y,scale,scale,
 				fill,
-				V_HUDTRANS|V_PERPLAYER, 
+				snap|V_HUDTRANS|V_PERPLAYER, 
 				(type == 1) and color or color2,
 				0,0,
 				width,fill.height*FU
@@ -3797,25 +3891,111 @@ local function drawtransfotimer(v,p,cam)
 			
 			v.drawCropped(x,y,scale,scale,
 				fill,
-				V_HUDTRANS|V_PERPLAYER, 
+				snap|V_HUDTRANS|V_PERPLAYER, 
 				(type2 == 1) and color or color2,
 				0,0,
 				width2,fill.height*FU
 			)
 			
-			v.drawScaled(x, y, scale, bubble, V_PERPLAYER|V_HUDTRANS)
+			v.drawScaled(x, y, scale, bubble, snap|V_PERPLAYER|V_HUDTRANS)
 			if time2
 				local offset = FixedMul(FixedMul(fill.width*FU,erm2),scale)+scale
-				v.drawScaled(x+4*scale+offset, y+3*scale, scale, mark, V_PERPLAYER|V_HUDTRANS,invc)
+				v.drawScaled(x+4*scale+offset, y+3*scale, scale, mark, snap|V_PERPLAYER|V_HUDTRANS,invc)
 			end
 			
 			local offset = FixedMul(FixedMul(fill.width*FU,erm),scale)+scale
-			v.drawScaled(x+4*scale+offset, y+3*scale, scale, mark, V_PERPLAYER|V_HUDTRANS,invc)
+			v.drawScaled(x+4*scale+offset, y+3*scale, scale, mark, snap|V_PERPLAYER|V_HUDTRANS,invc)
 			
 		end
 		
 	end
 	
+end
+
+local function drawfallout(v,p,cam)
+	
+	if (skins[p.skin].name ~= TAKIS_SKIN)
+		return
+	end
+		
+		
+	local takis = p.takistable
+	local me = p.realmo	
+	
+	local tic = takis.pitanim
+	
+	if not tic then return end
+		
+	local width = (v.width() / v.dupx()) + 1
+	local height = (v.height() / v.dupy()) + 1
+	
+	if tic >= 2*TR
+		local timer = 3*TR-tic
+		if timer >= TR/2+2
+			v.fadeScreen(0xFF00,(timer-TR/2-2)*2)
+		end
+	elseif tic >= TR
+		v.fadeScreen(0xFF00,32)
+	elseif tic < TR
+		local left = (160*FU)-(width*FU/2)--FixedMul(340*FU,FixedDiv(width*FU, 340*FU))
+		local right = (160*FU)+(width*FU/2)+10*FU
+		
+		local wipe = v.cachePatch("TA_WIPE")
+		local zig = v.cachePatch("TA_WIPEZIG")
+		local zag = v.cachePatch("TA_WIPEZAG")
+		
+		local hscale = FixedDiv(width * FU, wipe.width * FU)
+		local vscale = FixedDiv(height * FU, wipe.height * FU)
+		
+		--local tween = ease.inback((FU/TR)*(TR-tic),left,right,FU*2)
+		local tween = ease.inquint((FU/TR)*(TR-tic),left,right)
+		
+		v.drawStretched(tween, 0, 
+			hscale, vscale,
+			zig,
+			V_SNAPTOTOP
+		)
+		v.drawStretched(tween, 0, 
+			hscale, vscale,
+			wipe,
+			V_SNAPTOTOP
+		)
+		v.drawStretched(tween, 0, 
+			hscale, vscale,
+			zag,
+			V_SNAPTOTOP
+		)
+	end
+	
+
+	local top = (100*FU)-(height*FU/2)-10*FU
+	local bottom = (100*FU)+(height*FU/2)+10*FU
+	
+	local tweentic = min(3*TR-tic,TR/2)
+	local et = TR/2
+	local tween = ease.outback((FU/et)*tweentic,
+		top,
+		100*FU,
+		FU*2
+	)
+	
+	if tic <= TR
+	and tic > TR/2
+		--
+	end
+	
+	if tic <= TR
+	and tic > et
+		tween = ease.inback((FU/et)*(TR-tic),
+			100*FU,
+			bottom,
+			FU*2
+		)
+	end
+	
+	if tic > et
+		v.drawString(160*FU,tween,"Fall out!",0,"fixed-center")
+	end
 end
 
 /*
@@ -4323,8 +4503,10 @@ local function drawdebug(v,p)
 		if modeattacking then ypos = hudinfo[HUD_LIVES].y+10 end
 		local maxspeed = 200*FU
 		local speed = FixedDiv(takis.accspeed,maxspeed)
+		local runspeed = FixedDiv(p.runspeed,maxspeed)
 		local normalspeed = FixedDiv(p.normalspeed,maxspeed)
 		local roll
+		local rsroll
 		local nroll
 		local scale = FU
 		local offy2 = 0
@@ -4337,6 +4519,11 @@ local function drawdebug(v,p)
 			nroll = FixedAngle(180*FU-FixedMul(180*FU,normalspeed))
 		else
 			nroll = FixedAngle(180*FU)
+		end
+		if (runspeed ~= 0)
+			rsroll = FixedAngle(180*FU-FixedMul(180*FU,runspeed))
+		else
+			rsroll = FixedAngle(180*FU)
 		end
 		if AngleFixed(roll) == 0
 			offy2 = -4
@@ -4371,6 +4558,12 @@ local function drawdebug(v,p)
 			end
 		end
 		
+		v.drawScaled((hudinfo[HUD_LIVES].x+30)*FU,
+			(ypos-8+offy2)*FU,
+			FU/2,
+			v.getSpritePatch(SPR_THND,D,0,rsroll),
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER
+		)
 		v.drawScaled((hudinfo[HUD_LIVES].x+30)*FU,
 			(ypos-8+offy2)*FU,
 			FU/2,
@@ -4414,6 +4607,13 @@ local function drawdebug(v,p)
 		v.drawString(hudinfo[HUD_LIVES].x*FU,
 			(ypos-68)*FU,
 			p.thrustfactor.." thrust",
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
+			"thin-fixed"
+		)
+
+		v.drawString(hudinfo[HUD_LIVES].x*FU,
+			(ypos-76)*FU,
+			p.accelstart..", "..p.acceleration.." accelstart, accel",
 			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
 			"thin-fixed"
 		)
@@ -4524,7 +4724,7 @@ local function drawdebug(v,p)
 		
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_NET)
-		local dex = 7
+		local dex = 8
 		local cv = {
 			[1] = CV_TAKIS.nerfarma,
 			[2] = CV_TAKIS.tauntkills,
@@ -4533,6 +4733,7 @@ local function drawdebug(v,p)
 			[5] = CV_TAKIS.heartcards,
 			[6] = CV_TAKIS.hammerquake,
 			[7] = CV_TAKIS.chaingun,
+			[8] = CV_TAKIS.happytime,
 		}
 		local net = {
 			[1] = TAKIS_NET.nerfarma,
@@ -4542,6 +4743,7 @@ local function drawdebug(v,p)
 			[5] = TAKIS_NET.cards,
 			[6] = TAKIS_NET.hammerquakes,
 			[7] = TAKIS_NET.chaingun,
+			[8] = TAKIS_NET.happytime,
 		}
 		local name = {
 			[1] = "Nerf arma",
@@ -4551,6 +4753,7 @@ local function drawdebug(v,p)
 			[5] = "Cards",
 			[6] = "Hammer quakes",
 			[7] = "Chaingun",
+			[8] = "HH toggle",
 		}
 		local boolclr = {
 			[true] = "\x83",
@@ -4586,18 +4789,19 @@ local function drawdebug(v,p)
 		end
 		
 		--other shit
+		local bottom = 10+(dex*8)
 		local m = TAKIS_MISC
-		v.drawString(100,66,
+		v.drawString(100,bottom,
 			"FC: "..(m.partdestroy).."/"..(m.numdestroyables).." things",
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			"thin"
 		)
-		v.drawString(100,74,
+		v.drawString(100,bottom+8,
 			"count: E "..m.exitingcount..", T "..m.takiscount..", "..m.playercount,
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			"thin"
 		)
-		v.drawString(100,82,
+		v.drawString(100,bottom+16,
 			"cardbump: "..L_FixedDecimal(m.cardbump,2),
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			"thin"
@@ -4606,32 +4810,32 @@ local function drawdebug(v,p)
 		local bm = m.inbossmap
 		local bk = m.inbrakmap
 		local retro = m.isretro == TOL_MARIO
-		drawflag(v,100,90,"spec",
+		drawflag(v,100,bottom+24,"spec",
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			V_GREENMAP,V_REDMAP,
 			"thin",
 			ss
 		)
-		drawflag(v,140,90,"boss",
+		drawflag(v,140,bottom+24,"boss",
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			V_GREENMAP,V_REDMAP,
 			"thin",
 			bm
 		)
-		drawflag(v,100,98,"brak",
+		drawflag(v,100,bottom+32,"brak",
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			V_GREENMAP,V_REDMAP,
 			"thin",
 			bk
 		)
-		drawflag(v,140,98,"retro",
+		drawflag(v,140,bottom+32,"retro",
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			V_GREENMAP,V_REDMAP,
 			"thin",
 			retro
 		)
 		
-		v.drawString(100,106,
+		v.drawString(100,bottom+40,
 			"lifepool: "..m.livescount,
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			"thin"
@@ -4755,14 +4959,16 @@ addHook("HUD", function(v,p,cam)
 			
 			local hasstat = CV_FindVar("perfstats").value
 			
-			--drawwareffect(v,p)
 			drawclutches(v,p,cam)
 			drawnadocount(v,p,cam)
+			drawtransfotimer(v,p,cam)
+			
+			drawfallout(v,p)
+			--drawwareffect(v,p)
 			--drawbubbles(v,p,cam)
 			if not hasstat
 				drawrings(v,p)
 				drawtimer(v,p)
-				drawtransfotimer(v,p,cam)
 			end
 			drawlivesarea(v,p)
 			drawcombostuff(v,p,cam)

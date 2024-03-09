@@ -129,7 +129,9 @@ function TB.AdvanceBox(player)
 				player.textBox.tree[lasttree].advancescript(player)
 			end
 		end
-		player.textBox.move = player.textBox.tree[player.textBox.current].move
+		if player.textBox.tree
+			player.textBox.move = player.textBox.tree[player.textBox.current].move
+		end
 	else
 		if player.textBox.tree[lasttree].closescript then 
 			player.textBox.tree[lasttree].closescript(player)

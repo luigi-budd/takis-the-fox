@@ -161,7 +161,8 @@ local function think_bird(p)
 	
 	if me.state == S_PLAY_TAKIS_BIRD
 		--me.state = S_PLAY_TAKIS_BIRD
-		me.frame = ((takis.taunttime-2) % 6)
+		--me.frame = ((takis.taunttime-2) % 6)
+		me.frame = ((takis.taunttime-2)/4 % 6)
 	end
 	
 	--cancel conga

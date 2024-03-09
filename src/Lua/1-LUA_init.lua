@@ -27,6 +27,7 @@
 	-NiGHTS Freeroam - ok this isnt reusable but buggie asked me to put it in
 	-ChrispyChars - some code used for confetti, safefreeslot code
 	-MinHUD - some hud functions i used
+	-ffoxD's Momentum mod - momentum used in takis
 	
 	SOME MORE STUFF I STOLE
 	-AntonBlast - sound effects, music, sprites
@@ -237,6 +238,7 @@ rawset(_G, "TAKIS_NET", {
 	cards = true, --only spawn heartcards if this is true
 	hammerquakes = true,
 	chaingun = false,
+	happytime = false,
 	
 	usedcheats = false,
 	
@@ -581,6 +583,12 @@ rawset(_G, "TakisInitTable", function(p)
 		lastminhud = nil,
 		placement = 0,
 		lastplacement = 0,
+		lastgroundedpos = {},
+		lastgroundedangle = 0,
+		ropeletgo = 0,
+		pitanim = 0,
+		pitfunny = false,
+		lastcarry = 0,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -628,6 +636,7 @@ rawset(_G, "TakisInitTable", function(p)
 			cashable = false,
 			dropped = false,
 			awardable = false,
+			pacifist = true,
 			
 			failcount = 0,
 			failtics = 0,
@@ -1670,7 +1679,7 @@ mobjinfo[MT_TAKIS_DEADBODY] = {
 	doomednum = -1,
 	spawnstate = S_NULL,
 	--mt_playuer
-	flags = MF_NOCLIP|MF_SLIDEME|MF_NOCLIPTHING|MF_NOGRAVITY,
+	flags = MF_NOCLIPHEIGHT|MF_NOCLIP|MF_SLIDEME|MF_NOCLIPTHING|MF_NOGRAVITY,
 	height = 16*FRACUNIT,
 	radius = 26*FRACUNIT,
 }
@@ -1711,7 +1720,9 @@ function A_ShotgunBox(mo)
 	gun.scale = $/20
 	L_ZLaunch(gun,4*FU)
 	gun.destscale = oldscale
+	print("ASASD",mo.flags2 & MF2_AMBUSH)
 	gun.flags2 = $|(mo.flags2 & MF2_AMBUSH)
+	print(gun.flags2 & MF2_AMBUSH)
 	
 	if mo.info.seesound
 		local g = P_SpawnGhostMobj(mo)
@@ -1927,7 +1938,7 @@ mobjinfo[MT_TAKIS_STEAM] = {
 	spawnhealth = 1,
 	height = 6*FRACUNIT,
 	radius = 6*FRACUNIT,
-	flags = MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT
+	flags = MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIP|MF_NOGRAVITY|MF_NOCLIPHEIGHT
 }
 
 SafeFreeslot("MT_TAKIS_PONGLER")
@@ -1965,6 +1976,31 @@ mobjinfo[MT_TAKIS_GUNSHOT] = {
 	speed = 120*FRACUNIT,
 	flags = MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY
 }
+
+SafeFreeslot("MT_TAKIS_SPAWNER")
+SafeFreeslot("S_TAKIS_SPAWNER_IDLE")
+SafeFreeslot("S_TAKIS_SPAWNER_FIRE")
+states[S_TAKIS_SPAWNER_IDLE] = {
+	sprite = SPR_RING,
+	frame = A,
+	tics = 4*TICRATE,
+	nextstate = S_TAKIS_SPAWNER_IDLE,
+}
+
+mobjinfo[MT_TAKIS_SPAWNER] = {
+	--$Name Enemy Spawner
+	--$Sprite SHGNC0
+	--$Category Takis Stuff
+	doomednum = 3005,
+	spawnstate = S_TAKIS_SPAWNER_IDLE,
+	deathstate = S_TAKIS_SPAWNER_IDLE,
+	spawnhealth = 1000,
+	activesound = sfx_gbeep,
+	height = 64*FRACUNIT,
+	radius = 32*FRACUNIT,
+	flags = MF_SOLID|MF_NOGRAVITY
+}
+
 
 addHook("NetVars",function(n)
 	--TAKIS_NET = n($)

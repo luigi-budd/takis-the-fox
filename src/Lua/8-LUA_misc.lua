@@ -137,14 +137,7 @@ addHook("MobjThinker", function(rag)
 		local aa = P_SpawnMobjFromMobj(rag,0,0,rag.height/2,MT_TAKIS_BADNIK_RAGDOLL_A)
 		aa.color = SKINCOLOR_KETCHUP
 	end
-	if rag.timealive % 5 == 0
-		local poof = P_SpawnMobjFromMobj(rag,0,0,rag.height/2,MT_SPINDUST)
-		poof.scale = FixedMul(2*FRACUNIT,rag.scale)
-		poof.colorized = true
-		poof.destscale = rag.scale/4
-		poof.scalespeed = FRACUNIT/4
-		poof.fuse = 10				
-	end
+	
 	--do hitboxes
 	if (TAKIS_NET.collaterals and not intwod)
 		--make hitting stuff more generous
@@ -2184,6 +2177,8 @@ end,MT_TAKIS_FETTI)
 addHook("MapThingSpawn",function(mo,mt)
 	if mt.options & MTF_AMBUSH
 		mo.type = MT_SHOTGUN_GOLDBOX
+		print(mt.options&MTF_AMBUSH == MTF_AMBUSH and MF2_AMBUSH or 0)
+		mo.flags2 = $|(mt.options&MTF_AMBUSH == MTF_AMBUSH and MF2_AMBUSH or 0)
 	end
 end,MT_SHOTGUN_BOX)
 
@@ -2623,6 +2618,24 @@ addHook("MobjThinker",function(pong)
 	end
 	
 end,MT_TAKIS_PONGLER)
+
+addHook("MobjDeath",function(dust,_,_,_,dmgt)
+	if not (dust and dust.valid) then return end
+	
+	if dmgt == DMG_DEATHPIT
+		return true
+	end
+	return
+end,MT_TAKIS_STEAM)
+
+addHook("ShouldDamage",function(dust,_,_,_,dmgt)
+	if not (dust and dust.valid) then return end
+	
+	if dmgt == DMG_DEATHPIT
+		return false
+	end
+	return
+end,MT_TAKIS_STEAM)
 
 filesdone = $+1
 

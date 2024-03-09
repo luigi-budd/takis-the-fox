@@ -229,7 +229,11 @@ COM_AddCommand("panic", function(p,tics,flags)
 	end
 	
 	if (HAPPY_HOUR.othergt)
-		COM_BufInsertText(p,"ptsr_pizzatimenow")
+		if not HAPPY_HOUR.happyhour
+			COM_BufInsertText(p,"ptsr_pizzatimenow")
+		else
+			COM_BufInsertText(p,"ptsr_timeto1")
+		end
 		return
 	end
 	
