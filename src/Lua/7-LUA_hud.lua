@@ -1099,22 +1099,33 @@ local function drawlivesbutton(v,p,x,y,flags)
 		disp = $-35*FU
 	end
 	
-	if (takis.transfo & TRANSFO_SHOTGUN)
-	and (takis.shotgunforceon == false)
-		local bflag = V_HUDTRANS
-		if takis.hammerblastdown then bflag = V_HUDTRANSHALF end
-		v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C3"), flags|bflag)
-		v.drawString(x+20*FU, y+disp+5*FU, "De-Shotgun",V_ALLOWLOWERCASE|flags|V_HUDTRANS, "thin-fixed")	
-		disp = $-20*FU
-	end
+	if not p.inkart
+		if (takis.transfo & TRANSFO_SHOTGUN)
+		and (takis.shotgunforceon == false)
+			local bflag = V_HUDTRANS
+			if takis.hammerblastdown then bflag = V_HUDTRANSHALF end
+			v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C3"), flags|bflag)
+			v.drawString(x+20*FU, y+disp+5*FU, "De-Shotgun",V_ALLOWLOWERCASE|flags|V_HUDTRANS, "thin-fixed")	
+			disp = $-20*FU
+		end
 	
-	if (p.powers[pw_shield] ~= SH_NONE)
-		local shieldflag = V_HUDTRANSHALF
-		shieldflag = (not(takis.noability&NOABIL_SHIELD)) and V_HUDTRANS or V_HUDTRANSHALF
-		
-		v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C2"), flags|shieldflag)
-		v.drawString(x+20*FU, y+disp+5*FU, "Shield Ability",V_ALLOWLOWERCASE|flags|V_HUDTRANS, "thin-fixed")
+		if (p.powers[pw_shield] ~= SH_NONE)
+			local shieldflag = V_HUDTRANSHALF
+			shieldflag = (not(takis.noability&NOABIL_SHIELD)) and V_HUDTRANS or V_HUDTRANSHALF
+			
+			v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C2"), flags|shieldflag)
+			v.drawString(x+20*FU, y+disp+5*FU, "Shield Ability",V_ALLOWLOWERCASE|flags|V_HUDTRANS, "thin-fixed")
+			disp = $-20*FU
+		end
+	else
+		v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C3"), flags)
+		v.drawString(x+20*FU, y+disp+5*FU, "Look behind",V_ALLOWLOWERCASE|flags|V_HUDTRANS, "thin-fixed")	
 		disp = $-20*FU
+		
+		v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C2"), flags)
+		v.drawString(x+20*FU, y+disp+5*FU, "Dismount",V_ALLOWLOWERCASE|flags|V_HUDTRANS, "thin-fixed")
+		disp = $-20*FU
+	
 	end
 	
 	if (p.powers[pw_carry] == CR_MINECART)
@@ -1199,6 +1210,7 @@ local function drawlivesarea(v,p)
 	or (TAKIS_DEBUGFLAG & (DEBUG_SPEEDOMETER|DEBUG_BUTTONS))
 	or p.takistable.hhexiting
 	or (p.takis_noabil ~= nil)
+	or (p.inkart)
 		return
 	end
 	
@@ -3998,6 +4010,289 @@ local function drawfallout(v,p,cam)
 	end
 end
 
+local function drawdriftmeter(v,p,cam)
+	if (customhud.CheckType("takis_kart_driftmeter") != modname) return end	
+	
+	if (skins[p.skin].name ~= TAKIS_SKIN)
+		return
+	end
+	
+	local takis = p.takistable
+	local me = p.realmo	
+	
+	if not p.inkart then return end
+	if not (me.tracer and me.tracer.valid) then return end
+	local car = me.tracer
+	if (car.drift == 0) then return end
+	
+	local width = 72*FU
+	local flip = 1
+	local bubble = v.cachePatch("TA_KDRIFT_BAR")
+	local fill = v.cachePatch("TA_KDRIFT_FILL")
+	local x, y, scale
+	local cutoff = function(y) return false end
+	local bottom = false
+	
+	if cam.chase and not (p.awayviewtics and not (me.flags2 & MF2_TWOD))
+		x, y, scale = R_GetScreenCoords(v, p, cam, me)
+		scale = $*2
+		if me.eflags & MFE_VERTICALFLIP
+		and p.pflags & PF_FLIPCAM
+			y = 200*FRACUNIT - $
+		else
+			flip = P_MobjFlip(me)
+		end
+		scale = FU
+	else
+		x, y, scale, bottom = 160*FRACUNIT, (110 - bubble.height >> 1)*FRACUNIT, FRACUNIT, true
+	end
+	
+	
+	if splitscreen
+		if p == secondarydisplayplayer
+			cutoff = function(y) return y < (bubble.height*scale >> 1) end
+		else
+			cutoff = function(y) return y > 200*FRACUNIT + (bubble.height*scale >> 1) end
+		end
+	end
+	
+	if not cutoff(y)
+		
+		y = $+25*scale
+		local percent = 0
+		local tmap = 0
+		local snap = (bottom) and V_SNAPTOBOTTOM or 0
+		local bounce = false
+		
+		if car.driftspark
+			local driftstage = TakisKart_DriftLevel(car.driftspark)
+			local erm = 0
+			local value = TakisKart_DriftSparkValue()
+			local max = 0
+			local erm2 = 0
+			
+			if car.drift == 0 then return end
+			
+			if car.driftspark >= value*4
+				erm = 400*FU
+				tmap = V_PURPLEMAP
+			elseif car.driftspark >= value*2
+				erm2 = car.driftspark-(value*2)
+				erm = 200*FU+FixedMul(200*FU,FixedDiv(erm2,value*2))
+				tmap = V_REDMAP
+				max = value*2
+			elseif car.driftspark >= value
+				erm2 = car.driftspark-value
+				erm = 100*FU+FixedMul(100*FU,FixedDiv(erm2,value))
+				tmap = V_SKYMAP
+				max = value
+			else
+				erm2 = car.driftspark
+				erm = FixedMul(100*FU,FixedDiv(erm2,value))
+				max = value
+			end
+			if car.driftbrake
+			and (car.driftbrake & 1)
+				tmap = V_REDMAP
+				bounce = true
+			end
+			percent = FixedInt(erm)
+			
+			if driftstage > 1
+			and driftstage ~= 4
+				v.drawScaled(x,
+					y,
+					scale,
+					fill,
+					snap|V_PERPLAYER|V_HUDTRANS,
+					v.getColormap(nil,TakisKart_DriftColor(driftstage-1))
+				)
+			end
+			
+			local color = TakisKart_DriftColor(driftstage)
+			if driftstage == 4
+				v.drawScaled(x,
+					y,
+					scale,
+					fill,
+					snap|V_PERPLAYER|V_HUDTRANS,
+					v.getColormap(nil,color)
+				)
+			else
+				local um = FixedDiv(erm2,max)
+				local width = FixedMul(um,fill.width*FU)
+				if width < 0 then
+					width = 0
+				end
+				
+				v.drawCropped(x,y,scale,scale,
+					fill,
+					snap|V_PERPLAYER|V_HUDTRANS, 
+					v.getColormap(nil,color),
+					0,0,
+					width,fill.height*FU
+				)
+			
+			end
+		end
+		
+		v.drawScaled(x, y, scale, bubble, snap|V_PERPLAYER|V_HUDTRANS)
+		v.drawString(x+(bubble.width*scale/2)+3*scale,
+			y-2*scale-((bounce) and scale or 0),
+			percent.."%",
+			tmap|snap|V_PERPLAYER|V_HUDTRANS,
+			"thin-fixed-right"
+		)
+	end
+		
+end
+
+local function kartspeedometer(v,p,takis,car,minus)
+	if (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER) then return end
+	
+	local scale = FU
+	local x,y = (hudinfo[HUD_LIVES].x+15)*FU+minus,(hudinfo[HUD_LIVES].y)*FU
+	local flags = V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS
+	
+	local maxspeed = 70*FU
+	local speed = FixedDiv(takis.accspeed,maxspeed)
+	local sroll
+	if (speed ~= 0)
+		sroll = FixedAngle(90*FU-FixedMul(90*FU,speed))
+	else
+		sroll = FixedAngle(90*FU)
+	end
+	sroll = $+FixedAngle(33*FU)
+	
+	v.drawScaled(5*FU+minus,192*FU,scale/2,
+		v.cachePatch("TA_KFUEL_BCRC"),
+		flags
+	)
+	
+	v.drawScaled(x,
+		y-(AngleFixed(sroll) == 0 and 4*FU or 0),
+		scale/2,
+		v.getSpritePatch(SPR_THND,F,0,sroll),
+		flags
+	)
+
+	local scorenum = "CMBCF"
+	local score = FixedInt(takis.accspeed)
+	local prevw
+	if not prevw then prevw = 0 end
+	
+	local textwidth = 0
+	for i = 1,string.len(score)
+		local n = string.sub(score,i,i)
+		local patch = v.cachePatch(scorenum+n)
+		textwidth = $+(patch.width*scale*4/10)		
+	end
+	
+	for i = 1,string.len(score)
+		local sc = FixedDiv(scale,2*FU)
+		local n = string.sub(score,i,i)
+		local patch = v.cachePatch(scorenum+n)
+		--local textwidth = (patch.width*scale*4/10)
+		v.drawScaled(x+prevw-(textwidth/2),
+			y-(patch.height*sc)+6*FU-(FU/2),
+			sc,
+			patch,
+			flags
+		)
+			
+		prevw = $+(patch.width*scale*4/10)
+	end
+
+end
+
+local function kartfuelometer(v,p,takis,car,minus)
+	local x,y = (hudinfo[HUD_LIVES].x+60)*FU+minus,(hudinfo[HUD_LIVES].y)*FU
+	local flags = V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_HUDTRANS
+	if (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
+		x = $+25*FU
+	end
+	local jerry = v.cachePatch("TA_KFUEL_CAN")
+	local needroll = 0
+	local maxfuel = 100*FU
+	local lev = 100*FU-car.fuel
+	local fuel = FixedDiv(lev,maxfuel)
+	local color = SKINCOLOR_SUPERSILVER1
+	if (car.damagetic
+	or car.fuel <= 25*FU)
+	and (leveltime/2 % 2)
+		color = SKINCOLOR_RED 
+	end
+	local colorm = v.getColormap(nil,color)
+	needroll = (FixedAngle(180*FU-FixedMul(180*FU,fuel))-ANGLE_90)
+	
+	v.drawScaled(x,
+		y-(jerry.height*FU/2)-(FU/2),
+		FU/2,
+		v.cachePatch("TA_KFUEL_CIRC"),
+		flags,
+		colorm
+	)	
+	v.drawScaled(x,
+		y-(jerry.height*FU/2)-(FU/2),
+		FU,
+		v.cachePatch("TA_KFUEL_EF"),
+		flags,
+		colorm
+	)	
+	v.drawScaled(x,
+		y-(jerry.height*FU/2)+FU-(AngleFixed(needroll) == 0 and 4*FU or 0),
+		FU/2,
+		v.getSpritePatch(SPR_THND,E,0,needroll),
+		flags,
+		colorm
+	)
+	v.drawScaled(x,
+		y-(jerry.height*FU/2),
+		FU/2,
+		jerry,
+		flags,
+		colorm
+	)	
+end
+
+local function drawkartmeters(v,p)
+	if (customhud.CheckType("takis_kart_meters") != modname) return end	
+	
+	if (skins[p.skin].name ~= TAKIS_SKIN)
+		return
+	end
+	
+	local takis = p.takistable
+	local me = p.realmo	
+	
+	if not p.inkart then return end
+	if not (me.tracer and me.tracer.valid) then return end
+	local car = me.tracer
+	if car.type ~= MT_TAKIS_KART_HELPER then return end
+	
+	local minx = -55*FU
+	local maxx = 15*FU
+	local x = maxx
+	local y = 128*FU
+	if p.kartingtime < TR/2
+		local etin = TR/2
+		local intic = p.kartingtime
+		
+		x = ease.outback((FU/etin)*intic,minx, maxx, FU*3/2)
+		
+	end
+	if not (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
+		v.drawScaled(x,y,FU,
+			v.cachePatch("TA_KFUEL_BACKING"),
+			V_HUDTRANSHALF|V_SNAPTOLEFT|V_SNAPTOBOTTOM
+		)
+	end
+	
+	kartspeedometer(v,p,takis,car,x-3*FU)
+	kartfuelometer(v,p,takis,car,x-3*FU)
+		
+end
+
 /*
 local function drawbubbles(v,p,cam)
 	--chrispy chars
@@ -4151,7 +4446,8 @@ local getcarry = {
 	[10] = "rollout",
 	[11] = "pterabyte",
 	[12] = "dustdevil",
-	[13] = "fan", 
+	[13] = "fan",
+	[20] = "kart",
 }
 
 local function drawflag(v,x,y,string,flags,onmap,offmap,align,flag)
@@ -4871,6 +5167,8 @@ customhud.SetupItem("textspectator", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_nadocount",	 	modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_tutbuttons",	 	modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_transfotimer", 	modname/*,	,	"game",	10*/)
+customhud.SetupItem("takis_kart_driftmeter",modname/*,	,	"game",	10*/)
+customhud.SetupItem("takis_kart_meters",	modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
 
 addHook("HUD", function(v,p,cam)
@@ -4920,6 +5218,8 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("takis_tutbuttons", 	modname)
 			customhud.SetupItem("takis_transfotimer", 	modname)
 			customhud.SetupItem("bossmeter",			modname)
+			customhud.SetupItem("takis_kart_driftmeter",modname)
+			customhud.SetupItem("takis_kart_meters",	modname)
 
 			if takis.io.nohappyhour == 0
 				customhud.SetupItem("PTSR_itspizzatime",modname)
@@ -4962,6 +5262,8 @@ addHook("HUD", function(v,p,cam)
 			drawclutches(v,p,cam)
 			drawnadocount(v,p,cam)
 			drawtransfotimer(v,p,cam)
+			drawdriftmeter(v,p,cam)
+			drawkartmeters(v,p)
 			
 			drawfallout(v,p)
 			--drawwareffect(v,p)

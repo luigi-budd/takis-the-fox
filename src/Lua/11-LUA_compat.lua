@@ -8,6 +8,7 @@ local compat = {
 	peptext = false,
 	speckismash = false,
 	ptsrhook = false,
+	boat = false,
 }
 
 local function printf(...)
@@ -116,6 +117,14 @@ addHook("ThinkFrame",do
 		
 		compat.ptsrhook = true
 		printf("Added PTSR stuff.")
+	end
+	if boatchars
+	/*
+	and not compat.boat
+		boatchars[TAKIS_SKIN] = {0, 1, 0}	
+		compat.boat = true
+		printf("Added boat stuff.")
+	*/
 	end
 end)
 

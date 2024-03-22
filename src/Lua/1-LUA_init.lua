@@ -8,14 +8,13 @@
 
 /*
 	SPECIAL THANKS/CONTRIBUTORS
-	remember to put this in the MB page luigi
 	
 	-dashdahog - takis' sprites inspiration. I LOVE TAILEELS!!!
 	-Jisk - jelped jith jome jode
 	-Unmatched Bracket - waterslide pain -> sliding code, compiling code
 	-katsy - bounce sector detection
 	-Banddy - metal sonic boss portrait, tested hh things mapheader positions
-	-Marilyn - final demo cutscene i used lol
+	-Marilyn - final demo cutscene i used lol, kart bump code
 	-nicholas rickys (saxashitter) - helped me with some code in sharecombos
 	
 	CODE I STOLE (from reusable mods)
@@ -30,9 +29,11 @@
 	-ffoxD's Momentum mod - momentum used in takis
 	
 	SOME MORE STUFF I STOLE
-	-AntonBlast - sound effects, music, sprites
+	-Antonblast - sound effects, music, sprites
 	-Pizza Tower - sound effects
 	-Team Fortress 2 - sound effects, music
+	-SRB2Kart - engine & drifting sound effects
+	-Hill Climb Racing - low fuel beep
 	
 	some functions were also taken from here
 	https://wiki.srb2.org/wiki/User:Clairebun/Sandbox/Common_Lua_Functions
@@ -210,6 +211,7 @@ local transfoenum = {
 	"ELEC",
 	"TORNADO",
 	"FIREASS",
+	"KART",
 }
 for k,v in ipairs(transfoenum)
 	local val = 1<<(k-1)
@@ -217,6 +219,9 @@ for k,v in ipairs(transfoenum)
 	print("Enummed TRANSFO_"..v.." ("..val..")")
 	table.insert(constlist,{"TRANSFO_"..v,val})
 end
+
+rawset(_G,"CR_TAKISKART",20)
+table.insert(constlist,{"CR_TAKISKART",20})
 
 --spike stuff according tro source
 -- https://github.com/STJr/SRB2/blob/a4a3b5b0944720a536a94c9d471b64c822cdac61/src/p_map.c#L838
@@ -547,6 +552,7 @@ rawset(_G, "TakisInitTable", function(p)
 		lastdestroyed = 0,
 		lastemeralds = 0,
 		lastss = 0,
+		lastpos = {x=p.realmo.x,y=p.realmo.y,z=p.realmo.z},
 		achfile = 0,
 		drilleffect = 0,
 		issuperman = false,
@@ -1076,6 +1082,8 @@ SafeFreeslot("sfx_antwi1")
 sfxinfo[sfx_antwi1].caption = "Strange laughing"
 SafeFreeslot("sfx_antwi2")
 sfxinfo[sfx_antwi2].caption = '\x8F"Ha!"\x80'
+SafeFreeslot("sfx_antwi3")
+sfxinfo[sfx_antwi3].caption = '\x8F"Ha-ha ha ha!"\x80'
 SafeFreeslot("sfx_tayeah")
 sfxinfo[sfx_tayeah].caption = '\x8F"Yyyeahh!"\x80'
 SafeFreeslot("sfx_hapyhr")
@@ -1249,6 +1257,12 @@ SafeFreeslot("sfx_summit")
 sfxinfo[sfx_summit].caption = "\x89SUMMIT!\x80"
 SafeFreeslot("sfx_ponglr")
 sfxinfo[sfx_ponglr].caption = "/"
+SafeFreeslot("sfx_kartst")
+sfxinfo[sfx_kartst].caption = "Startup"
+SafeFreeslot("sfx_kartlf")
+sfxinfo[sfx_kartlf].caption = "Fuel low!"
+SafeFreeslot("sfx_kartdr")
+sfxinfo[sfx_kartdr].caption = "/"
 
 --spr_ freeslot
 
@@ -1276,6 +1290,7 @@ SafeFreeslot("SPR_TKFT")
 SafeFreeslot("SPR_MTLD")
 SafeFreeslot("SPR_MDST")
 SafeFreeslot("SPR_PGLR") --polar and other pongler sprites
+SafeFreeslot("SPR_KART")
 
 --
 
@@ -1300,10 +1315,18 @@ SafeFreeslot("SPR2_PLHD")
 SafeFreeslot("SPR2_FASS")
 SafeFreeslot("SPR2_NADO")
 SafeFreeslot("SPR2_TBRD")
+SafeFreeslot("SPR2_KART")
 
 --
 
 --state freeslot
+
+SafeFreeslot("S_PLAY_TAKIS_KART")
+states[S_PLAY_TAKIS_KART] = {
+    sprite = SPR_PLAY,
+    frame = SPR2_KART,
+    tics = -1,
+}
 
 SafeFreeslot("S_PLAY_TAKIS_TORNADO")
 states[S_PLAY_TAKIS_TORNADO] = {
@@ -1712,7 +1735,6 @@ mobjinfo[MT_TAKIS_BADNIK_RAGDOLL_A] = {
 	radius = 5*FRACUNIT,
 }
 
-SafeFreeslot("MT_SHOTGUN_GOLDBOX")
 function A_ShotgunBox(mo)
 	local gun = P_SpawnMobjFromMobj(mo,0,0,0,MT_TAKIS_SHOTGUN)
 	gun.dropped = true
@@ -1720,9 +1742,9 @@ function A_ShotgunBox(mo)
 	gun.scale = $/20
 	L_ZLaunch(gun,4*FU)
 	gun.destscale = oldscale
-	print("ASASD",mo.flags2 & MF2_AMBUSH)
-	gun.flags2 = $|(mo.flags2 & MF2_AMBUSH)
-	print(gun.flags2 & MF2_AMBUSH)
+	if mo.forcebox
+		gun.forceon = true
+	end
 	
 	if mo.info.seesound
 		local g = P_SpawnGhostMobj(mo)
@@ -1761,6 +1783,44 @@ states[S_SHOTGUN_ICON2] = {
 
 SafeFreeslot("MT_SHOTGUN_BOX")
 SafeFreeslot("MT_SHOTGUN_ICON")
+SafeFreeslot("MT_SHOTGUN_GOLDBOX")
+
+function A_MonitorPop(mo)
+	--override shotgun boxesx
+	if mo.type == MT_SHOTGUN_BOX
+	--these guys use a different action
+	--or mo.type == MT_SHOTGUN_GOLDBOX
+		
+		local item = 0
+		if mo.info.damage == MT_UNKNOWN
+			super(mo)
+			return
+		else
+			item = mo.info.damage
+		end
+		
+		if item == 0
+			super(mo)
+			return
+		end
+		
+		local itemmo = P_SpawnMobjFromMobj(mo,0,0,13*FU,item)
+		itemmo.target = mo.target
+		itemmo.forcebox = mo.forcebox
+		
+		S_StartSound(mo,mo.info.deathsound)
+		P_SpawnMobjFromMobj(mo,0,0,mo.height/4,MT_EXPLODE)
+		
+		mo.health = 0
+		mo.flags = $|MF_NOCLIP &~MF_SOLID
+		
+		return
+	else
+		super(mo)
+	end
+	
+end
+
 mobjinfo[MT_SHOTGUN_BOX] = {
 	--$Name Shotgun Box
 	--$Sprite TVSGA0

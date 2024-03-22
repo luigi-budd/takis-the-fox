@@ -288,6 +288,27 @@ COM_AddCommand("shotgun", function(p)
 	
 end,COM_ADMIN)
 
+COM_AddCommand("kart", function(p)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if not (p.takistable)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	if not (p.mo.health)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	local x,y = ReturnTrigAngles(p.mo.angle+ANGLE_90)
+	P_SpawnMobjFromMobj(p.mo,-75*x,-75*y,0,MT_TAKIS_KART)
+	
+end,COM_ADMIN)
+
 local function GetPlayerHelper(pname)
 	-- Find a player using their node or part of their name.
 	local N = tonumber(pname)

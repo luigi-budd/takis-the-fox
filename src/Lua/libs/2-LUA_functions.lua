@@ -944,6 +944,29 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 				me.momz = $*21/23
 			end
 			takis.pancaketime = $-1
+			
+			local maxspeed = p.normalspeed*3/4
+			local oldspeed = takis.prevspeed
+			local speed = R_PointToDist2(me.momx - p.cmomx,me.momy - p.cmomy,0,0)
+			if speed > maxspeed
+			and not (p.pflags & PF_SPINNING)
+			and takis.onground
+			and me.friction ~= FU
+				local tmomx,tmomy
+				if oldspeed > maxspeed
+					if (speed > oldspeed)
+						tmomx = FixedMul(FixedDiv(me.momx - p.cmomx, speed), oldspeed)
+						tmomy = FixedMul(FixedDiv(me.momy - p.cmomy, speed), oldspeed)
+						me.momx = tmomx
+						me.momy = tmomy
+					end
+				else
+					tmomx = FixedMul(FixedDiv(me.momx - p.cmomx, speed), maxspeed)
+					tmomy = FixedMul(FixedDiv(me.momy - p.cmomy, speed), maxspeed)
+					me.momx = tmomx
+					me.momy = tmomy
+				end
+			end
 		else
 			S_StopSoundByID(me,sfx_trnsfo)
 			S_StartSound(me,sfx_shgnk)
@@ -1626,6 +1649,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if takis.accspeed >= 60*FU
 		if (me.state == S_PLAY_WALK or me.state == S_PLAY_RUN)
 		and (p.playerstate == PST_LIVE)
+		and (takis.notCarried)
 			takis.goingfast = true
 			takis.wentfast = 10*TR
 		end
@@ -2326,6 +2350,7 @@ rawset(_G, "DoTakisSquashAndStretch", function(p, me, takis)
 	or (p.powers[pw_carry] == CR_MINECART)
 	or (p.powers[pw_carry] == CR_ROPEHANG)
 	or (me.pizza_out or me.pizza_in)
+	or (p.inkart)
 		dontdo = true
 	end
 	
@@ -2455,7 +2480,7 @@ rawset(_G, "S_StartAntonOw", function(source,p)
 	S_StartSound(source, P_RandomRange(sfx_antow1,sfx_antow7),p)
 end)
 rawset(_G, "S_StartAntonLaugh", function(source,p)
-	S_StartSound(source, P_RandomRange(sfx_antwi1,sfx_antwi2),p)
+	S_StartSound(source, P_RandomRange(sfx_antwi1,sfx_antwi3),p)
 end)
 
 local function collide2(me,mob)
@@ -2910,6 +2935,7 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 	or (maptol & TOL_NIGHTS)
 	or (TAKIS_MISC.inspecialstage)
 	or (takis.inChaos)
+	or p.inkart
 		return
 	end
 	if add == nil
@@ -3829,6 +3855,18 @@ rawset(_G,"TakisMenuThinker",function(p)
 	end
 	
 	if menu.page == 1
+		local off = (menu.achpage*16)
+		local max = 0
+		if (NUMACHIEVEMENTS > 16)
+			max = (menu.achpage == 0) and 15 or (NUMACHIEVEMENTS-1)-off
+		else
+			max = 15
+		end
+		
+		if menu.achcur > max
+			menu.achcur = max
+		end
+		
 		if menu.up == 1
 		or menu.up >= TR/2
 			if menu.achcur ~= 0
@@ -3838,14 +3876,6 @@ rawset(_G,"TakisMenuThinker",function(p)
 		end
 		if menu.down == 1
 		or menu.down >= TR/2
-			local off = (menu.achpage*16)
-			local max = 0
-			if (NUMACHIEVEMENTS > 16)
-				max = (menu.achpage == 1) and 15 or NUMACHIEVEMENTS-off
-			else
-				max = 15
-			end
-			
 			if menu.achcur ~= max
 				menu.achcur = $+1
 				S_StartSound(nil,sfx_menu1,p)
@@ -3854,6 +3884,7 @@ rawset(_G,"TakisMenuThinker",function(p)
 		if menu.jump == 1
 		and (NUMACHIEVEMENTS > 16)
 			menu.achpage = 1-$
+			menu.achcur = 0
 		end
 		return
 	end
@@ -4189,6 +4220,7 @@ rawset(_G,"TakisHurtMsg",function(p,inf,sor,dmgt)
 	end
 end)
 
+--will this be a metal or regular set?
 local function metalorreggib(mo)
 	local spawnmetal = true
 	
@@ -4894,5 +4926,64 @@ rawset(_G, "TakisSpawnDustRing", function(mo, speed, thrust, num, alwaysabove)
 	end
 end)
 
+rawset(_G,"TakisKart_SpawnSpark",function(car,angle,color,realspark)
+	local x,y = ReturnTrigAngles(angle)
+	local spark = P_SpawnMobjFromMobj(car,
+		-16*x+car.momx*2,
+		-16*y+car.momy*2,
+		(P_RandomRange(-1,2)*car.scale)+(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+		MT_THOK
+	)
+	spark.scale = FixedMul(car.scale,2*FU+(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)))
+	local sscale = FixedDiv(FU/10,spark.scale)
+	local lifetime = -1 --TR*2
+	spark.angle = angle
+	spark.spritexscale,spark.spriteyscale = sscale,sscale
+	spark.blendmode = AST_ADD
+	spark.tics,spark.fuse = lifetime,lifetime
+	P_SetObjectMomZ(spark,(P_RandomRange(4,6)*car.scale)+(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)))
+	spark.flags = $ &~(MF_NOCLIPHEIGHT|MF_NOGRAVITY)
+	P_Thrust(spark,
+		spark.angle,
+		P_RandomRange(-4,-6)*car.scale--+(FixedHypot(car.momx,car.momy)/2)
+	)
+	spark.isakartspark = true
+	spark.color = color
+	if realspark 
+		spark.isrealspark = true
+		spark.blendmode = 0
+	end
+	return spark
+end)
+
+rawset(_G,"TakisKart_DriftSparkValue",function()
+	return 70*FU
+end)
+
+rawset(_G,"TakisKart_DriftLevel",function(driftspark)
+	local level = 0
+	if driftspark >= TakisKart_DriftSparkValue()*4
+		level = 4
+	elseif driftspark >= TakisKart_DriftSparkValue()*2
+		level = 3
+	elseif driftspark >= TakisKart_DriftSparkValue()
+		level = 2
+	elseif driftspark < TakisKart_DriftSparkValue()
+		level = 1
+	end
+	return level
+end)
+
+local driftclr = {
+	[4] = SKINCOLOR_NEON,
+	[3] = SKINCOLOR_SALMON,
+	[2] = SKINCOLOR_SAPPHIRE,
+	[1] = SKINCOLOR_WHITE,
+	[0] = SKINCOLOR_WHITE
+}
+
+rawset(_G,"TakisKart_DriftColor",function(driftlevel)
+	return driftclr[driftlevel] or SKINCOLOR_WHITE
+end)
 
 filesdone = $+1

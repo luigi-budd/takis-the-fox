@@ -17,6 +17,7 @@ FlickyList = Bluebird,Chipmunk
 Level Z1
 Music = _INTER
 NoTitlecard = true
+NextLevel = 2
 
 Level Z0
 Levelname = Red Room

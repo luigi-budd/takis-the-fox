@@ -95,6 +95,14 @@ local filelistt1 = {
 	"Textboxes",
 	"battlemod",
 }
+--objects
+local filelistt2 = {
+	"shotgun",
+	"heartcards",
+	"metaldetector",
+	"thokspawner",
+}
+
 local filelist = {
 	"io",
 	"main",
@@ -106,11 +114,12 @@ local filelist = {
 	"MOTD",
 	"finaldemo",
 	"compat",
+	"kart",
 }
 --
 
 rawset(_G, "filesdone", 0)
-rawset(_G, "NUMFILES", (#guh)+(#filelistt1)+(#filelist-1))
+rawset(_G, "NUMFILES", (#guh)+(#filelistt1)+(#filelistt2)+(#filelist-1))
 --from chrispy chars!!! by Lach!!!!
 rawset(_G,"SafeFreeslot",function(...)
 	for _, item in ipairs({...})
@@ -173,6 +182,11 @@ end
 
 for k,v in ipairs(filelistt1)
 	dofile("libs/"..k.."-"..pre..v..suf)
+	print("Done "..filesdone.." file(s)")
+end
+
+for k,v in ipairs(filelistt2)
+	dofile("objects/"..k.."-"..pre..v..suf)
 	print("Done "..filesdone.." file(s)")
 end
 

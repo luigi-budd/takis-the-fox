@@ -117,7 +117,16 @@ COM_AddCommand("takis_dojumpscare", function(p,node,wega)
 	end
 
 	if not node
-		prn(p,"Forces Takis' jumpscare on someone. Type @random to choose a random person in the server. @self for yourself.")
+		local list = {
+			"@random	- Chooses a random person on the server",
+			"@self		- Chooses yourself",
+			"@others	- Chooses everyone but you",
+			"@nonadmins - Chooses everyone that isn't an admin"
+		}
+		prn(p,"Forces Takis' jumpscare on someone. Special @ codes listed below:")
+		for k,v in ipairs(list)
+			prn(p,v)
+		end
 		return
 	end
 	
@@ -138,6 +147,27 @@ COM_AddCommand("takis_dojumpscare", function(p,node,wega)
 		node = choose(unpack(plist))
 	elseif node == "@self"
 		node = #p
+	elseif node == "@others"
+		for play in players.iterate
+			if play.bot
+			or play.quittime
+			or play == p
+				continue
+			end
+			TakisJumpscare(play,wega ~= nil)
+			prn(p,"Jumpscared "..play.name)
+		end
+	elseif node == "@nonadmins"
+		for play in players.iterate
+			if play.bot
+			or play.quittime
+			or (p == server)
+			or (IsPlayerAdmin(p))
+				continue
+			end
+			TakisJumpscare(play,wega ~= nil)
+			prn(p,"Jumpscared "..play.name)
+		end
 	end
 	
 	local p2 = GetPlayer(p,node)
@@ -253,7 +283,7 @@ COM_AddCommand("takis_importantletter", function(p)
 		return
 	end
 	
-	if not takis.isTakis
+	if skins[p.skin].name ~= TAKIS_SKIN
 		return
 	end
 	
