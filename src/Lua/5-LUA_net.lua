@@ -207,6 +207,23 @@ local bumpinterval = {
 	["vsfang"] = 410	--145 bpm
 }
 
+local gslist = {
+	[0] = 	"GS_NULL",
+	[1] = 	"GS_LEVEL",
+	[2] = 	"GS_INTERMISSION",
+	[3] = 	"GS_CONTINUING",
+	[4] = 	"GS_TITLESCREEN",
+	[5] = 	"GS_TIMEATTACK",
+	[6] = 	"GS_CREDITS",
+	[7] = 	"GS_EVALUATION",
+	[8] = 	"GS_GAMEEND",
+	[9] = 	"GS_INTRO",
+	[10] = 	"GS_ENDING",
+	[11] = 	"GS_CUTSCENE",
+	[12] = 	"GS_DEDICATEDSERVER",
+	[13] = 	"GS_WAITINGPLAYERS",
+}
+
 addHook("ThinkFrame", do
 	
 	--CVtoNET()

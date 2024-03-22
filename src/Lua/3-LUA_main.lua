@@ -141,14 +141,15 @@
 	 to get more accurate measurements?
 	-takis things use udmf args too
 	-[done?]pacifist ach
-	-revert rag hitboxes
-	-chaingun shotgon on shotgun in CanPlayerDaagePlater
+	-[done? i dont rememver LMAO]revert rag hitboxes
+	-[done but shitily]chaingun shotgon on shotgun in CanPlayerDaagePlater
 	-[done]show "Show lives" when already tweened out
-	-limit letter to takis
+	-[done]limit letter to takis
 	-takis hh end shakes more than others
 	-[done]corpse faces same angle
 	-[done]teleport corpse with momentum
-	-shotgun forceon doenst work
+	-[done]shotgun forceon doenst work
+	-[done]fix ach page overscroll
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -159,6 +160,7 @@
 	-[done]redo tailees dead
 	-BOSS TITLE SHIT!!!
 	-stun anim
+	-specki BLOX anims
 	
 	--PLANNED MAPHEADERS
 	-[done]Takis_HH_Music - regular happyhour mus, ignore styles
@@ -304,6 +306,7 @@ addHook("PreThinkFrame",function()
 			if P_IsObjectOnGround(me)
 			and not P_CheckDeathPitCollide(me)
 			and not takis.pitanim
+			and not p.inkart
 				if not ((me.eflags & MFE_TOUCHWATER) and not ((me.eflags & MFE_UNDERWATER) or (P_IsObjectInGoop(me))))
 					takis.lastgroundedpos = {me.x,me.y,me.z}
 					takis.lastgroundedangle = me.angle
@@ -340,6 +343,10 @@ addHook("PreThinkFrame",function()
 			takis.noability = $|NOABIL_CLUTCH
 		end
 	
+		if p.inkart
+			takis.noability = $|NOABIL_ALL|NOABIL_THOK
+		end
+		
 	end
 end)
 
@@ -1050,6 +1057,7 @@ addHook("PlayerThink", function(p)
 				and not ((takis.tauntmenu.open) and (takis.tossflag))
 				and not (takis.inwaterslide or takis.resettingtoslide)
 				and not (takis.noability & NOABIL_SLIDE)
+				and takis.notCarried
 					S_StartSound(me,sfx_eeugh)
 					S_StartSound(me,sfx_taksld)
 					P_InstaThrust(me,p.drawangle,FixedMul(20*FU+(4*takis.accspeed/5),me.scale))
@@ -1602,6 +1610,7 @@ addHook("PlayerThink", function(p)
 							ghost.colorized = true
 							ghost.frame = $|TR_TRANS10
 							ghost.blendmode = AST_ADD
+							ghost.angle = p.drawangle
 							for i = 0, 4 do
 								P_SpawnSkidDust(p,25*me.scale)
 							end
@@ -1640,6 +1649,10 @@ addHook("PlayerThink", function(p)
 				takis.dived = false
 			end
 			
+			if p.inkart
+				takis.noability = $ &~NOABIL_AFTERIMAGE
+			end
+	
 			if not (takis.noability & NOABIL_AFTERIMAGE)
 				if takis.clutchingtime
 				or takis.glowyeffects
@@ -1870,6 +1883,7 @@ addHook("PlayerThink", function(p)
 				or me.sprite2 == SPR2_WALK)
 				and (me.health)
 				and not takis.dontfootdust
+				and not p.inkart
 					local frame = me.frame & FF_FRAMEMASK
 					if ((frame == A) or (frame == E))
 						if not takis.steppedthisframe
@@ -1912,6 +1926,7 @@ addHook("PlayerThink", function(p)
 				and not (me.eflags & (MFE_TOUCHWATER|MFE_TOUCHLAVA))
 				and not P_CheckDeathPitCollide(me)
 				and me.health
+				and not p.inkart
 					if (takis.dontlanddust == false)
 					and (takis.onPosZ)
 						S_StartSoundAtVolume(me,sfx_takst0,255*4/5)
@@ -2131,6 +2146,8 @@ addHook("PlayerThink", function(p)
 					takis.heartcards = TAKIS_MAX_HEARTCARDS
 				end
 			end
+			
+			if p.inkart then takis.combo.time = 0 end
 			
 			--handle combo stuff here
 			if takis.combo.time ~= 0
@@ -2477,6 +2494,10 @@ addHook("PlayerThink", function(p)
 			if not takis.otherskin
 				takis.otherskin = true
 				TakisResetTauntStuff(takis,true)
+				if takis.HUD.showingletter
+					takis.HUD.showingletter = false
+					P_RestoreMusic(p)
+				end
 			else
 				takis.otherskintime = $+1
 			end
@@ -2561,6 +2582,15 @@ addHook("PlayerThink", function(p)
 		
 		if me.battime then me.battime = $-1 end
 		if me.touchingdetector then me.touchingdetector = $-1 end
+		if p.inkart
+			p.inkart = $-1
+		else
+			if p.powers[pw_carry] == CR_TAKISKART
+				p.powers[pw_carry] = 0
+				me.tracer = nil
+			end
+			p.kartingtime = 0
+		end
 		
 		takis.combo.lastcount = takis.combo.count
 		takis.lastmap = gamemap
@@ -2608,11 +2638,16 @@ end
 addHook("PostThinkFrame", function ()
     for p in players.iterate() do
         if not (p and p.valid) then continue end
-		if not (p.mo and p.mo.valid) then continue end
-		if not (p.mo.skin == TAKIS_SKIN) then continue end
+		if not (p.realmo and p.realmo.valid) then continue end
 		
 		local me = p.realmo
 		local takis = p.takistable
+		
+		if not takis then continue end
+		
+		takis.lastpos = {x=me.x,y=me.y,z=me.z}
+		
+		if not (me.skin == TAKIS_SKIN) then continue end
 		
 		if (takis.transfo & TRANSFO_TORNADO)
 			p.drawangle = me.angle+takis.nadoang
@@ -2947,6 +2982,7 @@ addHook("PlayerCanDamage", function(player, mobj)
 			not (takis.noability & (NOABIL_CLUTCH|NOABIL_HAMMER))
 		)
 		or (takis.transfo & TRANSFO_TORNADO)
+		or (player.inkart)
 			if L_ZCollide(me,mobj)
 			/*
 			and ((mobj.flags & MF_ENEMY)
@@ -2978,6 +3014,29 @@ addHook("PlayerCanDamage", function(player, mobj)
 	end
 end)
 
+local function kartpain(me,inf)
+	local p = me.player
+	if not p.inkart then return end
+	if not (me.tracer and me.tracer.valid) then return end
+	local car = me.tracer
+	
+	car.inpain = true
+	car.painangle = car.angle
+	P_SetObjectMomZ(car,P_RandomRange(25,30)*car.scale)
+	SpawnBam(me)
+	S_StartAntonOw(car)
+	car.fuel = $-(5*FU)
+	car.damagetic = TR
+	car.driftspark = 0
+	if (inf and inf.valid)
+		local ang = R_PointToAngle2(inf.x,inf.y,car.x,car.y)
+		local thrust = FixedHypot(FixedHypot(inf.momx,inf.momy),inf.momz)
+		local speed = FixedHypot(FixedHypot(car.momx,car.momy),car.momz)
+		P_Thrust(car,ang,-thrust)
+	end
+
+end
+
 --handle takis damage here
 --freeroam damage is handled in the ShouldDamage
 addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
@@ -3006,7 +3065,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		return
 	end
 	
-	if takis.pitanim then print("!!!"); return end
+	if takis.pitanim then return end
 	if takis.pittime then return end
 	if p.ptsr_outofgame then return end
 	
@@ -3142,6 +3201,11 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		takis.totalshit = $+1
 		
 		if takis.totalshit >= 100 then TakisAwardAchievement(p,ACHIEVEMENT_OFFICER) end
+		
+		if p.inkart
+			kartpain(mo,inf,sor)
+			return true
+		end
 		
 		if inf
 		and inf.valid
@@ -3446,8 +3510,10 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		
 		S_StartSound(mo,sfx_smack)
 		DoQuake(p,30*FU*(max(1,p.timeshit*2/3)),15)
-		S_StartAntonOw(mo)
-
+		if not p.inkart
+			S_StartAntonOw(mo)
+		end
+		
 		SpawnEnemyGibs(inf or mo,mo)
 
 		TakisResetHammerTime(p)
@@ -3811,28 +3877,38 @@ local function givecardpieces(mo, _, source)
 	
 	
 	if source
-	and source.skin == TAKIS_SKIN
 	and source.player
 	and source.player.valid
 	
-		if source.player.takistable.combo.time
-		and mo.takis_givecombotime
-			TakisGiveCombo(source.player,source.player.takistable,false)
+		if source.skin == TAKIS_SKIN
+			if source.player.takistable.combo.time
+			and mo.takis_givecombotime
+				TakisGiveCombo(source.player,source.player.takistable,false)
+			end
+			
+			local givescore = true
+			if G_RingSlingerGametype()
+				givescore = false
+			end
+			if (HAPPY_HOUR.othergt) then givescore = false end
+			
+			--stop being OP >:(
+			if (mo.takis_givecombotime
+			or mo.takis_givecardpieces)
+			and (givescore == true)
+				P_AddPlayerScore(source.player,10)
+			end
 		end
 		
-		local givescore = true
-		if G_RingSlingerGametype()
-			givescore = false
-		end
-		if (HAPPY_HOUR.othergt) then givescore = false end
-		
-		--stop being OP >:(
-		if (mo.takis_givecombotime
+		if source.player.powers[pw_carry] == CR_TAKISKART
+		and (mo.takis_givecombotime
 		or mo.takis_givecardpieces)
-		and (givescore == true)
-			P_AddPlayerScore(source.player,10)
+		and (source.tracer and source.tracer.valid)
+			source.tracer.fuel = $+3*FU
+			if source.tracer.fuel > 100*FU
+				source.tracer.fuel = 100*FU
+			end
 		end
-		
 	end
 	
 end
@@ -4128,6 +4204,8 @@ addHook("JumpSpecial", function(p)
 	if takis.jump > 1 then return end
 	if (takis.thokked or p.pflags & PF_THOKKED) then return end
 	if (takis.jumptime > 0) then return end
+	if p.inkart then return end
+	if (p.pflags & PF_JUMPSTASIS) then return end
 	
 	if takis.onGround
 	or takis.coyote
@@ -4232,6 +4310,18 @@ addHook("MobjMoveCollide",function(tm,t)
 		--only horizontal springs
 		elseif (t.flags & MF_SPRING)
 		and L_ZCollide(t,tm)
+			if p.inkart
+			and (tm.tracer and tm.tracer.valid)
+				local car = tm.tracer
+				P_DoSpring(t,car)
+				P_DoSpring(t,tm)
+				if (mobjinfo[t.type].mass > 0)
+					car.angle = t.angle
+					tm.angle = t.angle
+					p.drawangle = t.angle
+				end
+				return
+			end
 			if ((mobjinfo[t.type].mass == 0) and (mobjinfo[t.type].damage > 0))
 				TakisResetHammerTime(p)
 				P_InstaThrust(tm,t.angle,takis.prevspeed+mobjinfo[t.type].damage)
@@ -4385,6 +4475,28 @@ addHook("MobjMoveCollide",function(tm,t)
 			P_RemoveMobj(tm)
 			TakisGiveCombo(p,takis,true)
 			
+			return false
+		--kart stuff
+		--run people over!
+		elseif (t.type == MT_PLAYER)
+		and ((t.player) and (t.player.valid))
+		and (p.inkart)
+		and L_ZCollide(t,tm)
+		and (takis.accspeed >= 15*FU)
+			if CanPlayerHurtPlayer(p,t.player)
+				P_DamageMobj(t,tm,tm,10)
+				LaunchTargetFromInflictor(1,t,tm,63*tm.scale,takis.accspeed/5)
+				P_Thrust(tm,p.drawangle,5*tm.scale)
+				L_ZLaunch(t,P_RandomRange(5,15)*tm.scale,true)
+				
+				SpawnEnemyGibs(t,tm)
+				SpawnBam(tm)
+				
+				S_StartSound(t,sfx_tsplat)
+				S_StartSound(tm,sfx_smack)
+			end
+		elseif (t.type == MT_TAKIS_KART_HELPER)
+		and (tm.tracer == t)
 			return false
 		end
 		
