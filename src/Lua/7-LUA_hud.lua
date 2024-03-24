@@ -2848,11 +2848,11 @@ local function drawtauntmenu(v,p)
 	
 	
 	v.drawScaled(160*FU,108*FU+yadd,FU/2,v.cachePatch("TAUNTBACK"),V_30TRANS,v.getColormap(nil, SKINCOLOR_BLACK))
-	v.drawString(15*FU,(75*FU)+yadd,"Taunt",V_ALLOWLOWERCASE|V_HUDTRANS,"fixed")
-	v.drawString(305*FU,(75*FU)+yadd,"Hit C1 to Cancel",V_ALLOWLOWERCASE|V_HUDTRANS,"thin-fixed-right")
-	v.drawString(15*FU,(90*FU)+yadd,"Hit C3 to join a Partner Taunt",V_ALLOWLOWERCASE|V_HUDTRANS,"thin-fixed")
-	v.drawString(305*FU,(86*FU)+yadd,"Quick Taunt: TF+#+C2/C3",V_ALLOWLOWERCASE|V_HUDTRANS,"small-fixed-right")
-	v.drawString(305*FU,(94*FU)+yadd,"Delete Quick Taunt: TF+Fire+C2/C3",V_ALLOWLOWERCASE|V_HUDTRANS,"small-fixed-right")
+	v.drawString(15*FU,(75*FU)+yadd,"Taunt",V_ALLOWLOWERCASE,"fixed")
+	v.drawString(305*FU,(75*FU)+yadd,"Hit C1 to Cancel",V_ALLOWLOWERCASE,"thin-fixed-right")
+	v.drawString(15*FU,(90*FU)+yadd,"Hit C3 to join a Partner Taunt",V_ALLOWLOWERCASE,"thin-fixed")
+	v.drawString(305*FU,(86*FU)+yadd,"Quick Taunt: TF+#+C2/C3",V_ALLOWLOWERCASE,"small-fixed-right")
+	v.drawString(305*FU,(94*FU)+yadd,"Delete Quick Taunt: TF+Fire+C2/C3",V_ALLOWLOWERCASE,"small-fixed-right")
 	v.drawScaled(160*FU,100*FU+yadd,FU/2,v.cachePatch("TAUNTSEPAR"),0,nil)
 	
 	local ydisp = 25*FU
@@ -2862,16 +2862,16 @@ local function drawtauntmenu(v,p)
 		local xoffset = takis.tauntmenu.xoffsets[i] or 0
 		local showicon = true
 		
-		local trans = V_HUDTRANS
+		local trans = 0
 		if ((name == "")
 		or (name == nil))
 			name = "\x86None"
-			trans = V_HUDTRANSHALF
+			trans = V_50TRANS
 			showicon = false
 		--there IS an entry, but no functions to call for it
 		elseif ((TAKIS_TAUNT_INIT[i] == nil) or (TAKIS_TAUNT_THINK[i] == nil))
 			name = "\x86"..takis.tauntmenu.list[i]
-			trans = V_HUDTRANSHALF
+			trans = V_50TRANS
 		end
 		
 		if (i == takis.tauntmenu.cursor)
@@ -4590,8 +4590,9 @@ local function drawdebug(v,p)
 			
 			v.drawString(40,8*(k-1),
 				va.tics.." | "..
-				L_FixedDecimal(va.intensity,3),
-				red|V_HUDTRANS,
+				L_FixedDecimal(va.intensity,3)..
+				((va.id ~= nil) and (" - "..va.id) or ''),
+				red|V_HUDTRANS|V_ALLOWLOWERCASE,
 				"left"
 			)
 		end

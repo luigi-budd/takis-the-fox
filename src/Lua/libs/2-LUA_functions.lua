@@ -132,13 +132,10 @@ rawset(_G, "TakisAnimateHappyHour", function(p)
 			local tics = HAPPY_HOUR.timeleft
 			local time = hud.timeshake
 			
-			local dontdo = false
-			if (HAPPY_HOUR.othergt)
-				dontdo = takis.io.nohappyhour == 1
-			end
+			local cando = HH_CanDoHappyStuff(p)
 			
 			if tics <= (56*TR)
-			and not (dontdo)
+			and cando
 			and not HAPPY_HOUR.gameover
 				hud.timeshake = ((56*TR)-tics)+1
 			end
@@ -261,10 +258,10 @@ rawset(_G, "TakisHappyHourThinker", function(p)
 		end
 		
 		
-		DoQuake(p,2*FU,1,0)
+		DoQuake(p,2*FU,1,0,"HHThinker - Shake")
 		
 		if (tics <= TR)
-			DoQuake(p,(72-(2*tics))*FU,1,0)
+			DoQuake(p,(72-(2*tics))*FU,1,0,"HHThinker - HHStart shake")
 		end
 		
 	end
@@ -285,8 +282,8 @@ rawset(_G, "TakisHappyHourThinker", function(p)
 					mapmusname = HAPPY_HOUR.songend
 					takis.sethappyend = true
 				end
-				DoQuake(p,(time*FU)/50,1,0)
-				DoQuake(p,(time*FU)/50,1,0)
+				DoQuake(p,(time*FU)/50,1,0,"HHThinker - EOHH1")
+				DoQuake(p,(time*FU)/50,1,0,"HHThinker - EOHH2")
 			end
 			
 		else
@@ -442,15 +439,12 @@ rawset(_G, "TakisHUDStuff", function(p)
 		end
 	end
 	
-
-	local dontdo2 = false
-	if (HAPPY_HOUR.othergt)
-		dontdo2 = takis.io.nohappyhour == 1
-	end
+	
+	local cando = HH_CanDoHappyStuff(p)
 	
 	--happy hour hud and stuff
 	if HAPPY_HOUR.time
-	and not (dontdo2)
+	and (cando)
 		local tics = HAPPY_HOUR.time
 		
 		if (tics == 1)
@@ -714,7 +708,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 		
 		if hud.showingachs & enum
 			table.remove(hud.steam,k)
-			return
+			break
 		end
 		
 		hud.showingachs = $|enum
@@ -1616,28 +1610,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 	end
 	
-	takis.quakeint = 0
-	for k,v in ipairs(takis.quake)
-		if v == nil
-			continue
-		end
-		
-		local q = takis.quake
-		
-		if v.tics
-			v.intensity = $-v.minus
-			takis.quakeint = $+v.intensity
-			v.tics = $-1
-		else
-			table.remove(q,k)
-		end
-	end
-	if takis.quakeint
-	and displayplayer == p
-	and takis.io.quakes
-		P_StartQuake(takis.quakeint,1)
-	end
-	
 	if takis.crushtime ~= 0
 		if not (takis.transfo & TRANSFO_PANCAKE)
 			takis.crushtime = $-1
@@ -1983,6 +1955,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		if not (takis.pizzastate)
 			takis.pizzastate = true
 		end
+		TakisResetHammerTime(p)
 		me.state = S_PLAY_DEAD
 		me.frame = A
 		me.sprite2 = SPR2_FASS
@@ -2452,19 +2425,12 @@ rawset(_G, "TakisBreakAndBust", function(p, me)
 	CheckAndCrumble(me, me.subsector.sector)
 end)
 
-rawset(_G, "DoQuake", function(p, int, tic, minus)
-	if (skins[p.skin].name == TAKIS_SKIN)
-		local m = int/tic
-		if minus == 0
-			m = 0
-		end
-		table.insert(p.takistable.quake,{intensity = int,tics = tic,minus = m})
-	else
-		if p == displayplayer
-		and p.takistable.io.quakes
-			P_StartQuake(int,tic)
-		end
+rawset(_G, "DoQuake", function(p, int, tic, minus, id)
+	local m = int/tic
+	if minus == 0
+		m = 0
 	end
+	table.insert(p.takistable.quake,{intensity = int,tics = tic,minus = m,id = id})
 end)
 
 rawset(_G, "DoFlash", function(p, pal, tic)
@@ -3647,10 +3613,14 @@ rawset(_G,"TakisPowerfulArma",function(p)
 	TakisGiveCombo(p,takis,true)
 end)
 
-rawset(_G,"TakisResetTauntStuff",function(takis,killclapper)
-	takis.taunttime = 0
-	takis.tauntid = 0
-	takis.tauntspecial = 0
+rawset(_G,"TakisResetTauntStuff",function(p,killclapper)
+	local takis = p.takistable
+	if takis.taunttime
+		takis.taunttime = 0
+		P_RestoreMusic(p)
+		takis.tauntid = 0
+		takis.tauntspecial = 0
+	end
 	if (killclapper)
 		if ((takis.tauntjoin) and (takis.tauntjoin.valid))
 			P_KillMobj(takis.tauntjoin)

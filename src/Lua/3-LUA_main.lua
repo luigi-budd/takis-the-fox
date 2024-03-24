@@ -124,7 +124,6 @@
 	-battlemod stuff
 	-[done]you can still clutch in waterslides
 	-[done?]make gibs face screen in 2d instead of being a straight line
-	-udmf arguments for all the mapthings
 	-[done]bots can give takis leaders combo
 	-[done]ujl coop score thing for combo sharing
 	-[done but better]make the server execute a command when cheats are activated to
@@ -139,17 +138,19 @@
 	-[done]no pt happy hour is broken
 	-since cardbump is client-side, maybe we could use S_MusicPosition
 	 to get more accurate measurements?
-	-takis things use udmf args too
+	-[scrapped]takis things use udmf args too, man nvm udmf sucks ass
 	-[done?]pacifist ach
 	-[done? i dont rememver LMAO]revert rag hitboxes
 	-[done but shitily]chaingun shotgon on shotgun in CanPlayerDaagePlater
 	-[done]show "Show lives" when already tweened out
 	-[done]limit letter to takis
-	-takis hh end shakes more than others
+	-[done]takis hh end shakes more than others
 	-[done]corpse faces same angle
 	-[done]teleport corpse with momentum
 	-[done]shotgun forceon doenst work
 	-[done]fix ach page overscroll
+	-placements in battlemod, no recov jump in bm
+	-fix parries still hurting in bm
 	
 	--ANIM TODO
 	-redo smug sprites
@@ -163,6 +164,7 @@
 	-specki BLOX anims
 	
 	--PLANNED MAPHEADERS
+	--document this in some sorta manual on the mb page?
 	-[done]Takis_HH_Music - regular happyhour mus, ignore styles
 	-[done]Takis_HH_EndMusic - ending happyhour mus, ignore styles
 	-[done]Takis_HH_NoMusic - disable happyhour mus
@@ -376,7 +378,6 @@ addHook("PlayerThink", function(p)
 	
 	--whatev
 	p.takistable.isTakis = skins[p.skin].name == TAKIS_SKIN
-	TakisHappyHourThinker(p)
 	
 	if ((p.realmo) and (p.realmo.valid))
 		local me = p.realmo
@@ -406,6 +407,8 @@ addHook("PlayerThink", function(p)
 		--more accurate speed thing
 		takis.accspeed = FixedDiv(abs(FixedHypot(p.rmomx,p.rmomy)), me.scale)
 		takis.gravflip = P_MobjFlip(me)
+		
+		TakisHappyHourThinker(p)
 		
 		if me.skin == TAKIS_SKIN
 			
@@ -1163,7 +1166,7 @@ addHook("PlayerThink", function(p)
 			end
 				takis.taunttime = $-1
 			else
-				TakisResetTauntStuff(takis,false)
+				TakisResetTauntStuff(p,false)
 				
 				if me.state == S_PLAY_TAKIS_SMUGASSGRIN
 					me.tics = 1
@@ -1177,7 +1180,7 @@ addHook("PlayerThink", function(p)
 				
 				takis.noability = $|NOABIL_SHOTGUN
 				
-				TakisResetTauntStuff(takis)
+				TakisResetTauntStuff(p,takis)
 			
 				takis.hammerblastjumped = 0
 				takis.recovwait = $+1
@@ -2112,7 +2115,7 @@ addHook("PlayerThink", function(p)
 				
 				takis.heartcards = 0
 				TakisResetHammerTime(p)
-				TakisResetTauntStuff(takis)
+				TakisResetTauntStuff(p)
 				
 				takis.clutchingtime = 0
 				takis.afterimaging = false
@@ -2493,7 +2496,7 @@ addHook("PlayerThink", function(p)
 			--just switched
 			if not takis.otherskin
 				takis.otherskin = true
-				TakisResetTauntStuff(takis,true)
+				TakisResetTauntStuff(p,true)
 				if takis.HUD.showingletter
 					takis.HUD.showingletter = false
 					P_RestoreMusic(p)
@@ -2503,46 +2506,8 @@ addHook("PlayerThink", function(p)
 			end
 			
 			takis.combo.time = 0
+			--still animate happy hour and stuff
 			TakisHUDStuff(p)
-			
-			if HAPPY_HOUR.time
-			and (takis.io.nohappyhour == 0
-			and takis.io.morehappyhour == 1)
-			and not HAPPY_HOUR.gameover
-				local tics = HAPPY_HOUR.time
-				
-				if (tics == 1)
-					S_StartSound(nil,sfx_mclang)
-					takis.HUD.ptsr.yoffset = 200*FU
-				end
-				
-		
-				if tics <= 2*TR
-					if takis.HUD.ptsr.yoffset ~= 0
-						local et = 2*TR
-						takis.HUD.ptsr.yoffset = ease.outquad(( FU / et )*tics,200*FU,0)
-					end
-				else
-					if takis.HUD.ptsr.yoffset ~= 0
-						takis.HUD.ptsr.yoffset = 0
-					end
-				end
-				
-				if (me.health)
-				--how convienient that 8 tics just so happens to be
-				--exactly 22 centiseconds!
-				and (tics == 8)
-					if (p.happyhourscream
-					and p.happyhourscream.skin == me.skin)
-						S_StartSound(nil,p.happyhourscream.sfx,p)
-					end
-				end
-				
-				if (tics <= TR)
-					P_StartQuake((72-(2*tics))*FU,1)
-				end
-				
-			end
 			
 			if (takis.shotgunned)
 				TakisDeShotgunify(p)
@@ -2647,14 +2612,6 @@ addHook("PostThinkFrame", function ()
 		
 		takis.lastpos = {x=me.x,y=me.y,z=me.z}
 		
-		if not (me.skin == TAKIS_SKIN) then continue end
-		
-		if (takis.transfo & TRANSFO_TORNADO)
-			p.drawangle = me.angle+takis.nadoang
-		end
-		
-		if p.powers[pw_nocontrol] then takis.nocontrol = p.powers[pw_nocontrol] end
-		
 		takis.quakeint = 0
 		for k,v in ipairs(takis.quake)
 			if v == nil
@@ -2676,6 +2633,14 @@ addHook("PostThinkFrame", function ()
 		and takis.io.quakes
 			P_StartQuake(takis.quakeint,1)
 		end
+		
+		if not (me.skin == TAKIS_SKIN) then continue end
+		
+		if (takis.transfo & TRANSFO_TORNADO)
+			p.drawangle = me.angle+takis.nadoang
+		end
+		
+		if p.powers[pw_nocontrol] then takis.nocontrol = p.powers[pw_nocontrol] end
 		
 		--get rid of ugliness
 		if takis.ballretain
@@ -2926,7 +2891,7 @@ addHook("PlayerSpawn", function(p)
 		
 		takis.combo.outrotics = 0
 		
-		TakisResetTauntStuff(takis,true)
+		TakisResetTauntStuff(p,true)
 		
 		if gamemap ~= takis.lastmap
 		or gamemap ~= takis.lastgt
@@ -3888,6 +3853,7 @@ local function givecardpieces(mo, _, source)
 			
 			local givescore = true
 			if G_RingSlingerGametype()
+			or source.player.takistable.inBattle
 				givescore = false
 			end
 			if (HAPPY_HOUR.othergt) then givescore = false end
@@ -4315,7 +4281,8 @@ addHook("MobjMoveCollide",function(tm,t)
 				local car = tm.tracer
 				P_DoSpring(t,car)
 				P_DoSpring(t,tm)
-				if (mobjinfo[t.type].mass > 0)
+				if (mobjinfo[t.type].mass == 0)
+				and (t.type ~= MT_BUMPER)
 					car.angle = t.angle
 					tm.angle = t.angle
 					p.drawangle = t.angle

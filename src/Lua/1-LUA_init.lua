@@ -366,9 +366,6 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_EGGFREEZER = "Egg Freezer",
 		MT_EGGEBOMBER = "E-Bomber",
 		
-		--silverhorn
-		MT_FACCIOLO_BOSS = "Facciolo",
-		
 		--characters
 		MT_SONIC = "Sonic",
 		MT_TAILS = "Tails",
@@ -378,6 +375,7 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_SILVER = "Silver",
 		
 		-- Misc levels
+		/*
 		MT_EGGMOBILE7 = "Egg Boiler",
 		MT_BOSSRIDE = "Player", -- this one never gets used, included anyway to tell the game you have it loaded
 		
@@ -395,6 +393,7 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_SUPERHOOD = "Robo-Hood",
 		MT_ANASTASIA = "Anastasia",
 		MT_INFINITE_318 = "Infinite",
+		*/
 		
 		--specki
 		MT_AGGROMANEN = "Aggromobile",
@@ -421,6 +420,7 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_INFINITE_318 = true,
 		
 		MT_PIZZA_ENEMY = true,
+		MT_ALIVEDUSTDEVIL = true,
 	},
 	
 	bossprefix = {
@@ -448,12 +448,14 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_EGGMOBILE7 = "EGG",
 		
 		--true arena
+		/*
 		MT_GREENHILLBOSS = "EGG",
 		MT_EGGOFLAMER = "EGG",
 		MT_EGGOFLAMERB = "EGG",
 		MT_SANDSUB_326 = "EGG",
 		MT_FROSTBURN = "EGG",
 		MT_EGGZAP = "EGG",
+		*/
 	},
 })
 
@@ -1263,6 +1265,14 @@ SafeFreeslot("sfx_kartlf")
 sfxinfo[sfx_kartlf].caption = "Fuel low!"
 SafeFreeslot("sfx_kartdr")
 sfxinfo[sfx_kartdr].caption = "/"
+for i = 0,12
+	local text = i
+	if i < 10
+		text = "0"..i
+	end
+	SafeFreeslot("sfx_krte"..text)
+	--sfxinfo[sfx_krte00+i].caption = "/"
+end
 
 --spr_ freeslot
 
@@ -2037,6 +2047,7 @@ mobjinfo[MT_TAKIS_GUNSHOT] = {
 	flags = MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY
 }
 
+/*
 SafeFreeslot("MT_TAKIS_SPAWNER")
 SafeFreeslot("S_TAKIS_SPAWNER_IDLE")
 SafeFreeslot("S_TAKIS_SPAWNER_FIRE")
@@ -2060,7 +2071,7 @@ mobjinfo[MT_TAKIS_SPAWNER] = {
 	radius = 32*FRACUNIT,
 	flags = MF_SOLID|MF_NOGRAVITY
 }
-
+*/
 
 addHook("NetVars",function(n)
 	--TAKIS_NET = n($)
