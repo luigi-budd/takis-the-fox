@@ -243,12 +243,13 @@ rawset(_G, "TAKIS_NET", {
 	cards = true, --only spawn heartcards if this is true
 	hammerquakes = true,
 	chaingun = false,
-	happytime = false,
+	--happytime = false,
 	
 	usedcheats = false,
 	
 })
 
+--everything else that was in TAKIS_NET is now in here
 rawset(_G,"TAKIS_MISC",{
 	inspecialstage = false,
 	inbossmap = false,
@@ -258,8 +259,8 @@ rawset(_G,"TAKIS_MISC",{
 	exitingcount = 0,
 	playercount = 0,
 	takiscount = 0,
-	
 	livescount = 0,
+	maxpostcount = 0,
 	
 	numdestroyables = 0,
 	partdestroy = 0,
@@ -366,9 +367,6 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_EGGFREEZER = "Egg Freezer",
 		MT_EGGEBOMBER = "E-Bomber",
 		
-		--silverhorn
-		MT_FACCIOLO_BOSS = "Facciolo",
-		
 		--characters
 		MT_SONIC = "Sonic",
 		MT_TAILS = "Tails",
@@ -378,6 +376,7 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_SILVER = "Silver",
 		
 		-- Misc levels
+		/*
 		MT_EGGMOBILE7 = "Egg Boiler",
 		MT_BOSSRIDE = "Player", -- this one never gets used, included anyway to tell the game you have it loaded
 		
@@ -395,6 +394,7 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_SUPERHOOD = "Robo-Hood",
 		MT_ANASTASIA = "Anastasia",
 		MT_INFINITE_318 = "Infinite",
+		*/
 		
 		--specki
 		MT_AGGROMANEN = "Aggromobile",
@@ -421,6 +421,8 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_INFINITE_318 = true,
 		
 		MT_PIZZA_ENEMY = true,
+		MT_ALIVEDUSTDEVIL = true,
+		MT_PT_JUGGERNAUTCROWN = true,
 	},
 	
 	bossprefix = {
@@ -448,12 +450,14 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 		MT_EGGMOBILE7 = "EGG",
 		
 		--true arena
+		/*
 		MT_GREENHILLBOSS = "EGG",
 		MT_EGGOFLAMER = "EGG",
 		MT_EGGOFLAMERB = "EGG",
 		MT_SANDSUB_326 = "EGG",
 		MT_FROSTBURN = "EGG",
 		MT_EGGZAP = "EGG",
+		*/
 	},
 })
 
@@ -843,6 +847,7 @@ rawset(_G, "TakisInitTable", function(p)
 			showingletter = false,
 			hudname = '',
 			cfgnotifstuff = 0,
+			useplacements = false,
 			lives = {
 				tweenx = -55*FU,
 				tweentic = 5*TR,
@@ -1263,6 +1268,14 @@ SafeFreeslot("sfx_kartlf")
 sfxinfo[sfx_kartlf].caption = "Fuel low!"
 SafeFreeslot("sfx_kartdr")
 sfxinfo[sfx_kartdr].caption = "/"
+for i = 0,12
+	local text = i
+	if i < 10
+		text = "0"..i
+	end
+	SafeFreeslot("sfx_krte"..text)
+	--sfxinfo[sfx_krte00+i].caption = "/"
+end
 
 --spr_ freeslot
 
@@ -1952,8 +1965,8 @@ mobjinfo[MT_TAKIS_SPIRIT] = {
 SafeFreeslot("MT_TAKIS_METALDETECTOR")
 SafeFreeslot("S_TAKIS_METALDETECTOR")
 states[S_TAKIS_METALDETECTOR] = {
-	sprite = SPR_RING,
-	frame = A,
+	sprite = SPR_SHGN,
+	frame = C,
 	tics = -1,
 	nextstate = S_TAKIS_METALDETECTOR,
 }
@@ -2021,8 +2034,8 @@ mobjinfo[MT_TAKIS_PONGLER] = {
 SafeFreeslot("MT_TAKIS_GUNSHOT")
 SafeFreeslot("S_TAKIS_GUNSHOT")
 states[S_TAKIS_GUNSHOT] = {
-	sprite = SPR_PGLR,
-	frame = A,
+	sprite = SPR_SHGN,
+	frame = D,
 	action = A_ThrownRing,
 	tics = 1,
 	nextstate = S_TAKIS_GUNSHOT
@@ -2037,6 +2050,7 @@ mobjinfo[MT_TAKIS_GUNSHOT] = {
 	flags = MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY
 }
 
+/*
 SafeFreeslot("MT_TAKIS_SPAWNER")
 SafeFreeslot("S_TAKIS_SPAWNER_IDLE")
 SafeFreeslot("S_TAKIS_SPAWNER_FIRE")
@@ -2060,7 +2074,7 @@ mobjinfo[MT_TAKIS_SPAWNER] = {
 	radius = 32*FRACUNIT,
 	flags = MF_SOLID|MF_NOGRAVITY
 }
-
+*/
 
 addHook("NetVars",function(n)
 	--TAKIS_NET = n($)

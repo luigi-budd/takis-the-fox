@@ -97,7 +97,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		icon = "ACH_JUMPSCARE",
 		scale = FU/4,
 		text = "Get jumpscared.",
-		flags = AF_MP,
+		flags = 0,
 	},
 	/*
 	[ACHIEVEMENT_HARDCORE] = {

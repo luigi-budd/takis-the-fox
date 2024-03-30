@@ -1198,6 +1198,40 @@ local placetext2 = {
 	["?"] = "TH",
 }
 
+local function isplayerlosing(p)
+	local winningpos = 1
+	local pcount = 0
+	local takis = p.takistable
+	
+	if takis.placement == 1
+		return false
+	end
+	
+	for player in players.iterate
+		if (player.spectator)
+			continue
+		end
+		if not player.takistable
+			continue
+		end
+		if player.takistable.placement > pcount
+			pcount = player.takistable.placement
+		end
+	end
+	
+	if pcount <= 1
+		return false
+	end
+	
+	winningpos = pcount/2
+	if (pcount % 2)
+		winningpos = $+1
+	end
+	
+	return (takis.placement > winningpos)
+	
+end
+
 --i guess we could put placements here in match
 local function drawlivesarea(v,p)
 
@@ -1346,16 +1380,12 @@ local function drawlivesarea(v,p)
 		end
 	else
 		--match placements
-		if ((G_RingSlingerGametype()
-		and not (
-			(gametyperules & GTR_LIVES)
-			or G_GametypeHasTeams()
-			or (gametyperules & GTR_TAG)
-		))
-		or HAPPY_HOUR.othergt)
-		and not p.spectator
+		if takis.HUD.lives.useplacements
+		and not (p.spectator or G_GametypeHasTeams())
 			local top3 = takis.placement and takis.placement < 4
-			local scorenum = top3 and "CMBCFP" or "CMBCF"
+			local inlosingplace = isplayerlosing(p)
+			local losing = inlosingplace and (leveltime/4 & 1)
+			local scorenum = (top3 and not inlosingplace) and "CMBCFP" or (losing and "CMBCFR" or "CMBCF")
 			local score = takis.placement
 			score = $..(placetext[takis.placement] or "?")
 			local scale = FU
@@ -1366,9 +1396,9 @@ local function drawlivesarea(v,p)
 			local textwidth = 0
 			for i = 1,string.len(score)
 				local n = string.sub(score,i,i)
-				local patch = v.cachePatch("CMBCF"+n)
+				local patch = v.cachePatch(scorenum+n)
 				if placetext2[n] ~= nil
-					patch = v.cachePatch("CMBCF"..placetext2[n])
+					patch = v.cachePatch(scorenum..placetext2[n])
 				end
 				textwidth = $+(patch.width*scale*4/10)		
 			end
@@ -1378,7 +1408,7 @@ local function drawlivesarea(v,p)
 				local n = string.sub(score,i,i)
 				local patch = v.cachePatch(scorenum+n)
 				if placetext2[n] ~= nil
-					patch = v.cachePatch("CMBCF"..placetext2[n])
+					patch = v.cachePatch(scorenum..placetext2[n])
 				end
 				v.drawScaled(x+prevw-textwidth+50*FU,
 					y-(patch.height*sc)+6*FU-(FU/2)-takis.HUD.lives.bump,
@@ -2848,11 +2878,11 @@ local function drawtauntmenu(v,p)
 	
 	
 	v.drawScaled(160*FU,108*FU+yadd,FU/2,v.cachePatch("TAUNTBACK"),V_30TRANS,v.getColormap(nil, SKINCOLOR_BLACK))
-	v.drawString(15*FU,(75*FU)+yadd,"Taunt",V_ALLOWLOWERCASE|V_HUDTRANS,"fixed")
-	v.drawString(305*FU,(75*FU)+yadd,"Hit C1 to Cancel",V_ALLOWLOWERCASE|V_HUDTRANS,"thin-fixed-right")
-	v.drawString(15*FU,(90*FU)+yadd,"Hit C3 to join a Partner Taunt",V_ALLOWLOWERCASE|V_HUDTRANS,"thin-fixed")
-	v.drawString(305*FU,(86*FU)+yadd,"Quick Taunt: TF+#+C2/C3",V_ALLOWLOWERCASE|V_HUDTRANS,"small-fixed-right")
-	v.drawString(305*FU,(94*FU)+yadd,"Delete Quick Taunt: TF+Fire+C2/C3",V_ALLOWLOWERCASE|V_HUDTRANS,"small-fixed-right")
+	v.drawString(15*FU,(75*FU)+yadd,"Taunt",V_ALLOWLOWERCASE,"fixed")
+	v.drawString(305*FU,(75*FU)+yadd,"Hit C1 to Cancel",V_ALLOWLOWERCASE,"thin-fixed-right")
+	v.drawString(15*FU,(90*FU)+yadd,"Hit C3 to join a Partner Taunt",V_ALLOWLOWERCASE,"thin-fixed")
+	v.drawString(305*FU,(86*FU)+yadd,"Quick Taunt: TF+#+C2/C3",V_ALLOWLOWERCASE,"small-fixed-right")
+	v.drawString(305*FU,(94*FU)+yadd,"Delete Quick Taunt: TF+Fire+C2/C3",V_ALLOWLOWERCASE,"small-fixed-right")
 	v.drawScaled(160*FU,100*FU+yadd,FU/2,v.cachePatch("TAUNTSEPAR"),0,nil)
 	
 	local ydisp = 25*FU
@@ -2862,16 +2892,16 @@ local function drawtauntmenu(v,p)
 		local xoffset = takis.tauntmenu.xoffsets[i] or 0
 		local showicon = true
 		
-		local trans = V_HUDTRANS
+		local trans = 0
 		if ((name == "")
 		or (name == nil))
 			name = "\x86None"
-			trans = V_HUDTRANSHALF
+			trans = V_50TRANS
 			showicon = false
 		--there IS an entry, but no functions to call for it
 		elseif ((TAKIS_TAUNT_INIT[i] == nil) or (TAKIS_TAUNT_THINK[i] == nil))
 			name = "\x86"..takis.tauntmenu.list[i]
-			trans = V_HUDTRANSHALF
+			trans = V_50TRANS
 		end
 		
 		if (i == takis.tauntmenu.cursor)
@@ -3146,6 +3176,7 @@ local function drawcosmenu(v,p)
 					else
 						value = tostring(page.values[i])
 					end
+					if value == nil or value == "nil" then value = '\x85???' end
 					
 					v.drawString(pos.x*FU+txtlength+shakex,
 						pos.y*FU+10*FU*i+shakey,
@@ -3924,7 +3955,7 @@ local function drawtransfotimer(v,p,cam)
 	
 end
 
-local function drawfallout(v,p,cam)
+local function drawfallout(v,p,tabdraw)
 	
 	if (skins[p.skin].name ~= TAKIS_SKIN)
 		return
@@ -3935,7 +3966,7 @@ local function drawfallout(v,p,cam)
 	local me = p.realmo	
 	
 	local tic = takis.pitanim
-	
+		
 	if not tic then return end
 		
 	local width = (v.width() / v.dupx()) + 1
@@ -4006,6 +4037,7 @@ local function drawfallout(v,p,cam)
 	end
 	
 	if tic > et
+	and not tabdraw
 		v.drawString(160*FU,tween,"Fall out!",0,"fixed-center")
 	end
 end
@@ -4291,6 +4323,58 @@ local function drawkartmeters(v,p)
 	kartspeedometer(v,p,takis,car,x-3*FU)
 	kartfuelometer(v,p,takis,car,x-3*FU)
 		
+end
+
+local function drawracelaps(v,p)
+	if (customhud.CheckType("takis_racelaps") != modname) return end	
+	
+	if (skins[p.skin].name ~= TAKIS_SKIN)
+		return
+	end
+	
+	local takis = p.takistable
+	local me = p.realmo	
+	
+	if gametype ~= GT_RACE then return end
+	if not circuitmap then return end
+	
+	local lapflag = v.cachePatch("TA_LAPFLAG")
+	local scale = 3*FU/5
+	v.drawScaled(160*FU-(lapflag.width*3*FU/5/2),
+		170*FU,
+		scale,
+		lapflag,
+		V_HUDTRANS|V_SNAPTOBOTTOM
+	)
+	v.drawString(160*FU,
+		160*FU,
+		"Laps",
+		V_YELLOWMAP|V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,
+		"thin-fixed-center"
+	)
+	
+	local maxlaps = CV_FindVar("numlaps").value
+	if p.laps ~= maxlaps
+		local map = (p.laps == maxlaps-1 
+			and leveltime/4 & 1 
+			and p.starpostnum == TAKIS_MISC.maxpostcount
+			and not isplayerlosing(p)
+		) and V_YELLOWMAP or V_PURPLEMAP
+		
+		v.drawString(160*FU,
+			177*FU,
+			(p.laps+1).."/"..maxlaps,
+			map|V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,
+			"fixed-center"
+		)
+	else
+		v.drawString(160*FU,
+			177*FU,
+			"Finished!",
+			V_YELLOWMAP|V_ALLOWLOWERCASE|V_HUDTRANS|V_SNAPTOBOTTOM|V_RETURN8,
+			"fixed-center"
+		)	
+	end
 end
 
 /*
@@ -4590,8 +4674,9 @@ local function drawdebug(v,p)
 			
 			v.drawString(40,8*(k-1),
 				va.tics.." | "..
-				L_FixedDecimal(va.intensity,3),
-				red|V_HUDTRANS,
+				L_FixedDecimal(va.intensity,3)..
+				((va.id ~= nil) and (" - "..va.id) or ''),
+				red|V_HUDTRANS|V_ALLOWLOWERCASE,
 				"left"
 			)
 		end
@@ -5169,6 +5254,7 @@ customhud.SetupItem("takis_tutbuttons",	 	modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_transfotimer", 	modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_kart_driftmeter",modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_kart_meters",	modname/*,	,	"game",	10*/)
+customhud.SetupItem("takis_racelaps",		modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
 
 addHook("HUD", function(v,p,cam)
@@ -5220,6 +5306,7 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("bossmeter",			modname)
 			customhud.SetupItem("takis_kart_driftmeter",modname)
 			customhud.SetupItem("takis_kart_meters",	modname)
+			customhud.SetupItem("takis_racelaps",		modname)
 
 			if takis.io.nohappyhour == 0
 				customhud.SetupItem("PTSR_itspizzatime",modname)
@@ -5273,6 +5360,7 @@ addHook("HUD", function(v,p,cam)
 				drawtimer(v,p)
 			end
 			drawlivesarea(v,p)
+			drawracelaps(v,p)
 			drawcombostuff(v,p,cam)
 			drawpizzatips(v,p)
 			drawpizzatimer(v,p)
@@ -5583,6 +5671,8 @@ addHook("HUD", function(v)
 			and (takis.io.minhud == 0)
 				drawtimer(v,p,true)
 			end
+			
+			drawfallout(v,p,true)
 			
 		end
 		

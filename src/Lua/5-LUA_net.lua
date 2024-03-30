@@ -90,14 +90,20 @@ CV_TAKIS.happytime = CV_RegisterVar({
 	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
 	PossibleValue = CV_TrueFalse,
 	func = function(cv)
-		t.happytime = boolean[string.lower(cv.string)]
-		debugf("happytime",string.lower(cv.string),tostring(t.happytime))
-		if not (netgame or multiplayer)
-			print("Happy Hour in SP is "..
-				(t.happytime and "enabled" or "disabled")
+		if consoleplayer
+			CONS_Printf(consoleplayer,
+				"\x82*Happy Hour in SP is "..
+				(cv.value and "enabled" or "disabled")
+				..", restart the map for changes to take effect"
+			)
+		else
+			print(
+				"\x82*Happy Hour in SP is "..
+				(cv.value and "enabled" or "disabled")
 				..", restart the map for changes to take effect"
 			)
 		end
+		S_StartSound(nil,sfx_ponglr,consoleplayer)
 	end
 })
 
@@ -191,6 +197,20 @@ addHook("MapLoad", function(mapid)
 		end
 		
 	end
+	
+	m.maxpostcount = 0
+	local maxcount = 0
+	for mobj in mobjs.iterate()
+		if mobj.type ~= MT_STARPOST
+			continue
+		end
+		if mobj.health > maxcount
+			maxcount = mobj.health
+		else
+			continue
+		end
+	end
+	m.maxpostcount = maxcount
 	
 	if m.numdestroyables ~= 0
 		m.partdestroy = m.numdestroyables/(m.playercount+2) or 1
@@ -292,9 +312,27 @@ addHook("ThinkFrame", do
 	table.sort(m.scoreboard, function(a,b)
 		local p1 = a
 		local p2 = b
-		if p1.score > p2.score then
-			return true
+		
+		if gametype == GT_RACE
+			if circuitmap
+				if p1.laps+1 > p2.laps+1 then
+					if p1.realtime < p2.realtime
+						return true
+					end
+				end
+				
+			else
+				if p1.realtime < p2.realtime then
+					return true
+				end
+			end
+		else
+			if p1.score > p2.score then
+				return true
+			end
+			
 		end
+		
 	end)
 	m.exitingcount = exitingCount
 	m.playercount = playerCount

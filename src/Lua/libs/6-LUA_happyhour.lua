@@ -681,7 +681,7 @@ addHook("MapLoad", function(mapid)
 	if G_BuildMapTitle(gamemap) == nil then return end
 	if (TAKIS_MISC.inescapable[string.lower(G_BuildMapTitle(gamemap))] == true) then return end
 	if (mapheaderinfo[gamemap].takis_hh_nohappyhour) then return end
-	if (not TAKIS_NET.happytime) then return end
+	if (not CV_TAKIS.happytime.value) then return end
 	
 	if not hastakis then return end
 	

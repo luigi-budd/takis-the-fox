@@ -117,7 +117,7 @@ tm.entries = {
 			"collaterals",
 			"cards",
 			"hammerquakes",
-			"happytime",
+			CV_TAKIS.happytime.value == 1,
 		},
 		--must be consvar_t, must be on/off, yes/no, true/false
 		cvars = {
@@ -140,6 +140,12 @@ tm.entries = {
 		}
 	},
 }
+
+--Epic.
+--hacky solution to get this thing in, since it isnt a _NET var anymore
+addHook("ThinkFrame",do
+	tm.entries[4].values[7] = CV_TAKIS.happytime.value == 1
+end)
 
 if (TAKIS_ISDEBUG)
 	tm.entries[5] = {

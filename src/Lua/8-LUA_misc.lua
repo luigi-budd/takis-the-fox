@@ -1465,7 +1465,7 @@ addHook("MobjThinker",function(gem)
 				--never let spirits overlap
 				if gem.emeralddex ~= 0
 				and (me.player.takistable.spiritlist and
-				me.player.takistable.spiritlist[gem.emeralddex-1])
+					me.player.takistable.spiritlist[gem.emeralddex-1])
 					gem.timealive = me.player.takistable.spiritlist[gem.emeralddex-1].timealive--+((360/7)*gem.emeralddex)
 				end
 			end

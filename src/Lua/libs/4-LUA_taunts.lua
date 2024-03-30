@@ -118,7 +118,7 @@ local function think_conga(p)
 	
 	--cancel conga
 	if (takis.c1)
-		TakisResetTauntStuff(takis)
+		TakisResetTauntStuff(p)
 		P_RestoreMusic(p)
 		me.state = S_PLAY_STND
 		P_MovePlayer(p)
@@ -167,7 +167,7 @@ local function think_bird(p)
 	
 	--cancel conga
 	if (takis.c1)
-		TakisResetTauntStuff(takis)
+		TakisResetTauntStuff(p)
 		P_RestoreMusic(p)
 		me.state = S_PLAY_STND
 		P_MovePlayer(p)

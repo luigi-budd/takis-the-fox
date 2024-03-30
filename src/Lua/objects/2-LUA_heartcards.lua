@@ -24,7 +24,6 @@ local function cardspawn(card,spawnedfrommt,hasambush,hasspecial,rtime)
 		card.cardhadspecial = true
 	end
 	
-	--TODO: udmf
 	if rtime ~= nil
 		card.cardtime = rtime*TR
 	end

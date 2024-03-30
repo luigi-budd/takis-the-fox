@@ -35,7 +35,7 @@ local function takis_priority(p)
 	end
 	
 	if hurtmsg ~= nil
-		print("bm: AS")
+		--print("bm: AS")
 		B.SetPriority(p,2,2,nil,2,2,hurtmsg)
 	end
 end

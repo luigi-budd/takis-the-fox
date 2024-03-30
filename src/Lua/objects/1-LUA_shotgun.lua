@@ -224,9 +224,27 @@ addHook("MobjMoveCollide",function(shot,mo)
 	
 end,MT_TAKIS_GUNSHOT)
 
+local colorlist = {
+	SKINCOLOR_FLAME,
+	SKINCOLOR_GARNET,
+	SKINCOLOR_KETCHUP
+}
+
 addHook("MobjThinker",function(shot)
 	TakisBreakAndBust(nil,shot)
 	shot.timealive = $+1
+	shot.color = colorlist[P_RandomRange(1,#colorlist)]
+	
+	if shot.timealive < 3 then return end
+	
+	local ghost = P_SpawnGhostMobj(shot)
+	ghost.colorized = true
+	ghost.blendmode = AST_ADD
+	ghost.destscale = 1
+	ghost.angle = shot.angle+(P_RandomRange(-20,20)*FU+((P_RandomChance(FU/2) and 1 or -1)*P_RandomFixed()))
+	P_Thrust(ghost,ghost.angle,-P_RandomRange(10,20)*shot.scale)
+	ghost.angle = shot.angle
+	P_SetObjectMomZ(ghost,P_RandomRange(-3,3)*ghost.scale)
 end,MT_TAKIS_GUNSHOT)
 
 addHook("MobjDeath",function(shot,i,s)

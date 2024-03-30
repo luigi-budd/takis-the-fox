@@ -20,10 +20,80 @@ addHook("TouchSpecial",function(door,mo)
 	return true
 end,MT_TAKIS_METALDETECTOR)
 
+local function delete3d(door)
+	if not door.made3d
+		door.flags2 = $ &~MF2_DONTDRAW
+		return
+	end
+	
+	if door.topblock
+		for k,v in pairs(door.topblock)
+			if v and v.valid
+				P_RemoveMobj(v)
+			end
+		end
+	end
+	
+	if door.sideblock1
+		for k,v in pairs(door.sideblock1)
+			if v and v.valid
+				P_RemoveMobj(v)
+			end
+		end
+	end
+	
+	if door.sideblock2
+		for k,v in pairs(door.sideblock2)
+			if v and v.valid
+				P_RemoveMobj(v)
+			end
+		end
+	end
+	
+	if door.nosign
+		for k,v in pairs(door.nosign)
+			if v and v.valid
+				P_RemoveMobj(v)
+			end
+		end
+	end 
+	
+	if door.alarm
+		for k,v in pairs(door.alarm)
+			if v and v.valid
+				P_RemoveMobj(v)
+			end
+		end
+	end
+	door.made3d = false
+	door.flags2 = $ &~MF2_DONTDRAW
+end
+
 addHook("MobjThinker",function(door)
 	if not (door and door.valid) then return end
 	
+	local dist = 0
+	local cullout = true
+	if (displayplayer and displayplayer.valid)
+		local cam = displayplayer.realmo
+		dist = R_PointToDist2(cam.x,cam.y, door.x,door.y)
+		
+		local thok = P_SpawnMobj(cam.x, cam.y, cam.z, MT_NULL)
+		thok.flags2 = $|MF2_DONTDRAW
+		if dist <= 5000*FU
+		and P_CheckSight(thok,door)
+			cullout = false
+		end
+		P_RemoveMobj(thok)
+	end
+	
+	if cullout
+		delete3d(door)
+		return
+	end
+	
 	if not door.made3d
+	and not cullout
 		local list
 		local flip = P_MobjFlip(door)
 		door.flags2 = $|MF2_DONTDRAW
