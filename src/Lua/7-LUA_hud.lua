@@ -1539,7 +1539,7 @@ local function drawlivesarea(v,p)
 			v.drawString(
 				x+95*FU,
 				y-13*FU,
-				openingmenu and "Open menu" or "Show lives",
+				openingmenu and (modeattacking and "Menu disabled" or "Open menu") or "Show lives",
 				(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS|V_ALLOWLOWERCASE),
 				"thin-fixed"
 			)		
@@ -2706,7 +2706,6 @@ local function hhtimerbase(v,p)
 	
 	if not (takis.inNIGHTSMode)
 		v.drawScaled(110*FU+(h.xoffset*FU),168*FU+(h.yoffset),FU,patch,V_HUDTRANS|V_SNAPTOBOTTOM)
-		local doot = false
 		
 		if not (HAPPY_HOUR.overtime)
 			TakisDrawPatchedText(v,
@@ -3948,7 +3947,7 @@ local function drawtransfotimer(v,p,cam)
 			
 			local offset = FixedMul(FixedMul(fill.width*FU,erm),scale)+scale
 			v.drawScaled(x+4*scale+offset, y+3*scale, scale, mark, snap|V_PERPLAYER|V_HUDTRANS,invc)
-			
+		
 		end
 		
 	end
@@ -5402,6 +5401,79 @@ addHook("HUD", function(v,p,cam)
 			end
 			drawhappyhour(v,p)
 			
+			--record attack stuff
+			if (modeattacking)
+				if (leveltime <= 5*TR)
+					local tween = 0
+					local et = TR/2
+					local trans = 0
+					if leveltime <= et
+						trans = ((18-leveltime)/2)<<V_ALPHASHIFT
+						tween = ease.outexpo((FU/et)*(leveltime),200*FU, 0)				
+					elseif leveltime >= 4*TR+et
+						local tics = leveltime-(4*TR+et)
+						trans = (tics/2)<<V_ALPHASHIFT
+						tween = ease.inexpo((FU/et)*tics,0,200*FU)				
+					end
+					
+					local happytime = CV_TAKIS.happytime.value
+					local frame = happytime and ((5*leveltime/6)%14) or 0
+					local patch = v.cachePatch("TAHHS"..frame)
+					local fs = takis.HUD.flyingscore
+					local x = fs.scorex*FU+tween
+					local y = (fs.scorey+20)*FU
+					
+					v.drawString(x,
+						y+10*FU,
+						"takis_happyhour",
+						V_ALLOWLOWERCASE|V_GRAYMAP|trans|V_SNAPTORIGHT|V_SNAPTOTOP,
+						"thin-fixed-right"
+					)
+					v.drawString(x,
+						y+18*FU,
+						"Change in cons.",
+						V_ALLOWLOWERCASE|trans|V_SNAPTORIGHT|V_SNAPTOTOP,
+						"thin-fixed-right"
+					)
+					
+					v.drawString(x-50*FU,
+						y-4*FU,
+						happytime and "ON" or "OFF",
+						V_YELLOWMAP|trans|V_SNAPTORIGHT|V_SNAPTOTOP,
+						"fixed"
+					)
+					v.drawScaled(x-(v.stringWidth("takis_happyhour",0,"thin")*FU),
+						y-7*FU,
+						FU/2,
+						patch,
+						trans|V_SNAPTORIGHT|V_SNAPTOTOP
+					)
+				end
+				
+				if takis.HUD.rthh.tics
+					local time = takis.HUD.rthh.time
+					local min = G_TicsToMinutes(time,true)
+					local sec = G_TicsToSeconds(time)
+					local cen = G_TicsToCentiseconds(time)
+					local tstring = tostring(min)..":"..(sec < 10 and "0" or '')..tostring(sec).."."..(cen < 10 and "0" or '')..tostring(cen)
+					
+					local x = 130*FU
+					local y = 150*FU
+					
+					local waveforce = FU*3
+					local ay = FixedMul(waveforce,sin(FixedAngle(leveltime*20*FU)))
+					
+					local cpatch = v.cachePatch("TAKCOSHARE")
+					local color = v.getColormap(nil,
+						(leveltime/2 % 2) and SKINCOLOR_GREEN
+						or SKINCOLOR_RED
+					)
+					local xoff = -7*FU
+					v.drawScaled(x+8*FU-xoff,y+ay,FU,cpatch,0,color)
+					v.drawString(x+8*FU-xoff,y+ay,tstring,V_YELLOWMAP,"fixed-right")
+				
+				end
+			end
 			
 			if (takis.shotguntuttic)
 				local string = ''

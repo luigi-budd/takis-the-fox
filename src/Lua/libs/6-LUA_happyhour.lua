@@ -110,6 +110,13 @@ rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 			end
 		end
 		
+		if modeattacking
+			local p = consoleplayer
+			local takis = p.takistable
+			takis.HUD.rthh.time = p.realtime
+			takis.HUD.rthh.tics = 3*TR
+		end
+		
 		hh.trigger = actor
 	end
 end)
@@ -570,6 +577,14 @@ addHook("TouchSpecial",function(door,mo)
 	
 	if (p.exiting or p.pflags & PF_FINISHED) then return true end
 	
+	if modeattacking
+		local p = consoleplayer
+		local takis = p.takistable
+		local hhstart = takis.HUD.rthh.time
+		takis.HUD.rthh.time = p.realtime-hhstart
+		takis.HUD.rthh.tics = 3*TR
+	end
+		
 	chatprint("\x82*\x83"..p.name.."\x82 reached the exit.")
 	P_DoPlayerExit(p)
 	mo.momx,mo.momy,mo.momz = 0,0,0

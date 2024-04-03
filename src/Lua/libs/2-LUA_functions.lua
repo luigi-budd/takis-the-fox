@@ -327,6 +327,10 @@ rawset(_G, "TakisHUDStuff", function(p)
 		hud.lives.useplacements = true
 	end
 	
+	if hud.rthh.tics
+		hud.rthh.tics = $-1
+	end
+	
 	hud.hudname = skins[TAKIS_SKIN].hudname
 	if p.skincolor == SKINCOLOR_SALMON
 		hud.hudname = "Rakis"
@@ -908,6 +912,10 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			if (takis.onGround)
 				p.thrustfactor = skins[TAKIS_SKIN].thrustfactor*10
 				
+				if takis.accspeed >= 45*FU
+					takis.glowyeffects = 2
+				end
+				
 				local chance = P_RandomChance(FU/3)
 				if takis.accspeed >= 30*FU
 					chance = true
@@ -1274,7 +1282,6 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			S_StartSound(me,sfx_shgnk)
 			me.color = p.skincolor
 			me.colorized = false
-			p.powers[pw_shield] = $ &~SH_PROTECTFIRE
 		end
 		
 		if not takis.fireregen
@@ -1341,6 +1348,17 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			me.state = S_PLAY_WALK
 			P_MovePlayer(p)
 			takis.transfo = $ &~TRANSFO_ELEC
+		end
+	end
+	if (takis.transfo & TRANSFO_SHOTGUN)
+		local gun = takis.shotgun
+		if not (gun and gun.valid)
+			local x = cos(p.drawangle-ANGLE_90)
+			local y = sin(p.drawangle-ANGLE_90)
+			
+			gun = P_SpawnMobjFromMobj(me,16*x,16*y,me.height/2,MT_TAKIS_SHOTGUN)
+			gun.target = me
+			gun.angle = p.drawangle
 		end
 	end
 end)

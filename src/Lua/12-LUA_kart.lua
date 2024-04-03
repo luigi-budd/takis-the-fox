@@ -201,13 +201,15 @@ local function soundhandle(p,car)
 		return
 	end
 	
-	if (leveltime % 8)
-		return
-	end
+	--if (leveltime % 8)
+	--	return
+	--end
 	
-	targetsnd = (((6*p.cmd.forwardmove)/25)+(FixedMul(car.momx,car.momy)/5))/2
+	targetsnd = (((6*p.cmd.forwardmove)/25)+(FixedMul(car.momx,car.momy)/50))/2
 	--clamp
 	targetsnd = max(0,min(12,targetsnd))
+	
+	print(targetsnd)
 	
 	if car.enginesound < targetsnd then car.enginesound = $+1 end
 	if car.enginesound > targetsnd then car.enginesound = $-1 end
@@ -329,6 +331,320 @@ local function movementstuff(p,car,maxspeed,oldspeed)
 		end
 	end
 	
+end
+
+local function driftstuff(p,car)
+	local minspeed = 10*car.scale
+	local grounded = P_IsObjectOnGround(car)
+	local dsone = TakisKart_DriftSparkValue()
+	local dstwo = dsone*2
+	local dsthree = dstwo*2
+	local cmd = p.cmd
+	local k_jump = cmd.buttons & BT_SPIN
+	local me = p.mo
+	
+	if car.drift ~= -5 and car.drift ~= 5
+	and car.driftspark < dsone
+	and grounded
+		car.driftspark = 0
+	elseif car.drift ~= -5 and car.drift ~= 5
+	and car.driftspark >= dsone and car.driftspark < dstwo
+	and grounded
+		if drifttime < 20
+			drifttime = 20
+		end
+		S_StartSound(car,sfx_s23c)
+		car.driftspark = 0
+	elseif car.drift ~= -5 and car.drift ~= 5
+	and car.driftspark < dsthree
+	and grounded
+		if drifttime < 50
+			drifttime = 50
+		end
+		S_StartSound(car,sfx_s23c)
+		car.driftspark = 0
+	elseif car.drift ~= -5 and car.drift ~= 5
+	and car.driftspark >= dsthree
+	and grounded
+		if drifttime < 125
+			drifttime = 125
+		end
+		S_StartSound(car,sfx_s23c)
+		car.driftspark = 0
+	end
+	
+	-- Drifting: left or right?
+	if cmd.sidemove > 0
+	and FixedHypot(car.momx,car.momy) > minspeed
+	and k_jump
+	and car.drift == 0
+	and not (car.driftedout)
+		--left
+		car.drift = 1
+		car.driftedout = false
+	elseif cmd.sidemove < 0
+	and FixedHypot(car.momx,car.momy) > minspeed
+	and k_jump
+	and car.drift == 0
+	and not (car.driftedout)
+		--right
+		car.drift = -1
+		car.driftedout = false
+	elseif not k_jump
+		if car.drift > 0
+			car.drift = $-1
+			car.driftedout = true
+		elseif car.drift < 0
+			car.drift = $+1
+			car.driftedout = true
+		else
+			car.driftedout = false
+		end
+	end
+	
+	-- Incease/decrease the drift value to continue drifting in that direction
+	if grounded
+	and car.drift ~= 0
+		local driftadd = 24
+		
+		if car.drift >= 1 --to left
+			car.drift = $+1
+			if car.drift > 5 then car.drift = 5 end
+			
+			--inward
+			if cmd.sidemove > 0
+				driftadd = $+abs(cmd.sidemove*16)/100
+			end
+			--outward
+			if cmd.sidemove < 0
+				driftadd = $-abs(cmd.sidemove*16)/75
+			end
+		elseif car.drift <= -1 --to right
+			car.drift = $-1
+			if car.drift < -5 then car.drift = -5 end
+			
+			--inward
+			if cmd.sidemove < 0
+				driftadd = $+abs(cmd.sidemove*16)/100
+			end
+			--outward
+			if cmd.sidemove > 0
+				driftadd = $-abs(cmd.sidemove*16)/75
+			end
+		end
+		
+		local dust = TakisSpawnDust(me,
+			car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed()),
+			0,
+			P_RandomRange(-1,2)*car.scale,
+			{
+				xspread = 0,
+				yspread = 0,
+				zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+				
+				thrust = -P_RandomRange(1,6)*car.scale,
+				thrustspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+				
+				momz = P_RandomRange(0,5)*me.scale,
+				momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
+				
+				scale = me.scale,
+				scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+				
+				fuse = 23+P_RandomRange(-2,3),
+			}
+		)
+		dust.color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
+		dust.colorized = true
+		
+		car.driftspark = $+driftadd
+		car.driftedout = false
+	end
+	
+	--stop drifting
+	if car.inpain or FixedMul(car.momx,car.momy) < minspeed
+		car.drift = 0
+		car.driftspark = 0
+		car.driftedout = true
+	end
+	
+	if car.drift ~= 0
+	and grounded
+		if not (cmd.forwardmove > 0)
+			car.driftbrake = $+1
+			if not S_SoundPlaying(car,sfx_skid)
+				S_StartSound(car,sfx_skid)
+			end
+		else
+			if car.driftbrake then car.driftbrake = $-1 end
+			S_StopSoundByID(car,sfx_skid)
+		end
+	end
+	if car.driftbrake >= TR/2
+		car.driftedout = true
+		car.drift = 0
+		car.driftspark = 0
+	end
+	
+	if TakisKart_DriftLevel(car.driftspark) == 4
+		local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
+		local color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
+		TakisKart_SpawnSpark(car,angle,color)					
+	end
+	
+	if TakisKart_DriftLevel(car.driftspark) ~= car.olddlevel
+		local level = TakisKart_DriftLevel(car.driftspark)
+		if level ~= 4
+			if level == 3
+				S_StartSound(car,sfx_cdfm40)
+			elseif level == 2
+				S_StartSound(car,sfx_s3ka2)
+			end
+		else
+			S_StartSound(car,sfx_kc4d)
+		end
+		
+		for i = 10,P_RandomRange(15,20)
+			local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
+			local color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
+			TakisKart_SpawnSpark(car,angle,color)					
+		end
+	end
+	if car.driftbrake
+		local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
+		TakisKart_SpawnSpark(car,angle,SKINCOLOR_ORANGE,true)
+	end
+	
+	if leveltime then return end
+	
+	if cmd.buttons & BT_SPIN
+		if abs(car.drift) < 5
+			if car.drift < 0
+				car.drift = $-1
+			elseif car.drift > 0
+				car.drift = $+1
+			end
+		end
+		if car.drift ~= 0
+		and grounded
+			local stop = false
+			if not (cmd.forwardmove > 0)
+				car.driftbrake = $+1
+				if not S_SoundPlaying(car,sfx_skid)
+					S_StartSound(car,sfx_skid)
+				end
+			else
+				if car.driftbrake then car.driftbrake = $-1 end
+				S_StopSoundByID(car,sfx_skid)
+			end
+			if FixedHypot(car.momx,car.momy) < 6*car.scale
+				car.driftbrake = TR
+			end
+			if car.driftbrake >= TR/2
+				car.driftedout = true
+				car.drift = 0
+				car.driftspark = 0
+				stop = true
+			end
+			
+			if not stop
+				car.drifttime = $+1
+				car.driftspark = $+FU
+				local dust = TakisSpawnDust(me,
+					car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed()),
+					0,
+					P_RandomRange(-1,2)*car.scale,
+					{
+						xspread = 0,
+						yspread = 0,
+						zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+						
+						thrust = -P_RandomRange(1,6)*car.scale,
+						thrustspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+						
+						momz = P_RandomRange(0,5)*me.scale,
+						momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
+						
+						scale = me.scale,
+						scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+						
+						fuse = 23+P_RandomRange(-2,3),
+					}
+				)
+				dust.color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
+				dust.colorized = true
+				
+				if TakisKart_DriftLevel(car.driftspark) == 4
+					local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
+					local color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
+					TakisKart_SpawnSpark(car,angle,color)					
+				end
+				
+				if TakisKart_DriftLevel(car.driftspark) ~= car.olddlevel
+					local level = TakisKart_DriftLevel(car.driftspark)
+					if level ~= 4
+						if level == 3
+							S_StartSound(car,sfx_cdfm40)
+						elseif level == 2
+							S_StartSound(car,sfx_s3ka2)
+						end
+					else
+						S_StartSound(car,sfx_kc4d)
+					end
+					
+					for i = 10,P_RandomRange(15,20)
+						local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
+						local color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
+						TakisKart_SpawnSpark(car,angle,color)					
+					end
+				end
+				if car.driftbrake
+					local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
+					TakisKart_SpawnSpark(car,angle,SKINCOLOR_ORANGE,true)
+				end
+					
+				--slow = FU*8/10
+			end
+		end
+		car.momt = $+(car.drift*2*FU)
+	else
+		--keep our drift if we let go midair
+		if grounded
+			if car.driftspark >= TakisKart_DriftSparkValue()
+			and not car.driftbrake
+				local driftboost = 0
+				local drifttime = 0
+				if car.driftspark >= TakisKart_DriftSparkValue()*4
+					driftboost = 15*car.scale
+					drifttime = 6*TR
+				elseif car.driftspark >= TakisKart_DriftSparkValue()*2
+					driftboost = 10*car.scale
+					drifttime = 3*TR
+				elseif car.driftspark >= TakisKart_DriftSparkValue()
+					driftboost = 3*car.scale
+					drifttime = TR*4/5
+				end
+				
+				car.angle = $+driftval(p,car,car.momt/FU)+((ANGLE_45/9)*car.drift)
+				P_Thrust(car,
+					car.angle,
+					driftboost
+				)
+				S_StartSound(car,sfx_zoom)
+				car.driftboost = drifttime+1
+			end
+			car.driftedout = false
+			car.drifttime = 0
+			car.drift = 0
+			car.driftspark = 0
+			car.driftbrake = 0
+		end
+	end
+	
+	if car.drift ~= 0
+	and grounded
+		car.angle = $+driftval(p,car,car.momt/FU)
+	end
 end
 
 addHook("MobjMoveCollide",function(car,mo)
@@ -517,129 +833,6 @@ addHook("MobjThinker",function(car)
 		car.turning = false
 	end
 	
-	if cmd.buttons & BT_SPIN
-		if abs(car.drift) < 5
-			if car.drift < 0
-				car.drift = $-1
-			elseif car.drift > 0
-				car.drift = $+1
-			end
-		end
-		if car.drift ~= 0
-		and grounded
-			local stop = false
-			if not (cmd.forwardmove > 0)
-				car.driftbrake = $+1
-				if not S_SoundPlaying(car,sfx_skid)
-					S_StartSound(car,sfx_skid)
-				end
-			else
-				if car.driftbrake then car.driftbrake = $-1 end
-				S_StopSoundByID(car,sfx_skid)
-			end
-			if FixedHypot(car.momx,car.momy) < 6*car.scale
-				car.driftbrake = TR
-			end
-			if car.driftbrake >= TR/2
-				car.driftedout = true
-				car.drift = 0
-				car.driftspark = 0
-				stop = true
-			end
-			
-			if not stop
-				car.drifttime = $+1
-				car.driftspark = $+FU
-				local dust = TakisSpawnDust(me,
-					car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed()),
-					0,
-					P_RandomRange(-1,2)*car.scale,
-					{
-						xspread = 0,
-						yspread = 0,
-						zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
-						
-						thrust = -P_RandomRange(1,6)*car.scale,
-						thrustspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
-						
-						momz = P_RandomRange(0,5)*me.scale,
-						momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
-						
-						scale = me.scale,
-						scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
-						
-						fuse = 23+P_RandomRange(-2,3),
-					}
-				)
-				dust.color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
-				dust.colorized = true
-				
-				if TakisKart_DriftLevel(car.driftspark) == 4
-					local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
-					local color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
-					TakisKart_SpawnSpark(car,angle,color)					
-				end
-				
-				if TakisKart_DriftLevel(car.driftspark) ~= car.olddlevel
-					local level = TakisKart_DriftLevel(car.driftspark)
-					if level ~= 4
-						if level == 3
-							S_StartSound(car,sfx_cdfm40)
-						elseif level == 2
-							S_StartSound(car,sfx_s3ka2)
-						end
-					else
-						S_StartSound(car,sfx_kc4d)
-					end
-					
-					for i = 10,P_RandomRange(15,20)
-						local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
-						local color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
-						TakisKart_SpawnSpark(car,angle,color)					
-					end
-				end
-				if car.driftbrake
-					local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
-					TakisKart_SpawnSpark(car,angle,SKINCOLOR_ORANGE,true)
-				end
-					
-				--slow = FU*8/10
-			end
-		end
-		car.momt = $+(car.drift*2*FU)
-	else
-		--keep our drift if we let go midair
-		if grounded
-			if car.driftspark >= TakisKart_DriftSparkValue()
-			and not car.driftbrake
-				local driftboost = 0
-				local drifttime = 0
-				if car.driftspark >= TakisKart_DriftSparkValue()*4
-					driftboost = 15*car.scale
-					drifttime = 6*TR
-				elseif car.driftspark >= TakisKart_DriftSparkValue()*2
-					driftboost = 10*car.scale
-					drifttime = 3*TR
-				elseif car.driftspark >= TakisKart_DriftSparkValue()
-					driftboost = 3*car.scale
-					drifttime = TR*4/5
-				end
-				
-				car.angle = $+driftval(p,car,car.momt/FU)+((ANGLE_45/9)*car.drift)
-				P_Thrust(car,
-					car.angle,
-					driftboost
-				)
-				S_StartSound(car,sfx_zoom)
-				car.driftboost = drifttime+1
-			end
-			car.driftedout = false
-			car.drifttime = 0
-			car.drift = 0
-			car.driftspark = 0
-			car.driftbrake = 0
-		end
-	end
 	if car.drift ~= 0
 	and not S_SoundPlaying(car,sfx_kartdr)
 	and grounded
@@ -649,15 +842,13 @@ addHook("MobjThinker",function(car)
 		S_StopSoundByID(car,sfx_kartdr)
 	end
 	
-	if car.drift ~= 0
-	and grounded
-		car.angle = $+driftval(p,car,car.momt/FU)
-	end
+	driftstuff(p,car)
 	car.momt = $*3/5
 	car.angle = $+FixedAngle(car.momt/9)
 	--
 	
 	--move
+	/*
 	if car.drift
 		if car.maxspeed > 30*car.scale
 			car.maxspeed = 30*car.scale
@@ -671,6 +862,7 @@ addHook("MobjThinker",function(car)
 			car.maxspeed = $*21/20
 		end
 	end
+	*/
 	if p.powers[pw_sneakers]
 		maxspeed = $*3/2
 		--accel = $*3/2
@@ -710,7 +902,7 @@ addHook("MobjThinker",function(car)
 	local thrustangle = car.angle
 	if car.drift ~= 0
 	and grounded
-		thrustangle = $+((ANGLE_45/9)*car.drift)
+		thrustangle = car.angle-((ANGLE_45/9)*car.drift)
 	end
 	car.momx = $+P_ReturnThrustX(nil,thrustangle,car.accel)
 	car.momy = $+P_ReturnThrustY(nil,thrustangle,car.accel)

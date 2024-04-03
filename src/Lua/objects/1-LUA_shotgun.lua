@@ -179,7 +179,7 @@ addHook("MobjMoveCollide",function(shot,mo)
 	if (CanFlingThing(mo)
 	or (
 		mo.type == MT_PLAYER
-		and CanPlayerHurtPlayer(shot.parent.player,mo.player)
+		and CanPlayerHurtPlayer(shot.parent.player,mo.player,true)
 		--dont kill ourselves though
 		and (mo ~= shot.parent)
 	))

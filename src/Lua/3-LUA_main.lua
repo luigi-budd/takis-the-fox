@@ -151,6 +151,7 @@
 	-[done]fix ach page overscroll
 	-[done]no recov jump in bm
 	-fix parries still hurting in bm
+	-explosion effects
 	
 	--ANIM TODO
 	-[done]redo smug sprites
@@ -501,6 +502,8 @@ addHook("PlayerThink", function(p)
 					S_StopSoundByID(me,sfx_shgnbs)
 					takis.bashtime = 0
 					takis.bashcooldown = true
+				elseif takis.accspeed > 55*FU
+					me.momx,me.momy = $1*4/5,$2*4/5
 				end
 				
 			else
@@ -2536,6 +2539,7 @@ addHook("PlayerThink", function(p)
 		and (takis.c3 >= TR)
 		and (takis.c2 >= TR)
 		and not (takis.cosmenu.menuinaction)
+		and not modeattacking
 			TakisMenuOpenClose(p)
 		end
 		
@@ -2691,6 +2695,7 @@ addHook("PostThinkFrame", function ()
 					takis.totalshit = $+1
 					
 				end
+				
 			end
 			
 			if takis.pitanim > TR
@@ -2704,6 +2709,25 @@ addHook("PostThinkFrame", function ()
 					me.sprite2 = SPR2_FASS
 				end
 				
+				if (leveltime & 1)
+					local pos = takis.lastgroundedpos
+					local ghost = P_SpawnMobj(pos[1],pos[2],pos[3],MT_THOK)
+					ghost.color = p.skincolor
+					ghost.frame = A
+					ghost.tics = 1
+					ghost.fuse = -1
+					ghost.sprite = SPR_PLAY
+					ghost.skin = TAKIS_SKIN
+					ghost.sprite2 = SPR2_STND
+					ghost.angle = takis.lastgroundedangle
+					if (displayplayer and displayplayer.valid)
+					and (displayplayer == p)
+						ghost.flags2 = $|MF2_DONTDRAW						
+					else
+						ghost.flags2 = $ &~MF2_DONTDRAW
+					end
+				end
+					
 				p.powers[pw_underwater] = 0
 				p.powers[pw_spacetime] = 0
 			end

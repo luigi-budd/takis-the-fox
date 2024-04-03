@@ -291,6 +291,7 @@ rawset(_G,"TAKIS_MISC",{
 		["_gover"] = true,
 		["blstcl"] = true,
 		["brdwrd"] = true,
+		["_timbl"] = true,
 		--spice runers
 		["ovrtme"] = true,
 		["ovrtm2"] = true,
@@ -848,6 +849,10 @@ rawset(_G, "TakisInitTable", function(p)
 			hudname = '',
 			cfgnotifstuff = 0,
 			useplacements = false,
+			rthh = {
+				time = 0,
+				tics = 0,
+			},
 			lives = {
 				tweenx = -55*FU,
 				tweentic = 5*TR,
