@@ -657,7 +657,8 @@ local function drawrings(v,p)
 	
 	if (p.rings <= 0)
 	and ((not (gametyperules & GTR_FRIENDLY))
-	or G_RingSlingerGametype())
+	or G_RingSlingerGametype()
+	and not p.spectator)
 		flash = true
 	end
 	

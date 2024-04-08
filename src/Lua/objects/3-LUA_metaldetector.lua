@@ -76,6 +76,10 @@ addHook("MobjThinker",function(door)
 	local cullout = true
 	if (displayplayer and displayplayer.valid)
 		local cam = displayplayer.realmo
+		if not (cam and cam.valid)
+			cam = camera
+		end
+		
 		dist = R_PointToDist2(cam.x,cam.y, door.x,door.y)
 		
 		local thok = P_SpawnMobj(cam.x, cam.y, cam.z, MT_NULL)

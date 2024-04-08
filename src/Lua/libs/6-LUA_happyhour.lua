@@ -429,6 +429,7 @@ end,MT_HHTRIGGER)
 
 addHook("MobjCollide",function(trig,mo)
 	if (hh.othergt) then return end
+	if (gametype ~= GT_COOP) then return end
 	
 	if not mo
 	or not mo.valid
@@ -606,6 +607,7 @@ addHook("TouchSpecial",function(door,mo)
 	if not (door and door.valid) then return true end
 	if not (hh.happyhour) then return true end
 	if (hh.othergt) then return true end
+	if (gametype ~= GT_COOP) then return true end
 	
 	local p = mo.player
 	
