@@ -177,6 +177,8 @@ addHook("MapLoad", function(mapid)
 	
 	m.numdestroyables = 0
 	m.partdestroy = 0
+	m.inbrakmap = false
+	m.lastbump = 0
 	
 	for mt in mapthings.iterate
 		
@@ -219,13 +221,15 @@ addHook("MapLoad", function(mapid)
 end)
 
 --in milliseconds
-local bumpinterval = {
+rawset(_G,"TAKIS_BEATMS",{
 	["vsboss"] = 440,	--136 bpm
 	["vsalt"] = 370,	--160 bpm
 	["vsmetl"] = 320,	--184 bpm
 	["vsbrak"] = 270,	--108 bpm 8/8
-	["vsfang"] = 410	--145 bpm
-}
+	["vsfang"] = 410,	--145 bpm
+	["hapyhr"] = 460,	--130 bpm
+	["hpyhre"] = 440	--135 bpm
+})
 
 local gslist = {
 	[0] = 	"GS_NULL",
@@ -363,16 +367,19 @@ addHook("ThinkFrame", do
 	end
 	
 	if m.inbossmap
+	or (HAPPY_HOUR.happyhour)
 		local pos = S_GetMusicPosition()
-		local bump = bumpinterval[string.lower(mapheaderinfo[gamemap].musname or '')] or MUSICRATE
-		print("things",
-			pos,
-			bump,
-			(pos % bump)
-		)
-		if (pos % bump) <= 10
-		and m.cardbump == 0
+		local musicname = ''
+		if m.inbossmap
+			musicname = mapheaderinfo[gamemap].musname 
+		end
+		if HAPPY_HOUR.happyhour
+			musicname = mapmusname
+		end
+		local bump = TAKIS_BEATMS[string.lower(musicname or '')] or MUSICRATE
+		if (pos / bump) > m.lastbump
 			m.cardbump = 10*FU
+			m.lastbump = (pos / bump)
 		end
 	end
 	

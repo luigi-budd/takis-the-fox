@@ -2,7 +2,7 @@ name = takisthefox
 hudname = Takis
 realname = Takis
 supername = Flamin'_Hot_Takis
-flags = SF_NOSUPERSPRITES|SF_NOJUMPSPIN|SF_STOMPDAMAGE|SF_NOSHIELDABILITY
+flags = SF_NONIGHTSSUPER|SF_NOSUPERSPRITES|SF_NOJUMPSPIN|SF_STOMPDAMAGE|SF_NOSHIELDABILITY
 
 startcolor = 96
 prefcolor = Forest

@@ -54,14 +54,8 @@ addHook("MobjThinker", function(ai)
 	if not me
 	or not me.valid
 		P_RemoveMobj(ai)
-		return	
+		return
 	end
-	
-	ai.spritexoffset = ai.takis_spritexoffset or 0
-	ai.spriteyoffset = ai.takis_spriteyoffset or 0
-	ai.spritexscale = ai.takis_spritexscale or FU
-	ai.spriteyscale = ai.takis_spriteyscale or FU
-	ai.rollangle = ai.takis_rollangle or 0
 	
 	--ai.frame = ai.takis_frame|FF_TRANS30
 	
@@ -72,8 +66,15 @@ addHook("MobjThinker", function(ai)
 		ai.timealive = $+1
 	end
 	
+	ai.spritexoffset = ai.takis_spritexoffset or 0
+	ai.spriteyoffset = ai.takis_spriteyoffset or 0
+	ai.spritexscale = ai.takis_spritexscale or FU
+	ai.spriteyscale = ai.takis_spriteyscale or FU
+	ai.rollangle = ai.takis_rollangle or 0
+	
 	local transnum = numtotrans[((ai.timealive*2/3)+1) %9]
 	ai.frame = ai.takis_frame|transnum
+	ai.blendmode = AST_ADD
 	
 	if (displayplayer and displayplayer.valid)
 		if not (camera.chase)
@@ -93,11 +94,13 @@ addHook("MobjThinker", function(ai)
 		end
 	end
 	
+	
 	local fuselimit = 5
-
+	
 	--because fuse doesnt wanna work
 	if ai.timealive > fuselimit
 		P_RemoveMobj(ai)
+		p.takistable.afterimagecount = $-1
 		return
 	end
 	
@@ -185,6 +188,14 @@ addHook("MobjThinker", function(rag)
 			return
 		end
 		
+		TakisFancyExplode(
+			rag.x, rag.y, rag.z,
+			P_RandomRange(60,64)*rag.scale,
+			32,
+			MT_TAKIS_EXPLODE,
+			15,20
+		)
+			
 		for i = 0, 34
 			A_BossScream(rag,1,MT_SONIC3KBOSSEXPLODE)
 		end
@@ -933,6 +944,26 @@ addHook("MobjThinker",function(s)
 end,MT_ARMAGEDDON_ORB)
 
 addHook("BossThinker", function(mo)
+	if not mo.health
+	and mo.aTakisFUCKINGkilledME
+		if mo.isFUCKINGdeadtimer == nil
+			mo.isFUCKINGdeadtimer = 0
+		else
+			mo.isFUCKINGdeadtimer = $+1
+		end
+		
+		if mo.isFUCKINGdeadtimer < 5
+			TakisFancyExplode(
+				mo.x, mo.y, mo.z,
+				P_RandomRange(60,64)*mo.scale,
+				16,
+				MT_TAKIS_EXPLODE,
+				15,20
+			)
+			S_StartSound(mo,sfx_tkapow)
+		end
+	end
+	
 	if TAKIS_BOSSCARDS.bossprefix[mo.type] == nil then return end
 	
 	if (mo.target and mo.target.valid)
@@ -1214,7 +1245,7 @@ addHook("MobjThinker",function(gib)
 	local grav = P_GetMobjGravity(gib)
 	grav = $*3/5
 	gib.momz = $+(grav*P_MobjFlip(gib))
-	gib.rollangle = $+gib.angleroll
+	gib.rollangle = $+(gib.angleroll or 0)
 	gib.speed = FixedHypot(gib.momx,gib.momy)
 	if (P_IsObjectOnGround(gib)
 	and not gib.bounced)
@@ -1442,6 +1473,23 @@ local emeraldslist = {
 	[5] = SKINCOLOR_FLAME,
 	[6] = SKINCOLOR_SLATE,
 }
+local emeraldframelist = {
+	[0] = A,
+	[1] = C,
+	[2] = E,
+	[3] = G,
+	[4] = A,
+	[5] = A,
+	[6] = A,
+}
+
+local function fetchspiritframe(index,gotit)
+	local frame = emeraldframelist[index]
+	if not (gotit)
+		frame = $+1
+	end
+	return frame
+end
 
 addHook("MobjThinker",function(gem)
 	if not (gem and gem.valid) then return end
@@ -1469,6 +1517,7 @@ addHook("MobjThinker",function(gem)
 					gem.timealive = me.player.takistable.spiritlist[gem.emeralddex-1].timealive--+((360/7)*gem.emeralddex)
 				end
 			end
+			gem.frame = fetchspiritframe(gem.emeralddex,true)
 			gem.color = gem.emeraldcolor
 			if gem.timealive == nil
 				gem.timealive = 0
@@ -1542,6 +1591,7 @@ end,MT_TAKIS_SPIRIT)
 addHook("MobjThinker",function(gem)
 	if not (gem and gem.valid) then return end
 	if emeraldslist[gem.frame & FF_FRAMEMASK] == nil then return end
+	if not G_IsSpecialStage(gamemap) then return end
 	
 	if not gem.emeraldcolor
 		gem.emeraldcolor = emeraldslist[gem.frame & FF_FRAMEMASK]
@@ -1580,6 +1630,7 @@ local function emeraldcollectspirit(gem)
 			gem.flags2 = $ &~MF2_DONTDRAW
 		end
 		
+		gem.soda.frame = fetchspiritframe(gem.soda.emeralddex,true)
 		if not gem.health
 			gem.soda.tracer = nil
 		end
@@ -1831,6 +1882,7 @@ end,MT_NIGHTSDRONE)
 --SUMMIT!
 addHook("GameQuit",function(quit)
 	if not quit then return end
+	if (gamestate == GS_LEVEL) then return end
 	
 	S_StopMusic(consoleplayer)
 	S_StartSound(nil,sfx_summit)
@@ -1891,6 +1943,40 @@ addHook("ShouldDamage",function(dust,_,_,_,dmgt)
 	end
 	return
 end,MT_TAKIS_STEAM)
+
+addHook("MobjThinker",function(poof)
+	if not (poof and poof.valid) then return end
+	
+	if poof.timealive == nil
+		poof.timealive = 0
+	else
+		poof.timealive = $+1
+	end
+	if P_IsObjectOnGround(poof)
+	and poof.timealive > 3
+		P_RemoveMobj(poof)
+		return
+	end
+	
+	poof.color = choose(SKINCOLOR_PEPPER,SKINCOLOR_RED,SKINCOLOR_CRIMSON)
+	poof.colorized = true
+	
+	if not (leveltime % 3 == 0) then return end
+	
+	local ghost = P_SpawnGhostMobj(poof)
+	ghost.frame = poof.frame
+	ghost.fuse = TR/2
+	ghost.destscale = 1
+	ghost.scalespeed = FU/40
+	ghost.color = choose(SKINCOLOR_BLACK,SKINCOLOR_CARBON)
+	ghost.colorized = true
+	ghost.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
+	ghost.state = S_TAKIS_STEAM2
+end,MT_TAKIS_EXPLODE)
+
+addHook("MobjMoveBlocked",function(poof)
+	P_RemoveMobj(poof)
+end,MT_TAKIS_EXPLODE)
 
 filesdone = $+1
 

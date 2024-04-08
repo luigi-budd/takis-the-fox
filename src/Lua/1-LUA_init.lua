@@ -270,6 +270,7 @@ rawset(_G,"TAKIS_MISC",{
 	inttic = 0,
 	stagefailed = true,
 	cardbump = 0,
+	lastbump = 0,
 	
 	scoreboard = {},
 	
@@ -599,7 +600,10 @@ rawset(_G, "TakisInitTable", function(p)
 		ropeletgo = 0,
 		pitanim = 0,
 		pitfunny = false,
+		pitcount = 0,
+		pittime = 0,
 		lastcarry = 0,
+		afterimagecount = 0,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -678,6 +682,7 @@ rawset(_G, "TakisInitTable", function(p)
 			sharecombos = 1,
 			dontshowach = 0, --1 to not show ach messages
 			minhud = 0, --guess what this one does, you wont believe it
+			laggymodel = 0,	--dont colorshift if laggy model
 		},
 		--tf2 taunt menu lol
 		--up to 7 taunts, detected with BT_WEAPONMASK
@@ -849,9 +854,11 @@ rawset(_G, "TakisInitTable", function(p)
 			hudname = '',
 			cfgnotifstuff = 0,
 			useplacements = false,
+			--record attack happy hour stuff
 			rthh = {
 				time = 0,
 				tics = 0,
+				sptic = 0,
 			},
 			lives = {
 				tweenx = -55*FU,
@@ -1314,7 +1321,7 @@ SafeFreeslot("SPR_KART")
 
 --spr2 freeslot
 
-SafeFreeslot("SPR2_TAKI")
+SafeFreeslot("SPR2_SMUG")
 --SafeFreeslot("SPR2_TAK2") I LOVE WASTING FREESLOTS!!!!
 SafeFreeslot("SPR2_TDED")
 SafeFreeslot("SPR2_THUP")
@@ -1410,7 +1417,7 @@ states[S_PLAY_TAKIS_KILLBASH] = {
 SafeFreeslot("S_PLAY_TAKIS_SMUGASSGRIN")
 states[S_PLAY_TAKIS_SMUGASSGRIN] = {
     sprite = SPR_PLAY,
-    frame = SPR2_TAKI,
+    frame = SPR2_SMUG,
     tics = -1,
     nextstate = S_PLAY_TAKIS_RESETSTATE
 }
@@ -2055,6 +2062,27 @@ mobjinfo[MT_TAKIS_GUNSHOT] = {
 	flags = MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY
 }
 
+SafeFreeslot("MT_TAKIS_EXPLODE")
+SafeFreeslot("S_TAKIS_EXPLODE")
+states[S_TAKIS_EXPLODE] = {
+	sprite = SPR_MDST,
+	frame = F,
+	action = function(mo)
+		mo.fuse = P_RandomRange(TR,2*TR)
+		mo.state = S_TAKIS_STEAM2
+	end,
+	tics = -1,
+}
+
+mobjinfo[MT_TAKIS_EXPLODE] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_EXPLODE,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_RUNSPAWNFUNC|MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIP|MF_NOCLIPHEIGHT
+}
+
 /*
 SafeFreeslot("MT_TAKIS_SPAWNER")
 SafeFreeslot("S_TAKIS_SPAWNER_IDLE")
@@ -2102,6 +2130,8 @@ addHook("NetVars",function(n)
 		"songend",
 		"nosong",
 		"noendsong",
+		"autohh",
+		"headerstuff",
 	}
 	for _,v in ipairs(hhsync)
 		HAPPY_HOUR[v] = n($)

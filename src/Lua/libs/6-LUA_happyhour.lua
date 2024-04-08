@@ -12,6 +12,8 @@ end
 
 rawset(_G,"HAPPY_HOUR",{
 	happyhour = false,
+	autohh = false,
+	headerstuff = false,
 	
 	timelimit = 0,
 	timeleft = 0,
@@ -22,7 +24,7 @@ rawset(_G,"HAPPY_HOUR",{
 	
 	trigger = 0,
 	exit = 0,
-		
+	
 	gameover = false,
 	gameovertics = 0,
 	
@@ -70,16 +72,37 @@ rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 				S_ChangeMusic(hh.song,p)
 				mapmusname = hh.song
 			end
+			
 			TakisGiveCombo(p,p.takistable,false,true)
+			
 			if multiplayer
 				p.realmo.momx,p.realmo.momy,p.realmo.momz = 0,0,0
 				p.powers[pw_nocontrol] = 5
-				P_SetOrigin(p.realmo,
-					actor.x,
-					actor.y,
-					GetActorZ(actor,actor,2)
-				)
 			end
+			
+			local starpoststuff = true
+			if (modeattacking)
+			or (ultimatemode)
+			or (p.starpostnum == TAKIS_MISC.maxpostcount+32)
+				starpoststuff = false
+			end
+			if starpoststuff
+				p.starpostx = actor.x/FU
+				p.starposty = actor.y/FU
+				p.starpostz = (GetActorZ(actor,actor,2)/FU)
+				p.starposttime = p.realtime
+				p.starpostangle = actor.angle
+				p.starpostscale = p.realmo.scale
+				p.starpostnum = TAKIS_MISC.maxpostcount+32
+				local takis = p.takistable
+				takis.HUD.rthh.sptic = 3*TR
+			end
+			
+			P_SetOrigin(p.realmo,
+				actor.x,
+				actor.y,
+				GetActorZ(actor,actor,2)
+			)
 		end
 		
 		if not (actor and actor.valid) then return end
@@ -123,11 +146,15 @@ end)
 
 rawset(_G,"HH_Reset",function()
 	hh.happyhour = false
+	hh.autohh = false
+	
 	hh.timelimit = 0
 	hh.timeleft = 0
 	hh.time = 0
+	
 	hh.trigger = 0
 	hh.exit = 0
+	
 	hh.gameover = false
 	hh.gameovertics = 0
 	
@@ -412,6 +439,7 @@ addHook("MobjCollide",function(trig,mo)
 	
 	if (mo.type ~= MT_PLAYER) then return end
 	
+	
 	if hh.happyhour
 		return
 	end
@@ -421,11 +449,14 @@ addHook("MobjCollide",function(trig,mo)
 	end
 	
 	if P_MobjFlip(trig) == 1
-		local myz = trig.z+trig.height
-		if not (mo.z <= myz+trig.scale and mo.z >= myz-trig.scale)
+		local midz = trig.z+(trig.height/2)
+		local topz = trig.z+(trig.height)
+		
+		if not (mo.z <= topz+trig.scale and mo.z >= midz-trig.scale)
 			return
 		end
-		if (mo.momz)
+		
+		if (mo.momz > 0)
 			return --true
 		end
 		
@@ -453,13 +484,16 @@ addHook("MobjCollide",function(trig,mo)
 		return --true
 		
 	else
-		local myz = trig.z
+		local midz = trig.z+(trig.height/2)
+		local topz = trig.z+(trig.height)
 		local otherz = mo.z+mo.height
-		if not (otherz <= myz+trig.scale and otherz >= myz-trig.scale)
+		
+		if not (otherz <= topz+trig.scale and otherz >= midz-trig.scale)
 			return
 		end
-		if (mo.momz*P_MobjFlip(trig))
-			return --true
+		
+		if (mo.momz < 0)
+			return
 		end
 		
 		local tl = tonumber(mapheaderinfo[gamemap].takis_hh_timelimit or 3*60)*TR
@@ -591,6 +625,8 @@ addHook("TouchSpecial",function(door,mo)
 	P_SetOrigin(mo,door.x,door.y,door.z)
 	mo.flags2 = $|MF2_DONTDRAW
 	
+	TakisAwardAchievement(p,ACHIEVEMENT_HAPPYEXIT)
+	
 	if (G_EnoughPlayersFinished())
 		door.state = S_HHEXIT_CLOSE1
 	end
@@ -680,6 +716,9 @@ end,MT_HHEXIT)
 
 --all happy hour
 addHook("MapLoad", function(mapid)
+	hh.autohh = true
+	hh.headerstuff = false
+	
 	if (gametype ~= GT_COOP) then return end
 	if (G_IsSpecialStage(mapid)) then return end
 	if (maptol & TOL_NIGHTS) then return end
@@ -696,9 +735,10 @@ addHook("MapLoad", function(mapid)
 	if G_BuildMapTitle(gamemap) == nil then return end
 	if (TAKIS_MISC.inescapable[string.lower(G_BuildMapTitle(gamemap))] == true) then return end
 	if (mapheaderinfo[gamemap].takis_hh_nohappyhour) then return end
-	if (not CV_TAKIS.happytime.value) then return end
+	--if (not CV_TAKIS.happytime.value) then return end
 	
 	if not hastakis then return end
+	
 	
 	local hasexit = false
 	local hassign = false
@@ -713,6 +753,7 @@ addHook("MapLoad", function(mapid)
 		if mt.type == mobjinfo[MT_HHEXIT].doomednum
 			hasdoor = true
 			door = mt.mobj
+			hh.headerstuff = true
 		end
 	end	
 	
@@ -732,21 +773,29 @@ addHook("MapLoad", function(mapid)
 	
 	if (not hasdoor)
 		if not doorheader.valid
-			for mt in mapthings.iterate
-				--exit
-				if mt.type == 1
-					--print("ASDSD")
-					--print(mt.angle,mt.angle*FU)
-					--local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
-					local px,py,pz  = mt.x*FU,mt.y*FU,mt.z*FU
-					door = P_SpawnMobj(px,py,pz,MT_HHEXIT)
-					hasdoor = true
+			if (CV_TAKIS.happytime.value)
+				for mt in mapthings.iterate
+					--exit
+					if mt.type == 1
+						--print("ASDSD")
+						--print(mt.angle,mt.angle*FU)
+						--local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
+						local px,py,pz  = mt.x*FU,mt.y*FU,mt.z*FU
+						door = P_SpawnMobj(px,py,pz,MT_HHEXIT)
+						hasdoor = true
+						local z = P_FloorzAtPos(door.x,door.y,door.z,door.height)
+						P_SetOrigin(door,door.x,door.y,z)
+					end
 				end
 			end
 		else
 			local d = doorheader
 			door = P_SpawnMobj(d.x*FU,d.y*FU,d.z*FU,MT_HHEXIT)
 			hasdoor = true
+			local z = P_FloorzAtPos(door.x,door.y,door.z,door.height)
+			P_SetOrigin(door,door.x,door.y,z)
+			hh.autohh = false
+			hh.headerstuff = true
 		end
 	end
 	
@@ -768,23 +817,37 @@ addHook("MapLoad", function(mapid)
 	
 	if hasdoor
 		if not trigheader.valid
-			for mt in mapthings.iterate
-				--trigger
-				if mt.type == mobjinfo[MT_SIGN].doomednum
-					local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
-					trig = P_SpawnMobj(
-						mt.x*FU+(-10*x), 
-						mt.y*FU+(-10*y), 
-						mt.z*FU,
-						MT_HHTRIGGER
-					)
-					if mt.options & MTF_OBJECTFLIP then
-						trig.flags2 = $ | MF2_OBJECTFLIP
+			if (CV_TAKIS.happytime.value)
+				for mt in mapthings.iterate
+					--trigger
+					if mt.type == mobjinfo[MT_SIGN].doomednum
+						local x,y = ReturnTrigAngles(FixedAngle(mt.angle*FU))
+						trig = P_SpawnMobj(
+							mt.x*FU+(-10*x), 
+							mt.y*FU+(-10*y), 
+							mt.z*FU,
+							MT_HHTRIGGER
+						)
+						local z = P_FloorzAtPos(trig.x,trig.y,trig.z,trig.height)
+						
+						trig.angle = FixedAngle(mt.angle*FU)
+						if mt.options & MTF_OBJECTFLIP then
+							trig.flags2 = $ | MF2_OBJECTFLIP
+							z = P_CeilingzAtPos(trig.x,trig.y,trig.z,trig.height)
+						end
+						P_SetOrigin(trig,trig.x,trig.y,z)
+						trig.shadowscale = trig.scale*9/10
+						trig.spritexoffset = 19*FU
+						trig.spriteyoffset = 26*FU
+						trig.takis_flingme = false
+						trig.spritexscale = 2*FU
+						trig.spriteyscale = 2*FU
+						
+						if (mt.mobj and mt.mobj.valid) then P_RemoveMobj(mt.mobj) end
+						hassign = true
 					end
-					if (mt.mobj and mt.mobj.valid) then P_RemoveMobj(mt.mobj) end
-					hassign = true
+					
 				end
-
 			end
 		else
 			local t = trigheader
@@ -794,10 +857,18 @@ addHook("MapLoad", function(mapid)
 				t.z*FU,
 				MT_HHTRIGGER
 			)
+			trig.shadowscale = trig.scale*9/10
+			trig.spritexoffset = 19*FU
+			trig.spriteyoffset = 26*FU
+			trig.takis_flingme = false
+			trig.spritexscale = 2*FU
+			trig.spriteyscale = 2*FU
 			if t.flip
 				trig.flags2 = $ | MF2_OBJECTFLIP
 			end
 			hassign = true
+			hh.autohh = false
+			hh.headerstuff = true
 		end
 	end
 	
@@ -805,6 +876,7 @@ addHook("MapLoad", function(mapid)
 	and (door and door.valid)
 		P_RemoveMobj(door)
 		hasdoor = false
+		hh.autohh = false
 		return
 	end
 	
@@ -820,6 +892,49 @@ addHook("MapLoad", function(mapid)
 		end
 	end
 	
+	--if we're spawning from an happy hour end, start it again
+	if consoleplayer.starpostnum == TAKIS_MISC.maxpostcount+32
+		local p = consoleplayer
+		local me = p.realmo
+		
+		HH_Reset()
+		
+		local sec = trig.subsector.sector
+		if (sec.specialflags & SSF_REALEXIT)
+		or (GetSecSpecial(sec.special, 4) == 2)
+			sec.specialflags = $ &~SSF_REALEXIT
+		end
+		
+		local tl = tonumber(mapheaderinfo[gamemap].takis_hh_timelimit or 3*60)*TR
+		if mapheaderinfo[gamemap].takis_hh_timelimit ~= nil
+		and string.lower(tostring(mapheaderinfo[gamemap].takis_hh_timelimit)) == "none"
+			tl = 0
+		end
+		HH_Trigger(trig,p,tl)
+		
+		p.powers[pw_nocontrol] = 1
+		P_ResetPlayer(p)
+		me.state = S_PLAY_STND
+		
+		/*
+		P_SetOrigin(me,
+			trig.x,
+			trig.y,
+			GetActorZ(trig,trig,2)+trig.scale
+		)
+		*/
+		p.pflags = $ &~PF_FINISHED
+		me.momz = 0
+	
+		S_StartSound(trig,trig.info.deathsound)
+		S_StartSound(me,trig.info.deathsound)
+		trig.state = trig.info.deathstate
+		
+		trig.spritexscaleadd = 2*FU
+		trig.spriteyscaleadd = -FU*3/2
+		
+	end
+
 end)
 
 --

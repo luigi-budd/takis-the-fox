@@ -151,7 +151,7 @@
 	-[done]fix ach page overscroll
 	-[done]no recov jump in bm
 	-fix parries still hurting in bm
-	-explosion effects
+	-[done]explosion effects
 	
 	--ANIM TODO
 	-[done]redo smug sprites
@@ -742,7 +742,11 @@ addHook("PlayerThink", function(p)
 							end
 						end
 						
-						P_InstaThrust(me,ang,FixedMul(20*FU+(3*takis.accspeed/5),me.scale))
+						local speed = takis.accspeed
+						if takis.accspeed < 20*FU
+							speed = 20*FU
+						end
+						P_InstaThrust(me,ang,FixedMul(speed,me.scale))
 						
 						p.drawangle = ang
 						--CreateWindRing(p,me)
@@ -1378,6 +1382,7 @@ addHook("PlayerThink", function(p)
 				
 				takis.hammerblastdown = $+1
 				
+				local domoves = true
 				--cancel conds.
 				if not (takis.notCarried)
 					
@@ -1386,7 +1391,7 @@ addHook("PlayerThink", function(p)
 						takis.hammerblasthitbox = nil
 					end
 					takis.hammerblastdown = 0
-					
+					domoves = false
 				elseif (me.eflags & MFE_SPRUNG
 				or takis.fakesprung)
 				
@@ -1397,6 +1402,7 @@ addHook("PlayerThink", function(p)
 					p.pflags = $ &~(PF_JUMPED|PF_THOKKED)
 					takis.thokked = false
 					takis.dived = false
+					domoves = false
 				elseif not me.health
 				or ((takis.inPain) or (takis.inFakePain))
 				or not (takis.notCarried)
@@ -1406,7 +1412,7 @@ addHook("PlayerThink", function(p)
 						takis.hammerblasthitbox = nil
 					end
 					takis.hammerblastdown = 0
-					
+					domoves = false
 				end
 				
 				if not (takis.shotgunned)
@@ -1461,6 +1467,10 @@ addHook("PlayerThink", function(p)
 					if ((takis.lastmomz*takis.gravflip) <= superspeed)
 						S_StartSound(me,sfx_s3k9b)
 						local radius = abs(takis.lastmomz)
+						if (p.powers[pw_shield] & SH_ARMAGEDDON)
+							radius = $*3/2
+						end
+						
 						for i = 0, 16
 							local fa = (i*ANGLE_22h)
 							local spark = P_SpawnMobjFromMobj(me,0,0,0,MT_SUPERSPARK)
@@ -1547,6 +1557,7 @@ addHook("PlayerThink", function(p)
 					P_MovePlayer(p)
 					
 					if not (takis.shotgunned)
+					and domoves
 						--holding jump while landing? boost us up!
 						if takis.jump > 0
 						and me.health
@@ -1787,6 +1798,14 @@ addHook("PlayerThink", function(p)
 				takis.coyote = 4
 				takis.bashcooldown = false
 				
+				if not takis.pitanim
+					if takis.pittime
+						takis.pittime = $-1
+					else
+						takis.pitcount = 0
+					end
+				end
+				
 				if (p.pflags & PF_SHIELDABILITY)
 				and (p.powers[pw_shield] == SH_BUBBLEWRAP)
 					P_DoBubbleBounce(p)
@@ -1992,6 +2011,8 @@ addHook("PlayerThink", function(p)
 				
 				--coyote time
 				if takis.coyote
+				and (me.health)
+				and (p.powers[pw_carry] ~= CR_NIGHTSMODE)
 					takis.coyote = $-1
 					if takis.jump == 1
 					and not (p.pflags & (PF_JUMPED|PF_JUMPSTASIS|PF_THOKKED))
@@ -2122,6 +2143,13 @@ addHook("PlayerThink", function(p)
 					S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSPLDET3])
 					me.frame = A
 					me.sprite2 = SPR2_TDED
+					TakisFancyExplode(
+						me.x, me.y, me.z,
+						P_RandomRange(60,64)*me.scale,
+						40,
+						MT_TAKIS_EXPLODE,
+						15,20
+					)
 					for i = 1, 6
 						A_BossScream(me,1,MT_SONIC3KBOSSEXPLODE)
 					end
@@ -2608,6 +2636,31 @@ addHook("PostThinkFrame", function ()
 		
 		if not takis then continue end
 		
+		if (takis.transfo & TRANSFO_SHOTGUN)
+			if not (me.eflags & MFE_FORCESUPER)
+				me.eflags = $|MFE_FORCESUPER
+				me.state = $
+			end
+		else
+			if (me.eflags & MFE_FORCESUPER)
+				me.eflags = $ &~MFE_FORCESUPER
+				me.state = $
+			end
+		end
+		if (VERSION == 202)
+		and (SUBVERSION >= 14)
+			if (p.powers[pw_carry] == CR_NIGHTSMODE)
+				if not (me.eflags & MFE_FORCENOSUPER)
+					me.eflags = $|MFE_FORCENOSUPER
+					me.state = $
+				end
+			else
+				if (me.eflags & MFE_FORCENOSUPER)
+					me.eflags = $ &~MFE_FORCENOSUPER
+					me.state = $
+				end
+			end
+		end
 		takis.lastpos = {x=me.x,y=me.y,z=me.z}
 		
 		takis.quakeint = 0
@@ -2670,10 +2723,17 @@ addHook("PostThinkFrame", function ()
 				me.flags2 = $|MF2_DONTDRAW
 				if takis.pitanim == TR
 					local pos = takis.lastgroundedpos
+					local angle = takis.lastgroundedangle
+					--if youve fallen into the same pit more than 2 times,
+					--fall back to your starpost pos
+					if takis.pitcount >= 3
+						pos = {p.starpostx*FU,p.starposty*FU,p.starpostz*FU}
+						angle = p.starpostangle
+					end
 					P_SetOrigin(me,pos[1],pos[2],pos[3])
 					
 					me.flags2 = $ &~MF2_DONTDRAW
-					me.angle = takis.lastgroundedangle
+					me.angle = angle
 					p.drawangle = me.angle
 					
 					takis.fakeflashing = TR+flashingtics
@@ -2834,6 +2894,8 @@ addHook("PlayerSpawn", function(p)
 		
 		takis.HUD.lives.useplacements = false
 		takis.pitanim = 0
+		takis.pittime = 0
+		takis.pitcount = 0
 		
 		if takis.lastmap == 1000
 		and G_BuildMapTitle(1000) == "Red Room"
@@ -3600,7 +3662,10 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 			end
 			
 			takis.pitanim = 3*TR
+			takis.pittime = 3*TR
+			takis.pitcount = $+1
 			p.deathpitteleportresistance = 0
+			--take away some combo
 			TakisGiveCombo(p,takis,false,false,true)
 			
 			--so you dont jump as you touch it
@@ -4046,6 +4111,34 @@ end
 addHook("MobjDeath", hurtbytakis)
 addHook("MobjDamage", diedbytakis)
 
+--summa
+addHook("MobjDeath",function(mo,inf,sor,dmgt)
+	if not (mo.flags & MF_BOSS) then return end
+	if not (sor and sor.valid) then return end
+	if sor.skin ~= TAKIS_SKIN then return end
+	
+	local rad = 1200*mo.scale
+	for p in players.iterate
+		
+		local m2 = p.realmo
+		
+		if not m2 or not m2.valid
+			continue
+		end
+		local rag = mo
+		if (FixedHypot(m2.x-rag.x,m2.y-rag.y) <= rad)
+			DoQuake(p,
+				FixedMul(
+					100*FU, FixedDiv( rad-FixedHypot(m2.x-rag.x,m2.y-rag.y),rad )
+				),
+				TR
+			)
+		end
+	end
+	mo.aTakisFUCKINGkilledME = true
+	S_StartSound(mo,sfx_tkapow)
+end)
+
 --takis died by thing
 addHook("MobjDeath", function(mo,i,s,dmgt)
 	local p = mo.player
@@ -4389,6 +4482,13 @@ addHook("MobjMoveCollide",function(tm,t)
 			local tm = j1
 			local t = j2
 			
+			TakisFancyExplode(
+				tm.x, tm.y, tm.z,
+				P_RandomRange(60,64)*tm.scale,
+				32,
+				MT_TAKIS_EXPLODE,
+				15,20
+			)
 			for i = 0, 34
 				A_BossScream(tm,1,MT_SONIC3KBOSSEXPLODE)
 			end

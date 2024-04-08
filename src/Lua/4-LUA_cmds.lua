@@ -450,6 +450,26 @@ COM_AddCommand("takis_minhud", function(p)
 	TakisSaveStuff(p)
 end)
 
-
+COM_AddCommand("takis_laggymodel", function(p)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if not (p.takistable)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	if p.takistable.io.laggymodel
+		p.takistable.io.laggymodel = 0
+		prn(p,skins[TAKIS_SKIN].realname.."'s Afterimages will color shift with models.")
+	else
+		p.takistable.io.laggymodel = 1
+		prn(p,skins[TAKIS_SKIN].realname.."'s Afterimages will not color shift with models.")
+	end
+	
+	TakisSaveStuff(p)
+end)
 
 filesdone = $+1

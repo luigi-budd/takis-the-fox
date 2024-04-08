@@ -330,6 +330,9 @@ rawset(_G, "TakisHUDStuff", function(p)
 	if hud.rthh.tics
 		hud.rthh.tics = $-1
 	end
+	if hud.rthh.sptic
+		hud.rthh.sptic = $-1
+	end
 	
 	hud.hudname = skins[TAKIS_SKIN].hudname
 	if p.skincolor == SKINCOLOR_SALMON
@@ -2287,7 +2290,10 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 		return
 	end
 	
+	local models = CV_FindVar("gr_models").value
+	
 	local takis = p.takistable
+	takis.afterimagecount = $+1
 	
 	local ghost = P_SpawnMobjFromMobj(me,0,0,0,MT_TAKIS_AFTERIMAGE)
 	ghost.target = me
@@ -2307,20 +2313,13 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	
 	ghost.angle = p.drawangle
 	
-	/*
-	local color = P_RandomRange(1,#skincolors-1)
-	--keep rolling until we get an accessable color!
-	if skincolors[color].accessible == false
-		color = P_RandomRange(1,#skincolors-1)
-	end
-	print("@@",color,#skincolors-1,#skincolors)
-	*/
-	
 	local color = SKINCOLOR_GREEN
 	
 	--not everyone is salmon
 	local salnum = #skincolors[ColorOpposite(p.skincolor)]
 	if not (takis.starman)
+	--laggy model? dont color shift if it is!
+	and not (models and takis.io.laggymodel)
 		takis.afterimagecolor = $+1
 		if (takis.afterimagecolor > #skincolors-1-salnum)
 			takis.afterimagecolor = 1
@@ -2337,6 +2336,7 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	ghost.takis_spritexoffset,ghost.takis_spriteyoffset = me.spritexoffset, me.spriteyoffset
 	ghost.takis_rollangle = me.rollangle
 	ghost.blendmode = AST_ADD
+	
 	return ghost
 end)
 
@@ -2884,9 +2884,19 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 			
 			L_ZLaunch(ragdoll,7*t.scale)
 			P_Thrust(ragdoll,ragdoll.angle,-63*t.scale-FixedMul(speed,t.scale))
+			
+			TakisFancyExplode(
+				tm.x, tm.y, tm.z,
+				P_RandomRange(60,64)*tm.scale,
+				32,
+				MT_TAKIS_EXPLODE,
+				15,20
+			)
+			
 			for i = 0, 34
 				A_BossScream(ragdoll,1,MT_SONIC3KBOSSEXPLODE)
 			end
+			
 			local f = P_SpawnGhostMobj(ragdoll)
 			f.flags2 = $|MF2_DONTDRAW
 			f.fuse = 2*TR
@@ -3690,6 +3700,8 @@ rawset(_G,"TakisDoShotgunShot",function(p,down)
 	local me = p.mo
 	
 	if takis.noability & NOABIL_SHOTGUN then return end
+	
+	DoQuake(p,10*FU,10)
 	
 	local lastaimingbeforedown = p.aiming
 	if down
@@ -4598,6 +4610,12 @@ rawset(_G,"TakisDoClutch",function(p)
 	
 	for j = -1,1,2
 		for i = 3,P_RandomRange(5,10)
+			TakisKart_SpawnSpark(me,
+				ang+FixedAngle(45*FU*j+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
+				SKINCOLOR_ORANGE,
+				true,
+				true
+			)
 			TakisSpawnDust(me,
 				ang+FixedAngle(45*FU*j+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
 				P_RandomRange(0,-50),
@@ -4760,7 +4778,7 @@ rawset(_G,"R_GetScreenCoords",function(v, p, c, mx, my, mz)
 
 	local y = camz-mz
 	--print(y/FRACUNIT)
-	y = FixedDiv(y, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my)))
+	y = FixedDiv(y, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my) or 1))
 	y = (y*160)+(100<<FRACBITS)
 	y = y+tan(camaiming, true)*160
  
@@ -4840,11 +4858,7 @@ rawset(_G,"CanFlingSolid",function(t,tm)
 	end
 	
 	if t.takis_flingme ~= nil
-		if t.takis_flingme == true
-			flingable = true
-		elseif t.takis_flingme == false
-			flingable = false
-		end
+		flingable = false
 	end
 	
 	if (t.flags & (MF_SPECIAL|MF_ENEMY|MF_MONITOR|MF_PUSHABLE))
@@ -4941,11 +4955,15 @@ rawset(_G, "TakisSpawnDustRing", function(mo, speed, thrust, num, alwaysabove)
 	end
 end)
 
-rawset(_G,"TakisKart_SpawnSpark",function(car,angle,color,realspark)
+rawset(_G,"TakisKart_SpawnSpark",function(car,angle,color,realspark,nobackthrust)
+	local momx,momy = car.momx*2, car.momy*2
+	if nobackthrust
+		momx,momy = 0,0
+	end
 	local x,y = ReturnTrigAngles(angle)
 	local spark = P_SpawnMobjFromMobj(car,
-		-16*x+car.momx*2,
-		-16*y+car.momy*2,
+		-16*x+momx,
+		-16*y+momy,
 		(P_RandomRange(-1,2)*car.scale)+(P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
 		MT_THOK
 	)
@@ -4999,6 +5017,50 @@ local driftclr = {
 
 rawset(_G,"TakisKart_DriftColor",function(driftlevel)
 	return driftclr[driftlevel] or SKINCOLOR_WHITE
+end)
+
+-- https://github.com/STJr/Kart-Public/blob/master/src/k_kart.c
+-- line 2551
+rawset(_G,"TakisFancyExplode",function(x,y,z,radius,count,type,minz,maxz,centered)
+	
+	for i = 0,count
+		local fa = FixedAngle(i*FixedDiv(360*FU,count*FU))
+		
+		local v = {}
+		v[0] = FixedMul(cos(fa),radius)
+		v[1] = FixedMul(sin(fa),radius)
+		v[2] = 0
+		v[3] = FU
+		
+		local final = {
+			x = x+v[0],
+			y = y+v[1],
+			z = z+v[2],
+		}
+		
+		local mobj = P_SpawnMobj(final.x,final.y,final.z,type)
+		mobj.z = $-(mobj.height/2)
+		mobj.angle = R_PointToAngle2(mobj.x,mobj.y,x,y)
+		mobj.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
+		
+		local dist = FixedHypot(FixedHypot(x-mobj.x,y-mobj.y),z-mobj.z)
+		dist = max(dist,1)
+		local pos = {
+			x = mobj.x,
+			y = mobj.y,
+			z = mobj.z
+		}
+		
+		if centered
+			mobj.x,mobj.y,mobj.z = x,y,z
+		end
+		
+		mobj.momx = FixedMul(FixedDiv(pos.x - x, dist), FixedDiv(dist, 6*FU))
+		mobj.momy = FixedMul(FixedDiv(pos.y - y, dist), FixedDiv(dist, 6*FU))
+		mobj.momz = FixedMul(FixedDiv(pos.z - z, dist), FixedDiv(dist, 6*FU))
+		mobj.momz = $+P_RandomRange(minz,maxz)*mobj.scale
+		mobj.flags = $|MF_NOCLIPTHING
+	end
 end)
 
 filesdone = $+1

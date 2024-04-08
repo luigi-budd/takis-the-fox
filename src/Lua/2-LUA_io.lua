@@ -9,7 +9,7 @@
 --Y7GDSUYFHIDJPK AAAAAAAAAAAHHHHHHHHH!!!!!!!!
 
 --if you use this manually and mess something up, its not my fault!
-COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a10,a11,a12,timeshit)
+COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a11,a12,timeshit)
 	
 	if sig ~= TAKIS_ACHIEVEMENTINFO.luasig
 		CONS_Printf(p,"\x85"+"Do not use this command manually!")
@@ -29,6 +29,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a10,a11,
 	a5 = tonumber($)
 	a6 = tonumber($)
 	a7 = tonumber($)
+	a8 = tonumber($)
 	a10 = tonumber($)
 	a11 = tonumber($)
 	a12 = tonumber($)
@@ -134,6 +135,14 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a10,a11,
 		CONS_Printf(p,"\x85"+"Error loading Don't show Achs.! Defaulting to 1...")
 	end
 	
+	if a8 == 1
+		takis.io.laggymodel = 1
+	elseif a8 == 0
+		takis.io.laggymodel = 0
+	else
+		CONS_Printf(p,"\x85"+"Error loading Laggy Model! Defaulting to 0...")
+	end
+	
 	if (timeshit ~= nil)
 	and timeshit > 0
 		takis.totalshit = abs(timeshit)
@@ -158,7 +167,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	local a5 = 0
 	local a6 = 0
 	local a7 = 0
-	local a8 = ''
+	local a8 = 0
 	local a9 = 0
 	local a10 = 0
 	local a11 = 0
@@ -177,6 +186,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	a5 = t.tmcursorstyle
 	a6 = t.quakes
 	a7 = t.flashes
+	a8 = t.laggymodel
 	a10 = t.clutchstyle
 	a11 = t.sharecombos
 	a12 = t.dontshowach
@@ -189,7 +199,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 		
 		local file = io.openlocal("client/takisthefox/config.dat", "w+")
 		file:write(" "..a1.." "..a2.." "..a3.." "..a4.." "..t1.." "
-			..t2.." "..a5.." "..a6.." "..a7.." "
+			..t2.." "..a5.." "..a6.." "..a7.." "..a8.." "
 			..a10.." "..a11.." "..a12.." "..timeshit
 		)
 		

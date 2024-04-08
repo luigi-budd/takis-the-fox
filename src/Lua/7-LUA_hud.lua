@@ -63,9 +63,10 @@ local function drawheartcards(v,p)
 	
 	--space allocated for all the cards
 	local bump = 0
-	if (TAKIS_MISC.inbossmap)
+	if ((TAKIS_MISC.inbossmap)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
-	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
+	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health))
+	or (HAPPY_HOUR.happyhour)
 		bump = TAKIS_MISC.cardbump
 	end
 	local maxspace = 90*FU+bump
@@ -83,6 +84,7 @@ local function drawheartcards(v,p)
 		and (takis.HUD.bosscards and takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 		and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
 			eflag = $ &~V_HUDTRANS
+			eflag = $|(v.userTransFlag())
 		end
 		
 		--patch
@@ -218,6 +220,7 @@ local function drawbosscards(v,p)
 		if (TAKIS_MISC.inbossmap)
 		and (bosscards.mo and bosscards.mo.health)
 			eflag = $ &~V_HUDTRANS
+			eflag = $|(v.userTransFlag())
 		end
 		
 		--patch
@@ -505,6 +508,7 @@ local function drawface(v,p)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
 		eflags = $ &~(V_HUDTRANS|V_HUDTRANSHALF)
+		eflags = $|(v.userTransFlag())
 	end
 	
 	if (takis.inBattle) then y2 = $+battleoffset*FU end
@@ -595,7 +599,7 @@ local function drawbossface(v,p)
 	if (takis.inChaos) then return end
 	if (takis.io.minhud) then return end
 	
-	local eflags = 0
+	local eflags = v.userTransFlag()
 	
 	local pre = TAKIS_BOSSCARDS.bossprefix[bosscards.mo.type]
 	local scale = 2*FU/5
@@ -931,7 +935,6 @@ local function drawscore(v,p)
 	local xshake = fs.xshake
 	local yshake = fs.yshake
 		
-	local score = p.score
 	/*
 	if fs.tics
 	and (takis.io.minhud == 0)
@@ -942,8 +945,14 @@ local function drawscore(v,p)
 	
 	--buggie's tf2 engi code
 	local scorenum = "SCREFT"
-	score = fs.scorenum
+	local score = fs.scorenum
 	local align = "right"
+	
+	if ((takis.HUD.lives.useplacements
+	and takis.placement == 1)
+	or (score >= 99999990))
+		scorenum = "GSCREFT"
+	end
 	
 	local prevw
 	if not prevw then prevw = 0 end
@@ -1094,8 +1103,9 @@ local function drawlivesbutton(v,p,x,y,flags)
 		end
 	end
 	
-	if (takis.firenormal)
-	and not takis.HUD.lives.tweentic
+	if ((takis.firenormal)
+	and not takis.HUD.lives.tweentic)
+	or (takis.HUD.rthh.sptic)
 		disp = $-35*FU
 	end
 	
@@ -1351,6 +1361,9 @@ local function drawlivesarea(v,p)
 		end
 		
 		local scorenum = "CMBCF"
+		if lives >= 99
+			scorenum = "CMBCFP"
+		end
 		local score = lives
 		local scale = FU
 		
@@ -1471,7 +1484,38 @@ local function drawlivesarea(v,p)
 			)
 		end
 	end
-
+	
+	if takis.HUD.rthh.sptic
+		local tic = takis.HUD.rthh.sptic
+		local tween = 0
+		
+		local et = TR/2
+		if tic >= 2*TR+et
+			local tics = (3*TR)-takis.HUD.rthh.sptic
+			tween = ease.outback((FU/et)*tics,40*FU,0,FU*3/2)
+		elseif tic <= et
+			local tics = et-takis.HUD.rthh.sptic
+			tween = ease.inexpo((FU/et)*tics,0,40*FU)
+		end
+		
+		v.drawString(
+			x+60*FU,
+			y-20*FU+tween,
+			"Checkpoint!",
+			V_YELLOWMAP|(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS|V_ALLOWLOWERCASE),
+			"thin-fixed"
+		)
+		local frame = (5*leveltime/6)%14
+		local patch = v.cachePatch("TAHHS"..frame)
+		v.drawScaled(x+60*FU+((v.stringWidth("Checkpoint!",0,"thin"))*FU/2)-(v.cachePatch("TAHHS0").width*FU/4),
+			y-10*FU+tween,
+			FU/2,
+			patch,
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF))|V_HUDTRANS
+		)
+		disp = $+55*FU
+	end
+	
 	--lives fill
 	if (takis.firenormal)
 	--?
@@ -1537,7 +1581,7 @@ local function drawlivesarea(v,p)
 		
 		if not (showing and not openingmenu)
 			v.drawString(
-				x+95*FU,
+				x+95*FU+disp,
 				y-13*FU,
 				openingmenu and (modeattacking and "Menu disabled" or "Open menu") or "Show lives",
 				(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS|V_ALLOWLOWERCASE),
@@ -1592,8 +1636,9 @@ local function drawclutches(v,p,cam)
 				y = $-5*FU
 			end
 		end
-		if (takis.firenormal)
-		and not takis.HUD.lives.tweentic
+		if ((takis.firenormal)
+		and not takis.HUD.lives.tweentic)
+		or (takis.HUD.rthh.sptic)
 			y = $-35*FU
 		end
 	
@@ -2443,7 +2488,7 @@ local function drawhappyhour(v,p)
 			local shakex,shakey = happyshakelol(v)
 			v.drawScaled(h.its.x+shakex, y+h.its.yadd+shakey, h.its.scale,
 				pa(h.its.patch..h.its.frame),
-				V_SNAPTOTOP|V_HUDTRANS
+				V_SNAPTOTOP|v.userTransFlag()
 			)
 			
 			local happy = h.happy.patch
@@ -2454,13 +2499,13 @@ local function drawhappyhour(v,p)
 			shakex,shakey = happyshakelol(v)
 			v.drawScaled(h.happy.x+shakex, y+h.happy.yadd+shakey, h.happy.scale,
 				pa(happy..h.happy.frame),
-				V_SNAPTOTOP|V_HUDTRANS
+				V_SNAPTOTOP|v.userTransFlag()
 			)
 			
 			shakex,shakey = happyshakelol(v)
 			v.drawScaled(h.hour.x+shakex, y+h.hour.yadd+shakey, h.hour.scale,
 				pa(h.hour.patch..h.hour.frame),
-				V_SNAPTOTOP|V_HUDTRANS
+				V_SNAPTOTOP|v.userTransFlag()
 			)
 			if tics > 4
 				local pat = SPR2_TRNS
@@ -2483,10 +2528,14 @@ local function drawhappyhour(v,p)
 					yadd = 0
 				end
 				
+				shakex,shakey = happyshakelol(v)
+				shakex,shakey = $1/2, $2/2
 				local face = v.getSprite2Patch(p.skin,pat,false,frame,0,0)
-				v.drawScaled(h.face.x+x, (130*FU)+h.face.yadd+yadd, FixedMul(scale,hires),
+				v.drawScaled(h.face.x+x+shakex,
+					(130*FU)+h.face.yadd+yadd+shakey,
+					FixedMul(scale,hires),
 					face,
-					V_HUDTRANS, v.getColormap(nil,p.skincolor)
+					v.userTransFlag(), v.getColormap(p.skin,p.skincolor)
 				)
 			end
 		end
@@ -5104,7 +5153,7 @@ local function drawdebug(v,p)
 		
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_NET)
-		local dex = 8
+		local dex = 7
 		local cv = {
 			[1] = CV_TAKIS.nerfarma,
 			[2] = CV_TAKIS.tauntkills,
@@ -5113,7 +5162,6 @@ local function drawdebug(v,p)
 			[5] = CV_TAKIS.heartcards,
 			[6] = CV_TAKIS.hammerquake,
 			[7] = CV_TAKIS.chaingun,
-			[8] = CV_TAKIS.happytime,
 		}
 		local net = {
 			[1] = TAKIS_NET.nerfarma,
@@ -5123,7 +5171,6 @@ local function drawdebug(v,p)
 			[5] = TAKIS_NET.cards,
 			[6] = TAKIS_NET.hammerquakes,
 			[7] = TAKIS_NET.chaingun,
-			[8] = TAKIS_NET.happytime,
 		}
 		local name = {
 			[1] = "Nerf arma",
@@ -5133,7 +5180,6 @@ local function drawdebug(v,p)
 			[5] = "Cards",
 			[6] = "Hammer quakes",
 			[7] = "Chaingun",
-			[8] = "HH toggle",
 		}
 		local boolclr = {
 			[true] = "\x83",
@@ -5403,39 +5449,57 @@ addHook("HUD", function(v,p,cam)
 			
 			--record attack stuff
 			if (modeattacking)
+			and (p.powers[pw_carry] ~= CR_NIGHTSMODE)
 				if (leveltime <= 5*TR)
 					local tween = 0
 					local et = TR/2
 					local trans = 0
+					local trans2 = V_50TRANS
 					if leveltime <= et
 						trans = ((18-leveltime)/2)<<V_ALPHASHIFT
+						--trans2 = ((9-leveltime)/4)<<V_ALPHASHIFT
 						tween = ease.outexpo((FU/et)*(leveltime),200*FU, 0)				
 					elseif leveltime >= 4*TR+et
 						local tics = leveltime-(4*TR+et)
 						trans = (tics/2)<<V_ALPHASHIFT
+						--trans2 = (tics/4)<<V_ALPHASHIFT
 						tween = ease.inexpo((FU/et)*tics,0,200*FU)				
 					end
 					
 					local happytime = CV_TAKIS.happytime.value
-					local frame = happytime and ((5*leveltime/6)%14) or 0
-					local patch = v.cachePatch("TAHHS"..frame)
 					local fs = takis.HUD.flyingscore
 					local x = fs.scorex*FU+tween
-					local y = (fs.scorey+20)*FU
+					local y = (fs.scorey+22)*FU
+					local constext = true
+					local hhtext = "takis_happyhour"
+					if (TAKIS_MISC.inescapable[string.lower(G_BuildMapTitle(gamemap) or '')] == true)
+						happytime = 0
+						constext = false
+						hhtext = "Inescapable map"
+					end
+					local frame = happytime and ((5*leveltime/6)%14) or 0
+					local patch = v.cachePatch("TAHHS"..frame)
 					
+					v.drawScaled(x,
+						y-9*FU,
+						FU,
+						v.cachePatch("TA_HH_BOX"),
+						trans2|V_SNAPTORIGHT|V_SNAPTOTOP
+					)
 					v.drawString(x,
 						y+10*FU,
-						"takis_happyhour",
+						hhtext,
 						V_ALLOWLOWERCASE|V_GRAYMAP|trans|V_SNAPTORIGHT|V_SNAPTOTOP,
 						"thin-fixed-right"
 					)
-					v.drawString(x,
-						y+18*FU,
-						"Change in cons.",
-						V_ALLOWLOWERCASE|trans|V_SNAPTORIGHT|V_SNAPTOTOP,
-						"thin-fixed-right"
-					)
-					
+					if constext
+						v.drawString(x,
+							y+18*FU,
+							"Change in cons.",
+							V_ALLOWLOWERCASE|trans|V_SNAPTORIGHT|V_SNAPTOTOP,
+							"thin-fixed-right"
+						)
+					end
 					v.drawString(x-50*FU,
 						y-4*FU,
 						happytime and "ON" or "OFF",
@@ -5686,6 +5750,23 @@ local emeraldslist = {
 	[5] = SKINCOLOR_FLAME,
 	[6] = SKINCOLOR_SLATE,
 }
+local emeraldframelist = {
+	[0] = A,
+	[1] = C,
+	[2] = E,
+	[3] = G,
+	[4] = A,
+	[5] = A,
+	[6] = A,
+}
+
+local function fetchspiritframe(index,gotit)
+	local frame = emeraldframelist[index]
+	if not (gotit)
+		frame = $+1
+	end
+	return frame
+end
 
 addHook("HUD", function(v)
 	if consoleplayer
@@ -5703,7 +5784,7 @@ addHook("HUD", function(v)
 					local maxspace = 200
 					for i = 0,maxspirits
 						local patch,flip = v.getSpritePatch(SPR_TSPR,
-							(emeralds & 1<<i == 0) and B or A,
+							fetchspiritframe(i,(emeralds & 1<<i ~= 0)),
 							(((leveltime/4)+i)%8)+1
 						)
 						v.drawScaled(
@@ -5720,7 +5801,7 @@ addHook("HUD", function(v)
 					local maxspace = 66
 					for i = 0,maxspirits
 						local patch,flip = v.getSpritePatch(SPR_TSPR,
-							(emeralds & 1<<i == 0) and B or A,
+							fetchspiritframe(i,(emeralds & 1<<i ~= 0)),
 							(((leveltime/4)+i)%8)+1
 						)
 						v.drawScaled(
@@ -5759,12 +5840,18 @@ addHook("HUD", function(v,p,tic,endtic)
 		hud.enable("stagetitle")
 	end
 	
-	if (mapheaderinfo[gamemap].bonustype ~= 1)
-		return 
-	end
 	if (skins[p.skin].name ~= TAKIS_SKIN) then return end	
 	if not (p.takistable) then return end
-	if (p.takistable.HUD.bosscards.name == '') then return end
+	
+	if (mapheaderinfo[gamemap].bonustype == 1)
+		if p.takistable.HUD.bosscards.name == ''
+			return
+		end
+	else
+		if (p.starpostnum ~= TAKIS_MISC.maxpostcount+32)
+			return
+		end
+	end
 	
 	hud.disable("stagetitle")
 end,"titlecard")
@@ -5802,7 +5889,7 @@ addHook("HUD", function(v)
 				
 				for i = 0,maxspirits
 					local patch,flip = v.getSpritePatch(SPR_TSPR,
-						(em & 1<<i == 0) and B or A,
+						fetchspiritframe(i,(em & 1<<i ~= 0)),
 						(((TAKIS_MISC.inttic/4)+i)%8)+1
 					)
 					v.drawScaled(
@@ -5825,7 +5912,7 @@ addHook("HUD", function(v)
 						if (em & 1<<i) then continue end
 						
 						local patch,flip = v.getSpritePatch(SPR_TSPR,
-							A,
+							fetchspiritframe(i,true),
 							(((TAKIS_MISC.inttic/4)+i)%8)+1
 						)
 						

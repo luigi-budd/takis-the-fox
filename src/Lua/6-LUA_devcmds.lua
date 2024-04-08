@@ -260,7 +260,7 @@ COM_AddCommand("panic", function(p,tics,flags)
 	
 end,COM_ADMIN)
 
-COM_AddCommand("shotgun", function(p)
+COM_AddCommand("shotgun", function(p,force)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
 		return
@@ -280,7 +280,7 @@ COM_AddCommand("shotgun", function(p)
 	local takis = p.takistable
 	
 	if (takis.shotgunned)
-		TakisDeShotgunify(p)
+		TakisDeShotgunify(p,force ~= nil)
 	
 	else
 		TakisShotgunify(p)
@@ -334,7 +334,7 @@ local function GetPlayer(player, pname)
 	return player2
 end
 
-COM_AddCommand("shotgunfor", function(p,node)
+COM_AddCommand("shotgunfor", function(p,node,force)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
 		return
@@ -359,7 +359,7 @@ COM_AddCommand("shotgunfor", function(p,node)
 		end
 		
 		if (takis.shotgunned)
-			TakisDeShotgunify(p2)
+			TakisDeShotgunify(p2,force ~= nil)
 		
 		else
 			TakisShotgunify(p2)
@@ -454,6 +454,19 @@ COM_AddCommand("spheres", function(p, num)
 	num = tonumber($)
 	
 	p.spheres = num
+end,COM_ADMIN)
+
+COM_AddCommand("lives", function(p, num)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if tonumber(num) == nil then return end
+	
+	num = tonumber($)
+	
+	p.lives = num
 end,COM_ADMIN)
 
 COM_AddCommand("setach", function(p, num)
@@ -558,6 +571,46 @@ COM_AddCommand('powerstone', function(p, arg)
 		end
 	end
 end, COM_ADMIN)
+
+COM_AddCommand("prhappyhour", function(p)
+	local strings = prtable("Happy Hour",HAPPY_HOUR,false)
+	for k,va in ipairs(strings)
+		print(va)
+	end
+	
+	local dh = {}
+	dh.x = tonumber(mapheaderinfo[gamemap].takis_hh_exit_x)
+	dh.y = tonumber(mapheaderinfo[gamemap].takis_hh_exit_y)
+	dh.z = tonumber(mapheaderinfo[gamemap].takis_hh_exit_z)
+	for k,v in pairs(dh)
+		if v == nil
+			dh.valid = false
+			break
+		else
+			dh.valid = true
+			continue
+		end
+	end
+	local th = {}
+	th.x = tonumber(mapheaderinfo[gamemap].takis_hh_trig_x)
+	th.y = tonumber(mapheaderinfo[gamemap].takis_hh_trig_y)
+	th.z = tonumber(mapheaderinfo[gamemap].takis_hh_trig_z)
+	th.flip = mapheaderinfo[gamemap].takis_hh_trig_flip ~= nil
+	for k,v in pairs(th)
+		if type(v) == "boolean" then continue end
+		if v == nil
+			th.valid = false
+			break
+		else
+			th.valid = true
+			continue
+		end
+	end
+	
+	print("door: {x="..(dh.x or "nil")..",y="..(dh.y or "nil")..",z="..(dh.z or "nil").."}")
+	print("trig: {x="..(th.x or "nil")..",y="..(th.y or "nil")..",z="..(th.z or "nil")..",f="..(tostring(th.flip) or "nil").."}")
+	print("candoshit: "..tostring( HH_CanDoHappyStuff(p) ))
+end,COM_ADMIN)
 
 /*
 COM_AddCommand("_gmodify", function(p,gdex,value,vty)

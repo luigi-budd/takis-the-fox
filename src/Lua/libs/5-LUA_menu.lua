@@ -44,6 +44,7 @@ tm.entries = {
 			"Share Combos",
 			"Don't Show Ach. Messages",
 			"MinHud",
+			"Laggy Model",
 		},
 		table = "takis.io",
 		values = {
@@ -57,6 +58,7 @@ tm.entries = {
 			"sharecombos",
 			"dontshowach",
 			"minhud",
+			"laggymodel",
 		},
 		commands = {
 			"nostrafe",
@@ -69,6 +71,7 @@ tm.entries = {
 			"sharecombos",
 			"dontshowach",
 			"minhud",
+			"laggymodel",
 		},
 		hints = {
 			"Toggles forced strafing.",
@@ -81,6 +84,7 @@ tm.entries = {
 			"Share combos with other Takis.",
 			"Don't show other Takis' achievements.",
 			"Toggles Minimal HUD elements for Takis.",
+			"Toggles Afterimage color shifting for models",
 		}
 	},
 	[3] = {
