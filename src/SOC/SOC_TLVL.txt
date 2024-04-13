@@ -41,7 +41,6 @@ Act = 0
 NoZone = true
 Music = REDROM
 TypeOfLevel = Singleplayer,Coop,CTF,Match
-ForceCharacter = takisthefox
 Lua.Takis_HH_Music = _DROWN
 Lua.Takis_HH_NoEndMusic = true
 Lua.Takis_HH_Timelimit = 8

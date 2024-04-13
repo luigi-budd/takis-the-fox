@@ -377,7 +377,7 @@ addHook("ThinkFrame", do
 			musicname = mapmusname
 		end
 		local bump = TAKIS_BEATMS[string.lower(musicname or '')] or MUSICRATE
-		if (pos / bump) > m.lastbump
+		if (pos / bump) ~= m.lastbump
 			m.cardbump = 10*FU
 			m.lastbump = (pos / bump)
 		end

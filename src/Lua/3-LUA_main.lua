@@ -136,7 +136,7 @@
 	-[done]skidding spawn takis dust
 	-[done]no afterimages when clutching out of a slide
 	-[done]no pt happy hour is broken
-	-since cardbump is client-side, maybe we could use S_MusicPosition
+	-[done]since cardbump is client-side, maybe we could use S_MusicPosition
 	 to get more accurate measurements?
 	-[scrapped]takis things use udmf args too, man nvm udmf sucks ass
 	-[done?]pacifist ach
@@ -255,6 +255,29 @@ local function peptoboxed(mobj)
 	end
 end
 
+local function spillrings(p,spillall)
+	if p.rings
+		S_StartSoundAtVolume(p.mo,sfx_s3kb9,255/2)
+		local spillamount = 32
+		if not (p.mo.health)
+		or (p.takistable.heartcards == 0)
+		or spillall
+			spillamount = p.rings
+		end
+		
+		if (p.rings >= spillamount)
+			P_PlayerRingBurst(p,spillamount)
+			p.rings = $ - spillamount
+		else
+			P_PlayerRingBurst(p,-1)
+			p.rings = 0
+		end
+	end
+	P_PlayerWeaponAmmoBurst(p)
+	P_PlayerWeaponPanelBurst(p)
+	P_PlayerEmeraldBurst(p)
+end
+
 local ranktonum = {
 	["P"] = 6,
 	["S"] = 5,
@@ -301,6 +324,9 @@ addHook("PreThinkFrame",function()
 			takis.noability = $|p.takis_noabil
 			takis.lastminhud = takis.io.minhud
 			takis.io.minhud = 0
+		end
+		if takis.pitanim
+			takis.noability = $|NOABIL_ALL|NOABIL_THOK
 		end
 		
 		TakisButtonStuff(p,takis)
@@ -1237,7 +1263,7 @@ addHook("PlayerThink", function(p)
 			--hammerblast stuff
 			if takis.hammerblastdown
 				p.charflags = $ &~SF_RUNONWATER
-				p.powers[pw_strong] = $|(STR_SPRING|STR_HEAVY)
+				p.powers[pw_strong] = $|(STR_SPRING|STR_HEAVY|STR_SPIKE)
 				takis.noability = $|NOABIL_SHOTGUN|NOABIL_HAMMER
 				--control better
 				p.thrustfactor = $*3/2
@@ -1292,6 +1318,9 @@ addHook("PlayerThink", function(p)
 				end
 				
 				me.momz = $+P_GetMobjGravity(me)
+				if p.powers[pw_shield] & SH_FORCE
+					me.momz = $+(P_GetMobjGravity(me)*3/2)
+				end
 				
 				--the main stuff
 				local fallingspeed = (8*me.scale)
@@ -1467,8 +1496,8 @@ addHook("PlayerThink", function(p)
 					if ((takis.lastmomz*takis.gravflip) <= superspeed)
 						S_StartSound(me,sfx_s3k9b)
 						local radius = abs(takis.lastmomz)
-						if (p.powers[pw_shield] & SH_ARMAGEDDON)
-							radius = $*3/2
+						if (p.powers[pw_shield] == SH_ARMAGEDDON)
+							radius = $*2
 						end
 						
 						for i = 0, 16
@@ -1564,13 +1593,26 @@ addHook("PlayerThink", function(p)
 						and not ((takis.inPain) or (takis.inFakePain))
 						and not (takis.noability & NOABIL_THOK)
 							local time = min(takis.hammerblastdown,TR*25/10)
+							if p.powers[pw_shield] == SH_WHIRLWIND
+								time = $*3/2
+							end
+							local basemomz = 20*FU
+							if p.powers[pw_shield] == SH_BUBBLEWRAP
+							or p.powers[pw_shield] == SH_ELEMENTAL
+								basemomz = 25*FU
+							end
+							
 							takis.hammerblastjumped = 1
+							
 							P_DoJump(p,false)
 							me.state = S_PLAY_ROLL
-							me.momz = 20*takis.gravflip*me.scale+(time*takis.gravflip*me.scale/8)
+							me.momz = FixedMul(basemomz+(time*FU/8),me.scale)*takis.gravflip
+							
 							S_StartSoundAtVolume(me,sfx_kc52,180)
+							
 							p.pflags = $|PF_JUMPED &~PF_THOKKED
 							takis.thokked = false
+							
 							shouldntcontinueslide = true
 							
 						--holding spin while landing? boost us forward!
@@ -2589,6 +2631,7 @@ addHook("PlayerThink", function(p)
 		takis.lastss = G_IsSpecialStage(takis.lastmap)
 		takis.lastplacement = takis.placement
 		takis.lastcarry = p.powers[pw_carry]
+		takis.lastrings = p.rings
 	end
 	
 end)
@@ -2710,11 +2753,12 @@ addHook("PostThinkFrame", function ()
 		
 		--fall out thinker
 		if takis.pitanim
-			if takis.pitanim == 3*TR
-				me.flags = $|(MF_NOCLIP|MF_NOCLIPHEIGHT)
-				me.momz = -30*me.scale*takis.gravflip --takis.lastmomz
+			if takis.pitanim > TR
+				me.flags = $|(MF_NOCLIPTHING|MF_NOCLIP|MF_NOCLIPHEIGHT)
+				if takis.pitanim == 3*TR
+					me.momz = -30*me.scale*takis.gravflip --takis.lastmomz
+				end
 			end
-			
 			
 			if takis.pitanim <= 2*TR
 			and takis.pitanim >= TR
@@ -2724,12 +2768,19 @@ addHook("PostThinkFrame", function ()
 				if takis.pitanim == TR
 					local pos = takis.lastgroundedpos
 					local angle = takis.lastgroundedangle
+					
 					--if youve fallen into the same pit more than 2 times,
 					--fall back to your starpost pos
 					if takis.pitcount >= 3
-						pos = {p.starpostx*FU,p.starposty*FU,p.starpostz*FU}
-						angle = p.starpostangle
+						if (p.starpostnum)
+							pos = {p.starpostx*FU,p.starposty*FU,p.starpostz*FU}
+							angle = p.starpostangle
+						else
+							pos = takis.pitbackup
+							angle = takis.pitbackup[4]
+						end
 					end
+					
 					P_SetOrigin(me,pos[1],pos[2],pos[3])
 					
 					me.flags2 = $ &~MF2_DONTDRAW
@@ -2771,6 +2822,13 @@ addHook("PostThinkFrame", function ()
 				
 				if (leveltime & 1)
 					local pos = takis.lastgroundedpos
+					if takis.pitcount >= 3
+						if (p.starpostnum)
+							pos = {p.starpostx*FU,p.starposty*FU,p.starpostz*FU}
+						else
+							pos = takis.pitbackup
+						end
+					end
 					local ghost = P_SpawnMobj(pos[1],pos[2],pos[3],MT_THOK)
 					ghost.color = p.skincolor
 					ghost.frame = A
@@ -2797,7 +2855,7 @@ addHook("PostThinkFrame", function ()
 			p.pflags = $ &~PF_THOKKED
 			takis.pitanim = $-1
 		else
-			me.flags = $ &~(MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY)
+			me.flags = $ &~(MF_NOCLIPTHING|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY)
 		end
 		
 		if p.powers[pw_carry] == CR_DUSTDEVIL	
@@ -2896,6 +2954,9 @@ addHook("PlayerSpawn", function(p)
 		takis.pitanim = 0
 		takis.pittime = 0
 		takis.pitcount = 0
+		takis.pitbackup = {
+			me.x, me.y, me.z, me.angle
+		}
 		
 		if takis.lastmap == 1000
 		and G_BuildMapTitle(1000) == "Red Room"
@@ -3198,10 +3259,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 			P_KillMobj(mo,inf,sor,dmgt)
 			
 			--lose EVERYTHING
-			P_PlayerRingBurst(p,p.rings)
-			P_PlayerWeaponAmmoBurst(p)
-			P_PlayerWeaponPanelBurst(p)
-			P_PlayerEmeraldBurst(p)
+			spillrings(p,true)
 			
 			if (p.gotflag)
 				P_PlayerFlagBurst(p,false)
@@ -3229,15 +3287,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		
 		if (p.powers[pw_shield] == SH_NONE)
 			TakisHealPlayer(p,mo,takis,3)
-			if (p.rings >= 15)
-				P_PlayerRingBurst(p,15)
-				p.rings = $-15
-			else
-				P_PlayerRingBurst(p,-1)
-				p.rings = 0
-			end
-			P_PlayerWeaponAmmoBurst(p)
-			P_PlayerWeaponPanelBurst(p)
+			spillrings(p)
 		else
 			P_RemoveShield(p)
 		end
@@ -3650,7 +3700,9 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		end
 		--
 		
+		spillrings(p)
 		S_StartSound(mo,sfx_s3k51)
+		
 		if takis.heartcards > 1
 			TakisResetHammerTime(p)
 			mo.state = S_PLAY_DEAD
@@ -4157,6 +4209,7 @@ addHook("MobjDeath", function(mo,i,s,dmgt)
 		return
 	end
 	
+	spillrings(p,true)
 	if (p.gotflag)
 		P_PlayerFlagBurst(p,false)
 	end

@@ -690,9 +690,44 @@ local function drawrings(v,p)
 			ringy = $+battleoffset	
 		end
 		
+		local spinframe = FixedInt(takis.HUD.rings.spin) % 22
+		local patch,flip = v.getSpritePatch(ringpatch, spinframe, 0)
+		eflag = $|(flip and V_FLIP or 0)
+		
+		if takis.HUD.rings.shake
+			local s = takis.HUD.rings.shake
+			local shakex,shakey = v.RandomFixed()/6,v.RandomFixed()/6
+			
+			local d1 = v.RandomRange(-1,1)
+			local d2 = v.RandomRange(-1,1)
+			if d1 == 0
+				d1 = v.RandomRange(-1,1)
+			end
+			if d2 == 0
+				d2 = v.RandomRange(-1,1)
+			end
+		
+			shakex = $*s*d1
+			shakey = $*s*d2
+			ringFx = $+shakex
+			ringFy = $+shakey
+		end
+		
 		--classic x = 102
-		v.drawScaled(ringFx, ringFy, FU/2,v.getSpritePatch(ringpatch, A, 0, 0), V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER,v.getColormap(nil,SKINCOLOR_RED))
-		v.drawNum(ringx, ringy, val, V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER)
+		v.drawScaled(
+			ringFx,
+			ringFy,
+			FU/2,
+			patch,
+			V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER,
+			v.getColormap(nil,SKINCOLOR_RED)
+		)
+		v.drawNum(
+			ringx,
+			ringy,
+			val,
+			V_SNAPTOLEFT|V_SNAPTOTOP|(eflag &~V_FLIP)|V_PERPLAYER
+		)
 	else
  		
 		local off = (takis.inBattle) and battleoffset or 0
@@ -1209,6 +1244,13 @@ local placetext2 = {
 	["?"] = "TH",
 }
 
+local placestring = {
+	[0] = '',
+	[1] = "P",
+	[2] = "S",
+	[3] = "B",
+}
+
 local function isplayerlosing(p)
 	local winningpos = 1
 	local pcount = 0
@@ -1399,7 +1441,7 @@ local function drawlivesarea(v,p)
 			local top3 = takis.placement and takis.placement < 4
 			local inlosingplace = isplayerlosing(p)
 			local losing = inlosingplace and (leveltime/4 & 1)
-			local scorenum = (top3 and not inlosingplace) and "CMBCFP" or (losing and "CMBCFR" or "CMBCF")
+			local scorenum = (top3 and not inlosingplace) and "CMBCF"..placestring[takis.placement] or (losing and "CMBCFR" or "CMBCF")
 			local score = takis.placement
 			score = $..(placetext[takis.placement] or "?")
 			local scale = FU
@@ -4256,7 +4298,8 @@ local function kartspeedometer(v,p,takis,car,minus)
 		v.getSpritePatch(SPR_THND,F,0,sroll),
 		flags
 	)
-
+	
+	
 	local scorenum = "CMBCF"
 	local score = FixedInt(takis.accspeed)
 	local prevw
@@ -4283,7 +4326,7 @@ local function kartspeedometer(v,p,takis,car,minus)
 			
 		prevw = $+(patch.width*scale*4/10)
 	end
-
+	
 end
 
 local function kartfuelometer(v,p,takis,car,minus)
@@ -4545,6 +4588,11 @@ local function DrawMiniButton(v, player, x, y, flags, color, butt, symb, strngty
 	)
 end
 
+local musname
+addHook("ThinkFrame",do
+	musname = S_MusicName()
+end)
+
 local getpstate = {
 	[0] = "PST_LIVE",
 	[1] = "PST_DEAD",
@@ -4674,12 +4722,21 @@ local function drawdebug(v,p)
 		v.drawString(x+60,y-10,p.powers[pw_nocontrol],flags,"thin")
 		
 	end
-	if (TAKIS_DEBUGFLAG & DEBUG_PAIN)
-		drawflag(v,160,122,"Pain",V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inPain))
-		drawflag(v,160,130,"FakePain",V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inFakePain))
-		drawflag(v,160,138,"WaterSlide",V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inwaterslide))
-		drawflag(v,160,146,"TicsForPain: "..takis.ticsforpain,V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsforpain > 0))
-		drawflag(v,160,154,"TicsInPain: "..takis.ticsinpain,V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsinpain > 0))
+	if (TAKIS_DEBUGFLAG & DEBUG_STATE)
+		local pstate = getpstate[p.playerstate]
+		local dmg = getdmg[takis.saveddmgt]
+		
+		v.drawString(100,100,"State: "..me.state,V_ALLOWLOWERCASE,"thin")
+		v.drawString(100,108,"Sprite2: "..me.sprite2,V_ALLOWLOWERCASE,"thin")
+		v.drawString(100,116,"PState: "..pstate,V_ALLOWLOWERCASE,"thin")
+		v.drawString(100,124,"Deadtimer: "..p.deadtimer,V_ALLOWLOWERCASE,"thin")
+		v.drawString(100,132,"DMG: "..dmg ,V_ALLOWLOWERCASE,"thin")
+		
+		drawflag(v,200,100,"Pain",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inPain))
+		drawflag(v,200,108,"FakePain",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inFakePain))
+		drawflag(v,200,116,"WaterSlide",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inwaterslide))
+		drawflag(v,200,124,"TicsForPain: "..takis.ticsforpain,V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsforpain > 0))
+		drawflag(v,200,132,"TicsInPain: "..takis.ticsinpain,V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsinpain > 0))
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_ACH)
 		for k,va in ipairs(takis.HUD.steam)
@@ -4916,16 +4973,6 @@ local function drawdebug(v,p)
 			(p.pflags & PF_APPLYAUTOBRAKE)
 		)
 		
-	end
-	if (TAKIS_DEBUGFLAG & DEBUG_DEATH)
-		local pstate = getpstate[p.playerstate]
-		local dmg = getdmg[takis.saveddmgt]
-		
-		v.drawString(100,100,"State: "..me.state,V_ALLOWLOWERCASE,"thin")
-		v.drawString(100,108,"Sprite2: "..me.sprite2,V_ALLOWLOWERCASE,"thin")
-		v.drawString(100,116,"PState: "..pstate,V_ALLOWLOWERCASE,"thin")
-		v.drawString(100,124,"Deadtimer: "..p.deadtimer,V_ALLOWLOWERCASE,"thin")
-		v.drawString(100,132,"DMG: "..dmg ,V_ALLOWLOWERCASE,"thin")
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_SPEEDOMETER)
 		
@@ -5268,7 +5315,66 @@ local function drawdebug(v,p)
 			"thin"
 		)
 	end
+	if (TAKIS_DEBUGFLAG & DEBUG_MUSIC)
+		local flags = V_SNAPTOLEFT|V_HUDTRANS
+		v.drawString(5,
+			92,
+			musname or "null",
+			flags,
+			"left"
+		)
+		
+		if not TAKIS_BEATMS[string.lower(musname or '')]
+			flags = $|V_REDMAP
+		end
+		
+		local leng = S_GetMusicLength()
+		local pos = S_GetMusicPosition()
+		local posstring = L_FixedDecimal(FixedDiv(pos,MUSICRATE),2).."/"..L_FixedDecimal(FixedDiv(leng,MUSICRATE),2)
+		v.drawString(5,
+			100,
+			posstring,
+			flags,
+			"left"
+		)
+		local HAHA = 0
+		if (leng ~= 0)
+			local percent = L_FixedDecimal(FixedMul(FixedDiv(pos,leng),100*FU),2).."%"
+			HAHA = v.stringWidth(percent.."==",0,normal)
+			v.drawString(5,
+				120,
+				percent,
+				flags,
+				"left"
+			)
+			
+			v.drawString(55,
+				120,
+				"beat "..TAKIS_MISC.lastbump,
+				flags,
+				"left"
+			)
+			
+			local pre = "MINFOB_"
+			local fill = v.cachePatch(pre.."FILL")
+			local erm = FixedDiv(pos,leng)
+			local width = FixedMul(erm,fill.width*FU)
+			if width < 0 then
+				width = 0
+			end
+			
+			v.drawScaled(5*FU,110*FU,FU,fill,flags,v.getColormap(nil,SKINCOLOR_BLACK))
+			v.drawCropped(5*FU,110*FU,FU,FU,
+				fill,
+				flags, 
+				nil,
+				0,0,
+				width,fill.height*FU
+			)
+		end
 	
+	end
+	--debug end
 end
 
 --draw the stuff

@@ -327,6 +327,36 @@ rawset(_G, "TakisHUDStuff", function(p)
 		hud.lives.useplacements = true
 	end
 	
+	if p.rings ~= takis.lastrings
+		if not (hud.rings.spin/FU)
+			hud.rings.spin = 44*FU
+		else
+			hud.rings.spin = $+22*FU
+		end
+		/*
+		for i = 1,10
+			if not (abs(p.rings - takis.lastrings) >= 4*(i+1))
+				break
+			end
+			
+			hud.rings.spin = $+22*FU
+			hud.rings.shake = $+TR/4
+		end
+		*/
+		hud.rings.shake = TR/2
+	end
+	
+	if hud.rings.spin
+		if not (hud.rings.spin > 44*FU)
+			hud.rings.spin = FixedMul($,FU*8/10)
+		else
+			hud.rings.spin = $*8/10
+		end
+	end
+	if hud.rings.shake
+		hud.rings.shake = $-1
+	end
+	
 	if hud.rthh.tics
 		hud.rthh.tics = $-1
 	end
@@ -1356,6 +1386,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 	if (takis.transfo & TRANSFO_SHOTGUN)
 		local gun = takis.shotgun
 		if not (gun and gun.valid)
+		and not (takis.c3)
 			local x = cos(p.drawangle-ANGLE_90)
 			local y = sin(p.drawangle-ANGLE_90)
 			
@@ -2803,6 +2834,10 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 		
 		if (takis.inChaos)
 			P_DamageMobj(tm,t,t,1)
+			return
+		end
+		if (gametype == GT_SRBZ)
+			P_DamageMobj(tm,t,t,P_RandomRange(10,15))
 			return
 		end
 	else
@@ -4771,18 +4806,24 @@ rawset(_G,"R_GetScreenCoords",function(v, p, c, mx, my, mz)
 	end -- MonsterIestyn, your bloody table fixing...
 
 	if x > ANGLE_90 or x < ANGLE_270 then
-		return -9, -9, 0
+		return -320, -100, 0
 	else
 		x = FixedMul(tan(x, true), 160<<FRACBITS)+160<<FRACBITS
 	end
-
+	
+	local pointtodist = R_PointToDist2(camx, camy, mx, my)
+	if not pointtodist then
+		pointtodist = 1
+	end
+	
+	
 	local y = camz-mz
 	--print(y/FRACUNIT)
-	y = FixedDiv(y, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my) or 1))
+	y = FixedDiv(y, FixedMul(distfact, pointtodist))
 	y = (y*160)+(100<<FRACBITS)
 	y = y+tan(camaiming, true)*160
  
-	local scale = FixedDiv(160*FRACUNIT, FixedMul(distfact, R_PointToDist2(camx, camy, mx, my)))
+	local scale = FixedDiv(160*FRACUNIT, FixedMul(distfact, pointtodist))
 	--print(scale)
 
 	return x, y, scale
@@ -4956,6 +4997,11 @@ rawset(_G, "TakisSpawnDustRing", function(mo, speed, thrust, num, alwaysabove)
 end)
 
 rawset(_G,"TakisKart_SpawnSpark",function(car,angle,color,realspark,nobackthrust)
+	if (netgame)
+	and (car.type == MT_PLAYER)
+		return
+	end
+	
 	local momx,momy = car.momx*2, car.momy*2
 	if nobackthrust
 		momx,momy = 0,0
@@ -5022,6 +5068,7 @@ end)
 -- https://github.com/STJr/Kart-Public/blob/master/src/k_kart.c
 -- line 2551
 rawset(_G,"TakisFancyExplode",function(x,y,z,radius,count,type,minz,maxz,centered)
+	if (netgame and isdedicatedserver) then return end
 	
 	for i = 0,count
 		local fa = FixedAngle(i*FixedDiv(360*FU,count*FU))

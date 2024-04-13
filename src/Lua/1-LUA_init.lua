@@ -55,18 +55,18 @@ table.insert(constlist,{"TAKIS_ISDEBUG",true})
 rawset(_G, "TAKIS_DEBUGFLAG", 0)
 local dbgflags = {
 	"BUTTONS",
-	"PAIN",
+	"STATE",
 	"ACH",
 	"QUAKE",
 	"HAPPYHOUR",
 	"ALIGNER",
 	"PFLAGS",
 	"BLOCKMAP",
-	"DEATH",
 	"SPEEDOMETER",
 	"HURTMSG",
 	"BOSSCARD",
 	"NET",
+	"MUSIC",
 }
 for k,v in ipairs(dbgflags)
 	local val = 1<<(k-1)
@@ -559,6 +559,7 @@ rawset(_G, "TakisInitTable", function(p)
 		lastemeralds = 0,
 		lastss = 0,
 		lastpos = {x=p.realmo.x,y=p.realmo.y,z=p.realmo.z},
+		lastrings = 0,
 		achfile = 0,
 		drilleffect = 0,
 		issuperman = false,
@@ -602,6 +603,7 @@ rawset(_G, "TakisInitTable", function(p)
 		pitfunny = false,
 		pitcount = 0,
 		pittime = 0,
+		pitbackup = {p.realmo.x,p.realmo.y,p.realmo.z,p.realmo.angle},
 		lastcarry = 0,
 		afterimagecount = 0,
 		
@@ -896,7 +898,9 @@ rawset(_G, "TakisInitTable", function(p)
 			},
 			rings = {
 				FIXED = {19*FU, 56*FU},
-				int = {117, 43}
+				int = {117, 43},
+				spin = 0,
+				shake = 0,
 			},
 			--timer has 2 different sets for spectator and when finished
 			--you can tell this was way before i knew how to align
@@ -1286,7 +1290,7 @@ for i = 0,12
 		text = "0"..i
 	end
 	SafeFreeslot("sfx_krte"..text)
-	--sfxinfo[sfx_krte00+i].caption = "/"
+	sfxinfo[sfx_krte00+i].caption = "/"
 end
 
 --spr_ freeslot
@@ -1810,11 +1814,49 @@ SafeFreeslot("MT_SHOTGUN_BOX")
 SafeFreeslot("MT_SHOTGUN_ICON")
 SafeFreeslot("MT_SHOTGUN_GOLDBOX")
 
+function A_GoldMonitorPop(mo)
+	--override shotgun boxesx
+	--these guys use a different action
+	if mo.type == MT_SHOTGUN_GOLDBOX
+		
+		local item = 0
+		if mo.info.damage == MT_UNKNOWN
+			super(mo)
+			return
+		else
+			item = mo.info.damage
+		end
+		
+		if item == 0
+			super(mo)
+			return
+		end
+		
+		if (mo.target and mo.target.player)
+			mo.target.player.numboxes = $-1
+		end
+		mo.fuse = 0
+		
+		local itemmo = P_SpawnMobjFromMobj(mo,0,0,13*FU,item)
+		itemmo.target = mo.target
+		itemmo.forcebox = mo.forcebox
+		
+		S_StartSound(mo,mo.info.deathsound)
+		
+		mo.flags = $ &~(MF_MONITOR|MF_SHOOTABLE)
+		
+		return
+	else
+		super(mo)
+	end
+	
+end
+
 function A_MonitorPop(mo)
 	--override shotgun boxesx
 	if mo.type == MT_SHOTGUN_BOX
-	--these guys use a different action
 	--or mo.type == MT_SHOTGUN_GOLDBOX
+	--these guys use a different action
 		
 		local item = 0
 		if mo.info.damage == MT_UNKNOWN

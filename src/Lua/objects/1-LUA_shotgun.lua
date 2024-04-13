@@ -264,6 +264,10 @@ end,MT_TAKIS_GUNSHOT)
 addHook("MapThingSpawn",function(mo,mt)
 	if mt.options & MTF_AMBUSH
 		mo.type = MT_SHOTGUN_GOLDBOX
+		if mt.options & MTF_OBJECTSPECIAL
+			mo.forcebox = true
+		end
+		return
 	end
 	if mt.options & MTF_OBJECTSPECIAL
 		mo.forcebox = true

@@ -1882,7 +1882,6 @@ end,MT_NIGHTSDRONE)
 --SUMMIT!
 addHook("GameQuit",function(quit)
 	if not quit then return end
-	if (gamestate == GS_LEVEL) then return end
 	
 	S_StopMusic(consoleplayer)
 	S_StartSound(nil,sfx_summit)
