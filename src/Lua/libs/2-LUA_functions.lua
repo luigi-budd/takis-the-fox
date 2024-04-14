@@ -2350,7 +2350,7 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 	local salnum = #skincolors[ColorOpposite(p.skincolor)]
 	if not (takis.starman)
 	--laggy model? dont color shift if it is!
-	and not (models and takis.io.laggymodel)
+	and not (models and consoleplayer.takistable.io.laggymodel)
 		takis.afterimagecolor = $+1
 		if (takis.afterimagecolor > #skincolors-1-salnum)
 			takis.afterimagecolor = 1

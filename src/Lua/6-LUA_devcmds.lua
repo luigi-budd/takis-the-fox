@@ -304,8 +304,14 @@ COM_AddCommand("kart", function(p)
 		return	
 	end
 	
-	local x,y = ReturnTrigAngles(p.mo.angle+ANGLE_90)
-	P_SpawnMobjFromMobj(p.mo,-75*x,-75*y,0,MT_TAKIS_KART)
+	if not circuitmap
+		local x,y = ReturnTrigAngles(p.mo.angle+ANGLE_90)
+		local k = P_SpawnMobjFromMobj(p.mo,-75*x,-75*y,0,MT_TAKIS_KART)
+		k.angle = p.mo.angle
+	else
+		local k = P_SpawnMobjFromMobj(p.mo,0,0,0,MT_TAKIS_KART)
+		k.angle = p.mo.angle
+	end
 	
 end,COM_ADMIN)
 

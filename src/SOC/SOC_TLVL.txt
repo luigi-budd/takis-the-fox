@@ -39,7 +39,7 @@ Level Z3
 Levelname = Test Room
 Act = 0
 NoZone = true
-Music = REDROM
+Music = TESTMP
 TypeOfLevel = Singleplayer,Coop,CTF,Match
 Lua.Takis_HH_Music = _DROWN
 Lua.Takis_HH_NoEndMusic = true

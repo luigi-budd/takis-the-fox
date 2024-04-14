@@ -396,6 +396,7 @@ addHook("TouchSpecial", function(post,touch)
 		end
 	end
 	if not post.activators.first[touch]
+	and not circuitmap
 		if ((post.activators.first[touch] == false) 
 		or (post.activators.first[touch] == nil))
 			touch.player.takistable.HUD.menutext.tics = 3*TR+9

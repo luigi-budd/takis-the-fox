@@ -1606,7 +1606,7 @@ addHook("PlayerThink", function(p)
 							
 							P_DoJump(p,false)
 							me.state = S_PLAY_ROLL
-							me.momz = FixedMul(basemomz+(time*FU/8),me.scale)*takis.gravflip
+							L_ZLaunch(me,basemomz+(time*FU/8)*takis.gravflip)
 							
 							S_StartSoundAtVolume(me,sfx_kc52,180)
 							
@@ -1716,6 +1716,10 @@ addHook("PlayerThink", function(p)
 				or (takis.drilleffect and takis.drilleffect.valid)
 				and not takis.shotgunned
 				or (takis.bashtime)
+				or (p.inkart and (me.tracer and me.tracer.valid) and me.tracer.type == MT_TAKIS_KART_HELPER 
+					and takis.accspeed >= 45*FU --FixedHypot(me.tracer.momx,me.tracer.momy) >= 45*FU
+					and (true == false)
+				)
 					if not takis.shotgunned
 						takis.clutchingtime = $+1
 					end
@@ -1837,7 +1841,7 @@ addHook("PlayerThink", function(p)
 			
 			--stuff to do while grounded
 			if takis.onGround
-				takis.coyote = 4
+				takis.coyote = 8+(p.cmd.latency)
 				takis.bashcooldown = false
 				
 				if not takis.pitanim
@@ -4451,6 +4455,7 @@ addHook("MobjMoveCollide",function(tm,t)
 					tm.angle = t.angle
 					p.drawangle = t.angle
 				end
+				car.sprung = true
 				return
 			end
 			if ((mobjinfo[t.type].mass == 0) and (mobjinfo[t.type].damage > 0))

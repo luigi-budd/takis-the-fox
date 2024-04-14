@@ -316,6 +316,7 @@ local function driftval(p,car, countersteer)
 end
 
 local function movementstuff(p,car,maxspeed,oldspeed)
+	if oldstuff then return end
 	
 	local speed = R_PointToDist2(car.momx,car.momy,0,0)
 	if speed > maxspeed
@@ -382,6 +383,18 @@ local function driftstuff(p,car)
 					car.drifttime = $+1
 					car.driftspark = $+FU
 					
+					local diff = car.oldangle-car.angle
+					local sign = 1
+					if car.drift < 0
+						sign = -1
+					end
+					local drift = car.drift*sign
+					
+					if abs(car.drift) >= 3
+						p.drawangle = car.angle-diff-(car.momt*24)
+					else
+						p.drawangle = car.angle-diff
+					end
 					local x,y = ReturnTrigAngles(p.drawangle)
 					
 					local spawner = P_SpawnMobjFromMobj(car,-30*x,-30*y,0,MT_THOK)
@@ -416,7 +429,7 @@ local function driftstuff(p,car)
 								thrust = -P_RandomRange(1,6)*car.scale,
 								thrustspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
 								
-								momz = P_RandomRange(0,5)*me.scale*(TakisKart_DriftLevel(car.driftspark)/2),
+								momz = P_RandomRange(0,5)*me.scale*(TakisKart_DriftLevel(car.driftspark)),
 								momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
 								
 								scale = me.scale,
@@ -449,6 +462,13 @@ local function driftstuff(p,car)
 							TakisKart_SpawnSpark(spawn,angle,SKINCOLOR_ORANGE,true)
 						end
 						
+						if P_RandomChance(FU/10)
+							for i = 10,P_RandomRange(15,20)
+								local angle = car.angle+FixedAngle(P_RandomRange(-20,20)*FU+P_RandomFixed())
+								local color = TakisKart_DriftColor(TakisKart_DriftLevel(car.driftspark))
+								TakisKart_SpawnSpark(spawn,angle,color)					
+							end
+						end
 					end
 					
 					if TakisKart_DriftLevel(car.driftspark) ~= car.olddlevel
@@ -474,7 +494,9 @@ local function driftstuff(p,car)
 				end
 				
 			end
-			car.momt = $+(car.drift*2*FU)
+			if P_IsObjectOnGround(car)
+				car.momt = $+(car.drift*2*FU)
+			end
 		else
 			--keep our drift if we let go midair
 			
@@ -721,6 +743,7 @@ end,MT_TAKIS_KART_HELPER)
 addHook("MobjMoveBlocked",function(car,thing,line)
 	if ((thing) and (thing.valid)) or ((line) and (line.valid))
 		if FixedHypot(car.momx,car.momy) < 7*car.scale then return end
+		if (car.sprung) and car.momz*P_MobjFlip(car) > 0 then return end
 		
 		local oldangle = car.angle
 		if thing and thing.valid
@@ -781,6 +804,8 @@ local function carinit(car)
 	car.turning = false
 	car.accel = 0
 	car.enginesound = 0
+	car.sprung = false
+	car.jumped = false
 end
 
 addHook("MobjThinker",function(car)
@@ -822,14 +847,14 @@ addHook("MobjThinker",function(car)
 	p.powers[pw_carry] = CR_TAKISKART
 	p.kartingtime = $+1 or 0
 	
-	local dist = 60
+	local dist = 100
 	local x,y = me.x,me.y
 	
 	--takis.lastpos is {x=me.x,y=me.y,z=me.z} in a PostThink, where "me" is p.realmo
-	if x+dist*me.scale < takis.lastpos.x
-	or x-dist*me.scale > takis.lastpos.x
-	or y+dist*me.scale < takis.lastpos.y
-	or y-dist*me.scale > takis.lastpos.y
+	if x+(dist*me.scale) < takis.lastpos.x
+	or x-(dist*me.scale) > takis.lastpos.x
+	or y+(dist*me.scale) < takis.lastpos.y
+	or y-(dist*me.scale) > takis.lastpos.y
 		P_MoveOrigin(car,x,y,me.z)
 	end
 	
@@ -839,7 +864,7 @@ addHook("MobjThinker",function(car)
 	local grounded = P_IsObjectOnGround(car)
 	
 	car.radius,car.height = me.radius,me.height
-	me.momx,me.momy,me.momz = car.momx,car.momy,car.momz
+	me.momx,me.momy = car.momx,car.momy
 	
 	car.basemaxspeed = 45*me.scale
 	local basemaxspeed = car.basemaxspeed
@@ -944,41 +969,70 @@ addHook("MobjThinker",function(car)
 	end
 	
 	if cmd.forwardmove
-	and grounded		
 		local acceldir = (cmd.forwardmove > 0) and 1 or -1
 		if acceldir == 1
 			if car.accel < 0
 				local ab = (car.accel > 0) and 1 or -1
 				car.accel = (abs($)*4/5)*ab
 			end
-			if car.accel+accel < maxspeed/8
+			if car.accel+accel < car.maxspeed/8
 				car.accel = $+accel
 			end
 		else
 			if car.accel > 0
 				car.accel = $*4/5
 			end
-			if car.accel-accel > -maxspeed/8
+			if car.accel-accel > -car.maxspeed/8
 				car.accel = $-accel
 			end
 		end
 	else
-		local ab = (car.accel > 0) and 1 or -1
-		car.accel = (abs($)*4/5)*ab
+		if grounded
+			local ab = (car.accel > 0) and 1 or -1
+			car.accel = (abs($)*4/5)*ab
+		end
+	end
+	if car.accel > car.maxspeed/8
+		car.accel = car.maxspeed/8
 	end
 	
 	car.oldspeed = R_PointToDist2(car.momx - p.cmomx,car.momy - p.cmomy,0,0)
 	local thrustangle = car.angle
 	if car.drift ~= 0
 	and grounded
-		thrustangle = car.angle-((ANGLE_45/9)*car.drift)
+		thrustangle = car.angle-(FixedAngle((AngleFixed(ANGLE_45)/9)*car.drift))
 	end
 	
 	local movethrust = FixedMul(FixedMul(car.friction,car.movefactor), car.accel)
+	if not grounded
+		movethrust = $/10
+	end
 	P_Thrust(car, thrustangle, movethrust)
 	
+	/*
+	print("speed",
+		"oldspeed - 	"..L_FixedDecimal(car.oldspeed,3),
+		"speed - 		"..L_FixedDecimal(takis.accspeed,3),
+		"normalspeed - 	"..L_FixedDecimal(car.maxspeed,3),
+		"accel. max -	"..L_FixedDecimal(car.maxspeed/8,3),
+		"accel. inc. - 	"..L_FixedDecimal(accel,3),
+		"car.accel - 	"..L_FixedDecimal(car.accel,3),
+		"movethrust - 	"..L_FixedDecimal(movethrust,3),
+		"movefactor - 	"..L_FixedDecimal(car.movefactor,3),
+		"friction - 	"..L_FixedDecimal(car.friction,3)
+	)
+	car.momx = $+P_ReturnThrustX(nil,thrustangle,car.accel)
+	car.momy = $+P_ReturnThrustY(nil,thrustangle,car.accel)
+	car.momx,car.momy = FixedMul($1,slow),FixedMul($2,slow)
+	*/
+	
+	movementstuff(p,car,maxspeed,car.oldspeed)
+	
+	P_ButteredSlope(car)
+	P_ButteredSlope(car)
+	
 	if grounded
-	and (FixedHypot(car.momx,car.momy) >= 50*car.scale
+	and (FixedHypot(car.momx,car.momy) >= 60*car.scale
 	or car.drift ~= 0)
 		for i = 0,1
 			local momx,momy = 0,0
@@ -987,50 +1041,56 @@ addHook("MobjThinker",function(car)
 			end
 			
 			local track = P_SpawnMobjFromMobj(car,momx,momy,0,MT_THOK)
-			track.lifetime = 5*TR
+			track.lifetime = 10*TR
 			track.sprite = SPR_WDRG
 			track.frame = F
 			track.tics,track.fuse = track.lifetime,track.lifetime
 			track.renderflags = RF_OBJECTSLOPESPLAT|RF_NOSPLATBILLBOARD|RF_FLOORSPRITE
 			track.angle = thrustangle
+			track.flags = $ &~(MF_NOSECTOR|MF_NOBLOCKMAP)
 		end
 	end
 	
-	/*
-		car.momx = $+P_ReturnThrustX(nil,thrustangle,car.accel)
-		car.momy = $+P_ReturnThrustY(nil,thrustangle,car.accel)
-	*/
-	car.momx,car.momy = FixedMul($1,slow),FixedMul($2,slow)
-	
-	movementstuff(p,car,maxspeed,car.oldspeed)
-	
-	P_ButteredSlope(car)
-	P_ButteredSlope(car)
 	--
 	
 	--jump
+	local jumped = false
 	if (cmd.buttons & BT_JUMP)
 	and not (p.lastbuttons & BT_JUMP)
-	and grounded
+	and (grounded or takis.coyote)
 	and car.drift == 0
 	and not car.inpain
-		P_SetObjectMomZ(car,10*car.scale)
+		P_SetObjectMomZ(car,15*car.scale)
 		S_StartSound(car,sfx_ngjump)
+		car.jumped = true
+		jumped = true
+	end
+	if not (cmd.buttons & BT_JUMP)
+	and car.jumped
+	and car.momz*P_MobjFlip(car) > 0
+		car.momz = $/2
+		car.jumped = false
 	end
 	--
 	
 	local flashingtics = flashingtics/2
 	if not grounded
 		if car.takiscar
+		and not (car.sprung)
 			car.momz = $+(P_GetMobjGravity(car)*3/5*P_MobjFlip(car))
 		end
 		if car.inpain
+			car.jumped = false
 			car.momz = $+(P_GetMobjGravity(car)*2/5*P_MobjFlip(car))
 			if takis.fakeflashing < flashingtics-2
 				takis.fakeflashing = flashingtics
 			end
 		end
 	else
+		if not jumped
+			car.jumped = false
+		end
+		car.sprung = false
 		if car.inpain
 			if car.oldmomz ~= nil
 			and car.oldmomz <= -5*car.scale
@@ -1097,8 +1157,8 @@ addHook("MobjThinker",function(car)
 			end
 			local drift = car.drift*sign
 			
-			if drift >= 3
-				p.drawangle = car.angle-diff-(car.momt*20)
+			if abs(car.drift) >= 3
+				p.drawangle = car.angle-diff-(car.momt*24)
 			else
 				p.drawangle = car.angle-diff
 			end
