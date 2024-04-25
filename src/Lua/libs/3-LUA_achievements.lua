@@ -23,6 +23,7 @@ local achs = {
 	"OFFICER",
 	"RIPANDTEAR",
 	"PACIFIST",
+	"VERYLAME",
 	
 }
 for k,v in ipairs(achs)

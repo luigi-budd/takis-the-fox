@@ -19,6 +19,7 @@ local transtonum = {
 	[FF_TRANS30] = 3,
 	[FF_TRANS20] = 2,
 	[FF_TRANS10] = 1,
+	[0] = 0
 }
 local numtotrans = {
 	[9] = FF_TRANS90,
@@ -72,9 +73,16 @@ addHook("MobjThinker", function(ai)
 	ai.spriteyscale = ai.takis_spriteyscale or FU
 	ai.rollangle = ai.takis_rollangle or 0
 	
-	local transnum = numtotrans[((ai.timealive*2/3)+1) %9]
-	ai.frame = ai.takis_frame|transnum
-	ai.blendmode = AST_ADD
+	if not ai.old
+		local transnum = numtotrans[((ai.timealive*2/3)+1) %9]
+		ai.frame = ai.takis_frame|transnum
+	else
+		if (leveltime % 6) > 3
+			ai.frame = ai.takis_frame
+		else
+			ai.frame = ai.takis_frame|FF_TRANS30
+		end
+	end
 	
 	if (displayplayer and displayplayer.valid)
 		if not (camera.chase)
@@ -680,8 +688,31 @@ addHook("MobjDeath",function(mo,i,s)
 	gst.fuse = 3*TR
 	
 	S_StartSound(gst,mobjinfo[MT_SPIKE].deathsound)
-
+	
 	for i = 0,5
+		TakisSpawnDust(mo,
+			FixedAngle( P_RandomRange(-337,337)*FRACUNIT ),
+			10,
+			P_RandomRange(0,(mo.height/mo.scale)/2)*mo.scale,
+			{
+				xspread = 0,
+				yspread = 0,
+				zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+				
+				thrust = 0,
+				thrustspread = 0,
+				
+				momz = P_RandomRange(10,-5)*mo.scale,
+				momzspread = 0,
+				
+				scale = mo.scale/2,
+				scalespread = P_RandomFixed(),
+				
+				fuse = 20,
+			}
+		)
+		
+		/*
 		local debris = P_SpawnMobjFromMobj(mo,
 			(P_RandomRange(-10,10)*mo.scale),
 			(P_RandomRange(-10,10)*mo.scale),
@@ -696,6 +727,7 @@ addHook("MobjDeath",function(mo,i,s)
 		debris.flags = $ &~MF_NOGRAVITY
 		L_ZLaunch(debris,10*mo.scale)
 		P_Thrust(debris,InvAngle(debris.angle),2*mo.scale)
+		*/
 	end
 	
 end,MT_SPIKEBALL)
@@ -863,6 +895,14 @@ local types = {
 
 local function makespecial(mo)
 	mo.takis_givecombotime = true
+	if mo.type == MT_RING
+	or mo.type == MT_COIN
+	or mo.type == MT_BLUESPHERE
+	or mo.type == MT_TOKEN
+	or mo.type == MT_REDTEAMRING
+	or mo.type == MT_BLUETEAMRING
+		mo.takis_ringtype = true
+	end
 end
 
 for k,type in pairs(types)

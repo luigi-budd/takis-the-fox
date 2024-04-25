@@ -416,7 +416,6 @@ COM_AddCommand("killme",function(p,type)
 	type = _G["DMG_"..type] or DMG_INSTAKILL
 	P_KillMobj(p.realmo,nil,nil,type)
 	p.takistable.saveddmgt = type
-	p.deadtimer = 1
 	
 end,COM_ADMIN)
 
@@ -493,11 +492,7 @@ COM_AddCommand("setach", function(p, num)
 	local file = p.takistable.achfile
 	local enum = 1<<tonumber(num)
 	
-	if file & enum
-		file = $ &~enum
-	else
-		TakisAwardAchievement(p,enum)
-	end
+	TakisAwardAchievement(p,enum)
 	
 end,COM_ADMIN)
 

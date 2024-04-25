@@ -399,6 +399,7 @@ local function calcstatusface(p,takis)
 		--doom's godmode face
 		if (p.pflags & PF_GODMODE)
 			takis.HUD.statusface.state = "GOD_"
+			takis.HUD.statusface.frame = (leveltime/3)%2
 			takis.HUD.statusface.priority = 5
 		end
 		
@@ -643,10 +644,10 @@ local function drawrings(v,p)
 		return
 	end
 
-	local ringpatch = "RING"
 	
 	local takis = p.takistable
 	
+	local ringpatch = takis.HUD.rings.sprite
 	local flash = false
 	
 	if p.rings == 0
@@ -664,10 +665,6 @@ local function drawrings(v,p)
 	
 	flash = (flash and ((leveltime%(2*TR)) < 30*TR) and (leveltime/5 & 1))
 
-	if flash
-		ringpatch = "TRNG"
-	end
-		
 	local eflag = V_HUDTRANS
 	if p.spectator then eflag = V_HUDTRANSHALF end
 	
@@ -690,8 +687,23 @@ local function drawrings(v,p)
 			ringy = $+battleoffset	
 		end
 		
-		local spinframe = FixedInt(takis.HUD.rings.spin) % 22
+		local spinframe = 0
+		if takis.HUD.rings.ringframe ~= 0
+			spinframe = FixedInt(takis.HUD.rings.spin) % takis.HUD.rings.ringframe
+		end
+		
 		local patch,flip = v.getSpritePatch(ringpatch, spinframe, 0)
+		if patch == nil
+			if takis.HUD.rings.ringframe ~= 0
+				patch = v.getSpritePatch(ringpatch, spinframe-1, 0)
+				--still???
+				if patch == nil
+					patch = v.getSpritePatch(ringpatch, 0, 0)
+				end
+			else
+				patch = v.getSpritePatch(ringpatch, 0, 0)
+			end
+		end
 		eflag = $|(flip and V_FLIP or 0)
 		
 		if takis.HUD.rings.shake
@@ -713,6 +725,21 @@ local function drawrings(v,p)
 			ringFy = $+shakey
 		end
 		
+		local colormap
+		
+		if G_GametypeHasTeams()
+		and ringpatch == "TRNG"
+			if p.spectator
+				ringpatch = "RING"
+			else
+				colormap = v.getColormap(nil,p.ctfteam == 1 and skincolor_redring or skincolor_bluering)
+			end
+		end
+		
+		if flash
+			colormap = v.getColormap(TC_RAINBOW,SKINCOLOR_RED)
+		end
+		
 		--classic x = 102
 		v.drawScaled(
 			ringFx,
@@ -720,7 +747,7 @@ local function drawrings(v,p)
 			FU/2,
 			patch,
 			V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER,
-			v.getColormap(nil,SKINCOLOR_RED)
+			colormap
 		)
 		v.drawNum(
 			ringx,
@@ -737,7 +764,7 @@ local function drawrings(v,p)
 			FU/4,
 			v.getSpritePatch(ringpatch, A, 0, 0),
 			V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER,
-			v.getColormap(nil,SKINCOLOR_RED)
+			nil
 		)
 		v.drawString(45,45+off,
 			p.rings,
@@ -1748,11 +1775,13 @@ local function drawclutches(v,p,cam)
 		local flip = 1
 		local bubble = v.cachePatch(pre.."BACK")
 		local angdiff = ANGLE_90
-		local x, y, scale
+		local x, y, scale, nodraw
 		local cutoff = function(y) return false end
 		
 		if cam.chase and not (player.awayviewtics and not (me.flags2 & MF2_TWOD))
-			x, y, scale = R_GetScreenCoords(v, player, cam, mo)
+			x, y, scale, nodraw = R_GetScreenCoords(v, player, cam, mo)
+			if nodraw then return end
+			
 			scale = $*2
 			if mo.eflags & MFE_VERTICALFLIP
 			and player.pflags & PF_FLIPCAM
@@ -1867,11 +1896,13 @@ local function drawnadocount(v,p,cam)
 	local flip = 1
 	local bubble = v.cachePatch("CMBCF"..takis.nadocount)
 	local angdiff = ANGLE_90
-	local x, y, scale
+	local x, y, scale, nodraw
 	local cutoff = function(y) return false end
 	
 	if cam.chase and not (player.awayviewtics and not (me.flags2 & MF2_TWOD))
-		x, y, scale = R_GetScreenCoords(v, player, cam, mo)
+		x, y, scale, nodraw = R_GetScreenCoords(v, player, cam, mo)
+		if nodraw then return end
+		
 		scale = $*2
 		if mo.eflags & MFE_VERTICALFLIP
 		and player.pflags & PF_FLIPCAM
@@ -3461,7 +3492,7 @@ local function drawcosmenu(v,p)
 			shakex,shakey = happyshakelol(v,menu.y+1,true)
 			v.drawString(pos.x*FU+shakex, (200-pos.y)*FU-10*FU+shakey,
 				page.hints[menu.y+1],
-				V_GRAYMAP|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE,
+				V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE,
 				"thin-fixed"
 			)
 		end
@@ -3940,12 +3971,14 @@ local function drawtransfotimer(v,p,cam)
 		local bubble = v.cachePatch(pre.."BAR")
 		local fill = v.cachePatch(pre.."FILL")
 		local mark = v.cachePatch(pre.."TIC")
-		local x, y, scale
+		local x, y, scale, nodraw
 		local cutoff = function(y) return false end
 		local bottom = false
 		
 		if cam.chase and not (p.awayviewtics and not (me.flags2 & MF2_TWOD))
-			x, y, scale = R_GetScreenCoords(v, p, cam, me)
+			x, y, scale, nodraw = R_GetScreenCoords(v, p, cam, me)
+			if nodraw then return end
+			
 			scale = $*2
 			if me.eflags & MFE_VERTICALFLIP
 			and p.pflags & PF_FLIPCAM
@@ -4152,12 +4185,14 @@ local function drawdriftmeter(v,p,cam)
 	local flip = 1
 	local bubble = v.cachePatch("TA_KDRIFT_BAR")
 	local fill = v.cachePatch("TA_KDRIFT_FILL")
-	local x, y, scale
+	local x, y, scale, nodraw
 	local cutoff = function(y) return false end
 	local bottom = false
 	
 	if cam.chase and not (p.awayviewtics and not (me.flags2 & MF2_TWOD))
-		x, y, scale = R_GetScreenCoords(v, p, cam, me)
+		x, y, scale, nodraw = R_GetScreenCoords(v, p, cam, me)
+		if nodraw then return end
+		
 		scale = $*2
 		if me.eflags & MFE_VERTICALFLIP
 		and p.pflags & PF_FLIPCAM
@@ -4469,6 +4504,44 @@ local function drawracelaps(v,p)
 	end
 end
 
+--rsneo
+local function drawviewmodel(v,p,cam)
+	if (customhud.CheckType("takis_viewmodel") != modname) return end	
+	
+	if (skins[p.skin].name ~= TAKIS_SKIN)
+		return
+	end
+	
+	local takis = p.takistable
+	local me = p.realmo	
+	
+	if not (me and me.valid) then return end
+	
+	if cam.chase
+		return
+	end
+	
+	local framenum = (takis.HUD.viewmodel.frameinc/4)+1
+	local patch = v.cachePatch("TA_VIEW_"..framenum)
+	local col = v.getColormap((me.colorized and TC_RAINBOW or TC_DEFAULT), me.color)
+	local scale = FU*3/2
+	local x, y
+	
+	x = 151*FU + takis.HUD.viewmodel.bobx
+	y = 220*FU + takis.HUD.viewmodel.boby
+	
+	if not splitscreen
+		v.drawScaled(x,
+			y,
+			scale,
+			patch,
+			V_SNAPTOBOTTOM|V_PERPLAYER,
+			col
+		)
+	end
+	
+end
+
 /*
 local function drawbubbles(v,p,cam)
 	--chrispy chars
@@ -4665,7 +4738,11 @@ local function drawdebug(v,p)
 		
 		--these arent really flags so it wouldnt make sense to draw them like they are
 		v.drawString(x,y-128,"pw_carry",flags,"thin")
-		v.drawString(x,y-120,getcarry[p.powers[pw_carry]] or "Unknown",flags,"thin")
+		if not p.inkart
+			v.drawString(x,y-120,getcarry[p.powers[pw_carry]] or "Unknown",flags,"thin")
+		else
+			v.drawString(x,y-120,"TAKISKART",flags,"thin")
+		end
 		
 		v.drawString(x,y-108,"pw_strong",flags,"thin")
 		drawflag(v,x+00,y-100,"NN",flags,V_GREENMAP,V_REDMAP,"thin",(p.powers[pw_strong] & STR_NONE))
@@ -5201,7 +5278,7 @@ local function drawdebug(v,p)
 		
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_NET)
-		local dex = 7
+		local dex = 8
 		local cv = {
 			[1] = CV_TAKIS.nerfarma,
 			[2] = CV_TAKIS.tauntkills,
@@ -5210,6 +5287,7 @@ local function drawdebug(v,p)
 			[5] = CV_TAKIS.heartcards,
 			[6] = CV_TAKIS.hammerquake,
 			[7] = CV_TAKIS.chaingun,
+			[8] = CV_TAKIS.noeffects,
 		}
 		local net = {
 			[1] = TAKIS_NET.nerfarma,
@@ -5219,6 +5297,7 @@ local function drawdebug(v,p)
 			[5] = TAKIS_NET.cards,
 			[6] = TAKIS_NET.hammerquakes,
 			[7] = TAKIS_NET.chaingun,
+			[8] = TAKIS_NET.noeffects,
 		}
 		local name = {
 			[1] = "Nerf arma",
@@ -5228,6 +5307,7 @@ local function drawdebug(v,p)
 			[5] = "Cards",
 			[6] = "Hammer quakes",
 			[7] = "Chaingun",
+			[8] = "No effects",
 		}
 		local boolclr = {
 			[true] = "\x83",
@@ -5271,7 +5351,7 @@ local function drawdebug(v,p)
 			"thin"
 		)
 		v.drawString(100,bottom+8,
-			"count: E "..m.exitingcount..", T "..m.takiscount..", "..m.playercount,
+			"count: exit: "..m.exitingcount..", takis: "..m.takiscount..", other: "..m.playercount,
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			"thin"
 		)
@@ -5379,7 +5459,6 @@ end
 
 --draw the stuff
 --customhud.SetupItem("takis_wareffect", 		modname/*,	,	"game",	1*/)
-customhud.SetupItem("takis_freezing", 		modname/*,	,	"game",	1*/)
 customhud.SetupItem("takis_clutchstuff",	modname/*,	,	"game",	23*/) --
 customhud.SetupItem("rings", 				modname/*,	,	"game",	24*/) 
 customhud.SetupItem("time", 				modname/*,	,	"game",	25*/) 
@@ -5407,6 +5486,7 @@ customhud.SetupItem("takis_transfotimer", 	modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_kart_driftmeter",modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_kart_meters",	modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_racelaps",		modname/*,	,	"game",	10*/)
+customhud.SetupItem("takis_viewmodel",		modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
 
 addHook("HUD", function(v,p,cam)
@@ -5434,12 +5514,19 @@ addHook("HUD", function(v,p,cam)
 		drawhappytime(v,p)
 		if takis.isTakis
 			
+			local opmode = (me and me.valid and me.state == S_OBJPLACE_DUMMY) or false
+			
 			--customhud.SetupItem("takis_wareffect", 		modname)
-			customhud.SetupItem("takis_freezing", 		modname)
 			customhud.SetupItem("takis_clutchstuff",	modname)
-			customhud.SetupItem("rings", 				modname) 
-			customhud.SetupItem("time", 				modname) 
-			customhud.SetupItem("score", 				modname) 
+			if opmode
+				customhud.SetupItem("rings", 			altmodname) 
+				customhud.SetupItem("time", 			altmodname) 
+				customhud.SetupItem("score", 			altmodname) 
+			else
+				customhud.SetupItem("rings", 			modname) 
+				customhud.SetupItem("time", 			modname) 
+				customhud.SetupItem("score", 			modname) 
+			end
 			customhud.SetupItem("lives", 				modname)
 			customhud.SetupItem("takis_combometer", 	modname) 
 			customhud.SetupItem("takis_heartcards", 	modname)
@@ -5459,7 +5546,13 @@ addHook("HUD", function(v,p,cam)
 			customhud.SetupItem("takis_kart_driftmeter",modname)
 			customhud.SetupItem("takis_kart_meters",	modname)
 			customhud.SetupItem("takis_racelaps",		modname)
-
+			customhud.SetupItem("takis_viewmodel",		modname)
+			if takis.transfo & TRANSFO_SHOTGUN
+				customhud.SetupItem("crosshair",		modname)
+			else
+				customhud.SetupItem("crosshair",		altmodname)
+			end
+			
 			if takis.io.nohappyhour == 0
 				customhud.SetupItem("PTSR_itspizzatime",modname)
 				customhud.SetupItem("PTSR_bar",modname)
@@ -5498,6 +5591,7 @@ addHook("HUD", function(v,p,cam)
 			
 			local hasstat = CV_FindVar("perfstats").value
 			
+			drawviewmodel(v,p,cam)
 			drawclutches(v,p,cam)
 			drawnadocount(v,p,cam)
 			drawtransfotimer(v,p,cam)
@@ -5513,10 +5607,13 @@ addHook("HUD", function(v,p,cam)
 			end
 			drawlivesarea(v,p)
 			drawracelaps(v,p)
-			drawcombostuff(v,p,cam)
+			if not opmode
+				drawcombostuff(v,p,cam)
+			end
 			drawpizzatips(v,p)
 			drawpizzatimer(v,p)
 			--drawnickranks(v,p)
+			
 			if takis.nadotuttic
 				local trans = 0
 				
@@ -5533,13 +5630,14 @@ addHook("HUD", function(v,p,cam)
 				v.drawString(160,75,"C3 - Whatever",V_ALLOWLOWERCASE|trans,"thin-center")
 				
 			end
+			
 			drawcfgnotifs(v,p)
 			drawtutbuttons(v,p)
 			if not hasstat
 				drawscore(v,p)
 			end
 			drawbosstitles(v,p)
-			if not hasstat
+			if not (hasstat or opmode)
 				drawheartcards(v,p)
 				drawbosscards(v,p)
 				drawface(v,p)
@@ -5668,25 +5766,32 @@ addHook("HUD", function(v,p,cam)
 			end
 			
 		else
-			customhud.SetupItem("rings",altmodname)
-			if not (HAPPY_HOUR.othergt)
-				customhud.SetupItem("time",altmodname)
-				customhud.SetupItem("score",altmodname)
-			else
-				customhud.SetupItem("time","spicerunners")
-				customhud.SetupItem("score","spicerunners")			
-			end
-			customhud.SetupItem("lives",altmodname)
 			if takis.io.morehappyhour == 0
+			and (not takis.otherskin
+			or takis.otherskintime == 1)
 				customhud.SetupItem("PTSR_itspizzatime","spicerunners")
 			else
 				customhud.SetupItem("PTSR_itspizzatime",modname)
 			end
 			drawhappyhour(v,p)
-			customhud.SetupItem("PTSR_bar","spicerunners")
-			customhud.SetupItem("PTSR_tooltips","spicerunners")
-			customhud.SetupItem("PTSR_rank", "spicerunners")
-			customhud.SetupItem("textspectator",altmodname)
+			
+			if not takis.otherskin
+			or takis.otherskintime == 1
+				customhud.SetupItem("rings",altmodname)
+				if not (HAPPY_HOUR.othergt)
+					customhud.SetupItem("time",altmodname)
+					customhud.SetupItem("score",altmodname)
+				else
+					customhud.SetupItem("time","spicerunners")
+					customhud.SetupItem("score","spicerunners")			
+				end
+				customhud.SetupItem("lives",altmodname)
+				customhud.SetupItem("PTSR_bar","spicerunners")
+				customhud.SetupItem("PTSR_tooltips","spicerunners")
+				customhud.SetupItem("PTSR_rank", "spicerunners")
+				customhud.SetupItem("textspectator",altmodname)
+				customhud.SetupItem("crosshair",altmodname)
+			end
 			--customhud.SetupItem("rank", "pizzatime2.0")
 			
 			--elfilin stuff

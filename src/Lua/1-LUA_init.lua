@@ -243,6 +243,7 @@ rawset(_G, "TAKIS_NET", {
 	cards = true, --only spawn heartcards if this is true
 	hammerquakes = true,
 	chaingun = false,
+	noeffects = false,
 	--happytime = false,
 	
 	usedcheats = false,
@@ -606,6 +607,7 @@ rawset(_G, "TakisInitTable", function(p)
 		pitbackup = {p.realmo.x,p.realmo.y,p.realmo.z,p.realmo.angle},
 		lastcarry = 0,
 		afterimagecount = 0,
+		painoverlay = 0,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -638,6 +640,11 @@ rawset(_G, "TakisInitTable", function(p)
 		hammerblastjumped = 0,
 		hammerblastgroundtime = 0,
 		hammerblastangle = 0,
+		
+		bombdive = {
+			started = false,
+			tics = 0,
+		},
 		
 		gravflip = 1,
 		
@@ -818,7 +825,6 @@ rawset(_G, "TakisInitTable", function(p)
 		inGoop = false,
 		inFakePain = false,
 		notCarried = false,
-		isMusicOn = false,
 		onPosZ = false,
 		isElevated = false,
 		inNIGHTSMode = false,
@@ -901,6 +907,9 @@ rawset(_G, "TakisInitTable", function(p)
 				int = {117, 43},
 				spin = 0,
 				shake = 0,
+				sprite = "RING",
+				type = MT_RING,
+				ringframe = 1,
 			},
 			--timer has 2 different sets for spectator and when finished
 			--you can tell this was way before i knew how to align
@@ -1043,6 +1052,12 @@ rawset(_G, "TakisInitTable", function(p)
 					x = 0,
 					y = 0,
 				*/
+			},
+			viewmodel = {
+				bob = 0,
+				bobx = 0,
+				boby = 0,
+				frameinc = 0,
 			},
 			
 				/*
@@ -1663,20 +1678,6 @@ states[S_SOAPYWINDRINGLOL] = {
 	sprite = SPR_WDRG,
 	tics = -1,
 	frame = TR_TRANS10|FF_PAPERSPRITE|A
-}
-
-SafeFreeslot("MT_TAKIS_HAMMERHITBOX")
-SafeFreeslot("S_TAKIS_HAMMERHITBOX")
-mobjinfo[MT_TAKIS_HAMMERHITBOX] = {
-	doomednum = -1,
-	spawnstate = S_TAKIS_HAMMERHITBOX,
-	height = 60*FRACUNIT,
-	radius = 20*FRACUNIT,
-	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID
-}
-states[S_TAKIS_HAMMERHITBOX] = {
-	sprite = SPR_RING,
-	frame = A
 }
 
 SafeFreeslot("MT_TAKIS_BADNIK_RAGDOLL")

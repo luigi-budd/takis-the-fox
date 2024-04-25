@@ -87,7 +87,7 @@ CV_TAKIS.chaingun = CV_RegisterVar({
 CV_TAKIS.happytime = CV_RegisterVar({
 	name = "takis_happyhour",
 	defaultvalue = "true",
-	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	flags = CV_SHOWMODIF|CV_CALL,
 	PossibleValue = CV_TrueFalse,
 	func = function(cv)
 		if consoleplayer
@@ -104,6 +104,16 @@ CV_TAKIS.happytime = CV_RegisterVar({
 			)
 		end
 		S_StartSound(nil,sfx_ponglr,consoleplayer)
+	end
+})
+CV_TAKIS.noeffects = CV_RegisterVar({
+	name = "takis_noeffects",
+	defaultvalue = "true",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.noeffects = boolean[string.lower(cv.string)]
+		debugf("noeffects",string.lower(cv.string),tostring(t.noeffects))
 	end
 })
 
@@ -366,8 +376,9 @@ addHook("ThinkFrame", do
 		end
 	end
 	
-	if m.inbossmap
-	or (HAPPY_HOUR.happyhour)
+	if (m.inbossmap
+	or (HAPPY_HOUR.happyhour))
+	and not multiplayer
 		local pos = S_GetMusicPosition()
 		local musicname = ''
 		if m.inbossmap
