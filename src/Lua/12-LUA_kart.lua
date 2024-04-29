@@ -910,7 +910,6 @@ addHook("MobjThinker",function(car)
 	soundhandle(p,car)
 	
 	--set the stuff for the player
-	local diff = car.oldangle-car.angle
 	me.angle = car.angle
 	--look behind
 	if p.cmd.buttons & BT_CUSTOM3
@@ -948,7 +947,7 @@ addHook("MobjThinker",function(car)
 	)
 	if not car.inpain
 		if (car.drift ~= 0)
-			p.drawangle = car.angle-diff
+			p.drawangle = car.angle
 		else
 			local sign = 1
 			if car.drift < 0
@@ -957,9 +956,9 @@ addHook("MobjThinker",function(car)
 			local drift = car.drift*sign
 			
 			if abs(car.drift) >= 3
-				p.drawangle = car.angle-diff-(car.momt*24)
+				p.drawangle = car.angle-(car.momt*24)
 			else
-				p.drawangle = car.angle-diff
+				p.drawangle = car.angle
 			end
 		end
 	else

@@ -108,7 +108,7 @@ CV_TAKIS.happytime = CV_RegisterVar({
 })
 CV_TAKIS.noeffects = CV_RegisterVar({
 	name = "takis_noeffects",
-	defaultvalue = "true",
+	defaultvalue = "false",
 	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
 	PossibleValue = CV_TrueFalse,
 	func = function(cv)

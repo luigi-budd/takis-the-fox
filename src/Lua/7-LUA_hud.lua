@@ -1468,10 +1468,19 @@ local function drawlivesarea(v,p)
 			local top3 = takis.placement and takis.placement < 4
 			local inlosingplace = isplayerlosing(p)
 			local losing = inlosingplace and (leveltime/4 & 1)
-			local scorenum = (top3 and not inlosingplace) and "CMBCF"..placestring[takis.placement] or (losing and "CMBCFR" or "CMBCF")
+			local scorenum = "CMBCF"
 			local score = takis.placement
 			score = $..(placetext[takis.placement] or "?")
 			local scale = FU
+			
+			if (gametype == GT_RACE)
+				local maxlaps = CV_FindVar("numlaps").value
+				if p.laps == maxlaps-1 
+					scorenum = (top3 and not inlosingplace) and "CMBCF"..placestring[takis.placement] or (losing and "CMBCFR" or "CMBCF")
+				end
+			else
+				scorenum = (top3 and not inlosingplace) and "CMBCF"..placestring[takis.placement] or (losing and "CMBCFR" or "CMBCF")
+			end
 			
 			local prevw
 			if not prevw then prevw = 0 end
@@ -5460,21 +5469,13 @@ end
 --draw the stuff
 --customhud.SetupItem("takis_wareffect", 		modname/*,	,	"game",	1*/)
 customhud.SetupItem("takis_clutchstuff",	modname/*,	,	"game",	23*/) --
-customhud.SetupItem("rings", 				modname/*,	,	"game",	24*/) 
-customhud.SetupItem("time", 				modname/*,	,	"game",	25*/) 
-customhud.SetupItem("lives", 				modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_combometer", 	modname/*,	,	"game",	27*/) 
-customhud.SetupItem("score", 				modname/*,	,	"game",	26*/) 
 customhud.SetupItem("takis_heartcards", 	modname/*,	,	"game",	30*/) --
 customhud.SetupItem("takis_bosscards", 		modname)
 customhud.SetupItem("takis_statusface", 	modname/*,	,	"game",	31*/) --
 customhud.SetupItem("takis_c3jumpscare", 	modname/*,	,	"game",	31*/) --
 customhud.SetupItem("takis_tauntmenu", 		modname/*,	,	"game",	31*/) --
 customhud.SetupItem("takis_cosmenu", 		modname/*,	,	"game",	31*/) --
-customhud.SetupItem("rings", 				modname/*,	,	"game",	24*/) 
-customhud.SetupItem("time", 				modname/*,	,	"game",	25*/) 
-customhud.SetupItem("score", 				modname/*,	,	"game",	26*/) 
-customhud.SetupItem("lives", 				modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_cfgnotifs", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_bonuses", 		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_crosshair", 		modname/*,	,	"game",	10*/)

@@ -608,6 +608,7 @@ rawset(_G, "TakisInitTable", function(p)
 		lastcarry = 0,
 		afterimagecount = 0,
 		painoverlay = 0,
+		deathfunny = false,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -1134,6 +1135,8 @@ SafeFreeslot("sfx_tawhip")
 sfxinfo[sfx_tawhip].caption = '\x82Johnny Test!\x80'
 SafeFreeslot("sfx_takhel")
 sfxinfo[sfx_takhel].caption = '\x8EHealed!\x80'
+SafeFreeslot("sfx_takhl2")
+sfxinfo[sfx_takhl2].caption = '/'
 SafeFreeslot("sfx_smack")
 sfxinfo[sfx_smack].caption = "\x8DSmacked!\x80"
 SafeFreeslot("sfx_takoww")
@@ -1256,6 +1259,8 @@ sfxinfo[sfx_hrtcdt] = {
 	caption = "Tink",
 	flags = SF_NOMULTIPLESOUND|SF_TOTALLYSINGLE,
 }
+SafeFreeslot("sfx_taklfh")
+sfxinfo[sfx_taklfh].caption = "Land"
 
 --tb = textbox
 --open
@@ -1286,7 +1291,7 @@ sfxinfo[sfx_tkfndo].caption = "Tornado spin!"
 SafeFreeslot("sfx_takhmb")
 sfxinfo[sfx_takhmb].caption = "/"
 SafeFreeslot("sfx_sptclt")
-sfxinfo[sfx_sptclt].caption = "Collect Spirit"
+sfxinfo[sfx_sptclt].caption = "Got it!"
 SafeFreeslot("sfx_sdmkil")
 sfxinfo[sfx_sdmkil].caption = "/"
 SafeFreeslot("sfx_summit")
@@ -1335,6 +1340,7 @@ SafeFreeslot("SPR_MTLD")
 SafeFreeslot("SPR_MDST")
 SafeFreeslot("SPR_PGLR") --polar and other pongler sprites
 SafeFreeslot("SPR_KART")
+SafeFreeslot("SPR_TKEX")
 
 --
 
@@ -2108,13 +2114,12 @@ mobjinfo[MT_TAKIS_GUNSHOT] = {
 SafeFreeslot("MT_TAKIS_EXPLODE")
 SafeFreeslot("S_TAKIS_EXPLODE")
 states[S_TAKIS_EXPLODE] = {
-	sprite = SPR_MDST,
-	frame = F,
-	action = function(mo)
-		mo.fuse = P_RandomRange(TR,2*TR)
-		mo.state = S_TAKIS_STEAM2
-	end,
-	tics = -1,
+	sprite = SPR_TKEX,
+	frame = A|FF_ANIMATE,
+	var1 = 14,
+	var2 = 2,
+	tics = 2*14,
+	nextstate = S_NULL
 }
 
 mobjinfo[MT_TAKIS_EXPLODE] = {
@@ -2123,7 +2128,7 @@ mobjinfo[MT_TAKIS_EXPLODE] = {
 	spawnhealth = 1,
 	height = 6*FRACUNIT,
 	radius = 6*FRACUNIT,
-	flags = MF_RUNSPAWNFUNC|MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIP|MF_NOCLIPHEIGHT
+	flags = MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIPHEIGHT
 }
 
 /*

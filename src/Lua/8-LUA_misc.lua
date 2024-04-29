@@ -33,6 +33,23 @@ local numtotrans = {
 	[1] = FF_TRANS10,
 	[0] = 0,
 }
+local emeraldframelist = {
+	[0] = A,
+	[1] = C,
+	[2] = E,
+	[3] = G,
+	[4] = A,
+	[5] = A,
+	[6] = A,
+}
+
+local function fetchspiritframe(index,gotit)
+	local frame = emeraldframelist[index]
+	if not (gotit)
+		frame = $+1
+	end
+	return frame
+end
 
 --after image
 addHook("MobjThinker", function(ai)
@@ -910,6 +927,74 @@ for k,type in pairs(types)
 end
 --
 
+addHook("MobjDeath",function(em,_,me)
+	if not (em and em.valid) then return end
+	if not (me and me.valid) then return end
+	local p = me.player
+	
+	if (em.soda and em.soda.valid)
+		P_RemoveMobj(em.soda)
+	end
+	
+	if not (p and p.valid) then return end
+	local takis = p.takistable
+	if not takis then return end
+	if me.skin ~= TAKIS_SKIN then return end
+	
+	S_StartSound(me,sfx_sptclt)
+	for i = 10,P_RandomRange(15,20)
+		local note = P_SpawnMobjFromMobj(em,0,0,0,MT_THOK)
+		note.flags = $|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOCLIPTHING
+		note.sprite = SPR_WDRG
+		note.frame = P_RandomRange(K,M)
+		note.tics,note.fuse = 3*TR,3*TR
+		note.angle = FixedAngle(P_RandomRange(0,360)*FU)
+		P_Thrust(note,note.angle,P_RandomRange(5,10)*note.scale)
+		P_SetObjectMomZ(note,P_RandomRange(-10,10)*FU)
+	end
+	
+	TakisGiveCombo(p,takis,false,true)
+end,MT_EMBLEM)
+
+addHook("MobjThinker",function(gem)
+	local tics = {6,16}
+	if not (gem and gem.valid) then return end
+	if not (gem.soda and gem.soda.valid)
+	and (gem.health)
+		gem.soda = P_SpawnMobjFromMobj(gem,0,0,5*gem.scale*P_MobjFlip(gem),MT_THOK)
+		gem.soda.wait = P_RandomRange(unpack(tics))
+	elseif (gem.soda and gem.soda.valid)
+		local soda = gem.soda
+		if (displayplayer
+		and displayplayer.valid
+		and skins[displayplayer.skin].name == TAKIS_SKIN)
+			gem.flags2 = $|MF2_DONTDRAW
+			soda.flags2 = $ &~MF2_DONTDRAW
+		else
+			gem.flags2 = $ &~MF2_DONTDRAW
+			soda.flags2 = $|MF2_DONTDRAW
+		end
+		
+		gem.circle = FixedAngle( ((2*FU)*3/2)*leveltime)
+		local z = sin(gem.circle)*12
+		soda.spriteyoffset = 3*FU+z
+		soda.tics,soda.fuse = -1,-1
+		soda.color = gem.color
+		soda.sprite = SPR_WDRG
+		soda.frame = G|(gem.frame &~FF_FRAMEMASK)
+		if soda.wait == 0
+			soda.wait = P_RandomRange(unpack(tics))
+			local spark = P_SpawnMobjFromMobj(soda,0,0,soda.spriteyoffset,MT_SUPERSPARK)
+			spark.destscale = 0
+			spark.angle = FixedAngle(P_RandomRange(0,360)*FU)
+			P_Thrust(spark,spark.angle,P_RandomRange(1,5)*soda.scale)
+			P_SetObjectMomZ(spark,P_RandomRange(-5,5)*FU)
+		else
+			soda.wait = $-1
+		end
+	end
+end,MT_EMBLEM)
+
 --
 local function choose(...)
 	local args = {...}
@@ -1514,23 +1599,6 @@ local emeraldslist = {
 	[5] = SKINCOLOR_FLAME,
 	[6] = SKINCOLOR_SLATE,
 }
-local emeraldframelist = {
-	[0] = A,
-	[1] = C,
-	[2] = E,
-	[3] = G,
-	[4] = A,
-	[5] = A,
-	[6] = A,
-}
-
-local function fetchspiritframe(index,gotit)
-	local frame = emeraldframelist[index]
-	if not (gotit)
-		frame = $+1
-	end
-	return frame
-end
 
 addHook("MobjThinker",function(gem)
 	if not (gem and gem.valid) then return end
@@ -1998,12 +2066,17 @@ addHook("MobjThinker",function(poof)
 		return
 	end
 	
-	poof.color = choose(SKINCOLOR_PEPPER,SKINCOLOR_RED,SKINCOLOR_CRIMSON)
-	poof.colorized = true
+	--poof.color = choose(SKINCOLOR_PEPPER,SKINCOLOR_RED,SKINCOLOR_CRIMSON)
+	--poof.colorized = true
 	
-	if not (leveltime % 3 == 0) then return end
+	if not (leveltime % 2 == 0) then return end
+	if (poof.spawnedfrom) then return end
+	poof.flags2 = $|MF2_DONTDRAW
 	
-	local ghost = P_SpawnGhostMobj(poof)
+	local ghost = P_SpawnMobjFromMobj(poof,0,0,0,MT_TAKIS_EXPLODE)
+	ghost.spawnedfrom = true
+	ghost.flags = $|MF_NOGRAVITY
+	/*
 	ghost.frame = poof.frame
 	ghost.fuse = TR/2
 	ghost.destscale = 1
@@ -2012,6 +2085,7 @@ addHook("MobjThinker",function(poof)
 	ghost.colorized = true
 	ghost.scale = $+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))
 	ghost.state = S_TAKIS_STEAM2
+	*/
 end,MT_TAKIS_EXPLODE)
 
 addHook("MobjMoveBlocked",function(poof)

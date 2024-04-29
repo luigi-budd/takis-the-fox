@@ -2344,6 +2344,14 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if (p.skidtime)
 	and (me.state == S_PLAY_SKID)
 		local ang = R_PointToAngle2(0,0, me.momx,me.momy)
+		if P_RandomChance(FU/3)
+			TakisKart_SpawnSpark(me,
+				ang+FixedAngle(P_RandomRange(-25,25)*FU+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
+				SKINCOLOR_ORANGE,
+				true,
+				true
+			)
+		end
 		TakisSpawnDust(me,
 			ang+FixedAngle(P_RandomRange(-25,25)*FU+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
 			P_RandomRange(0,-30),
@@ -2365,6 +2373,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 				fuse = 15+P_RandomRange(-5,5),
 			}
 		)
+	else
+		S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSSKID])
 	end
 	
 	if p.spectator
@@ -3277,6 +3287,19 @@ end)
 rawset(_G, "TakisDeathThinker",function(p,me,takis)
 	local capdead = false
 	
+	if p.deadtimer == 1
+		DoFlash(p,PAL_NUKE,7)
+	end
+	
+	if takis.deathfunny
+		takis.altdisfx = 0
+		me.momz = 0-P_GetMobjGravity(me)
+		if P_IsObjectOnGround(me)
+			me.z = $+(me.scale*takis.gravflip)
+		end
+		return
+	end
+	
 	--explosion anim
 	if me.sprite2 == SPR2_TDED
 		if p.deadtimer < 21
@@ -3285,10 +3308,6 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 		if not takis.stoprolling
 			me.rollangle = $-(ANG2*2)
 		end
-	end
-	
-	if p.deadtimer == 1
-		DoFlash(p,PAL_NUKE,7)
 	end
 	
 	if me.state == S_PLAY_PAIN
@@ -3458,39 +3477,40 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 	end
 	*/
 	
-	if (takis.justHitFloor
-	or takis.onGround)
-	and p.deadtimer > 3
-	and (not takis.deathfloored)
-		me.tics = -1
-		if (me.rollangle == 0)
+	if not takis.deathfunny
+		if (takis.justHitFloor
+		or takis.onGround)
+		and p.deadtimer > 3
+		and (not takis.deathfloored)
+			me.tics = -1
+			if (me.rollangle == 0)
+				me.state = S_PLAY_DEAD
+				me.frame = A
+				me.sprite2 = SPR2_TDD2
+				p.jp = 2
+				p.jt = -5
+				takis.deathfloored = true
+			else
+				L_ZLaunch(me,10*FU)
+				me.rollangle = 0
+				takis.stoprolling = true
+				takis.deathfloored = false
+			end
+			
+			DoFlash(p,PAL_NUKE,5)
+			S_StartSound(me,sfx_slam)
+			DoQuake(p,10*FU,5)
+		--fell back down again
+		elseif not (takis.justHitFloor
+		or takis.onGround)
+		and p.deadtimer > 3
+		and takis.deathfloored
 			me.state = S_PLAY_DEAD
 			me.frame = A
 			me.sprite2 = SPR2_TDD2
-			p.jp = 2
-			p.jt = -5
-			takis.deathfloored = true
-		else
-			L_ZLaunch(me,10*FU)
-			me.rollangle = 0
-			takis.stoprolling = true
 			takis.deathfloored = false
 		end
-		
-		DoFlash(p,PAL_NUKE,5)
-		S_StartSound(me,sfx_slam)
-		DoQuake(p,10*FU,5)
-	--fell back down again
-	elseif not (takis.justHitFloor
-	or takis.onGround)
-	and p.deadtimer > 3
-	and takis.deathfloored
-		me.state = S_PLAY_DEAD
-		me.frame = A
-		me.sprite2 = SPR2_TDD2
-		takis.deathfloored = false
 	end
-	
 end)
 
 local function FixedLerp(val1,val2,amt)
@@ -4525,7 +4545,7 @@ rawset(_G,"SpawnEnemyGibs",function(t,tm,ang,fromdoor)
 		gib.rollangle = FixedAngle(P_RandomRange(0,359)*FU+P_RandomFixed())
 		gib.angleroll = FixedAngle(P_RandomRange(1,15)*FU+P_RandomFixed())*(angrng or -1)
 		gib.fuse = 3*TR
-		L_ZLaunch(gib,P_RandomRange(6,20)*gib.scale+P_RandomFixed())
+		L_ZLaunch(gib,P_RandomRange(6,20)*FU+P_RandomFixed())
 		if (t and t.valid)
 			P_Thrust(gib,
 				R_PointToAngle2(t.x,t.y, tm.x,tm.y),

@@ -462,7 +462,6 @@ addHook("PlayerThink", function(p)
 				takis.otherskintime = 0
 			end
 			
-		
 			if not (p.powers[pw_invulnerability])
 				p.scoreadd = 0
 			end
@@ -1851,6 +1850,17 @@ addHook("PlayerThink", function(p)
 						S_StartSound(me,sfx_takst4)
 						p.jp = 1
 						p.jt = -5
+						if takis.prevmomz*takis.gravflip <= -18*me.scale
+							local momz = takis.prevmomz*takis.gravflip
+							local rich = 10*FU
+							S_StartSoundAtVolume(me,sfx_taklfh,255*4/5)
+							p.jt = -7
+							
+							if momz+18*me.scale < 0
+								rich = $+abs(FixedDiv(momz+18*me.scale,FU))
+							end
+							DoQuake(p,rich,15)
+						end
 						if not takis.crushtime
 						and (takis.saveddmgt ~= DMG_CRUSHED)
 							DoTakisSquashAndStretch(p,me,takis)
@@ -2076,6 +2086,7 @@ addHook("PlayerThink", function(p)
 				takis.stoprolling = false
 				takis.deathfloored = false
 				if p.bot == BOT_2PAI
+				and p.playerstate == PST_REBORN
 					takis.heartcards = TAKIS_MAX_HEARTCARDS
 				end
 			end
@@ -2265,12 +2276,13 @@ addHook("PlayerThink", function(p)
 								
 								if takis.heartcards
 									takis.heartcards = $-1
-									S_StartSound(nil,sfx_takhel,p)
+									S_StartSound(nil,sfx_takhl2,p)
 									P_AddPlayerScore(p,100)
 									table.insert(takis.bonuses.cards,{tics = TR+18,score = 100,text = "\x8EHeart Card\x80"})
 									--takis.bonuses["heartcard"].tics = TR+18
 									--takis.bonuses["heartcard"].score = 1000
 									takis.HUD.flyingscore.scorenum = $+1000
+									takis.HUD.heartcards.shake = TAKIS_HEARTCARDS_SHAKETIME/2
 								end
 								
 							end
@@ -2542,6 +2554,7 @@ addHook("PostThinkFrame", function ()
 		
 		if not takis then continue end
 		
+		/*
 		if (takis.transfo & TRANSFO_SHOTGUN)
 			if not (me.eflags & MFE_FORCESUPER)
 				me.eflags = $|MFE_FORCESUPER
@@ -2567,6 +2580,7 @@ addHook("PostThinkFrame", function ()
 				end
 			end
 		end
+		*/
 		takis.lastpos = {x=me.x,y=me.y,z=me.z}
 		
 		takis.quakeint = 0
@@ -2592,6 +2606,33 @@ addHook("PostThinkFrame", function ()
 		end
 		
 		if not (me.skin == TAKIS_SKIN) then continue end
+		
+		--handle this in post bc funny
+		local funnymax = TR/2
+		if takis.deathfunny
+		and p.deadtimer <= funnymax
+			me.spritexoffset = (funnymax-p.deadtimer)*2*FU*((leveltime & 1) and 1 or -1)
+			me.momx,me.momy,me.momz = 0,0,0
+			me.flags = $|MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
+			me.frame = A
+			if p.deadtimer == funnymax
+				me.flags = $ &~(MF_NOGRAVITY|MF_NOCLIPHEIGHT)
+				P_Thrust(me,
+					FixedAngle(
+						P_RandomRange(0,360)*FU
+					),
+					15*me.scale
+				)
+				L_ZLaunch(me,20*FU)
+				takis.deathfunny = false
+			end
+		end
+		if p.playerstate ~= PST_DEAD
+		and takis.deathfunny
+			me.flags = $ &~(MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP)
+			takis.deathfunny = false
+			me.spritexoffset = 0
+		end
 		
 		if (takis.transfo & TRANSFO_TORNADO)
 			p.drawangle = me.angle+takis.nadoang
@@ -4070,6 +4111,11 @@ addHook("MobjDeath", function(mo,i,s,dmgt)
 		end
 	elseif takis.saveddmgt == DMG_SPACEDROWN
 		takis.saveddmgt = DMG_SPACEDROWN
+	end
+	
+	if not (dmgt &~DMG_DEATHMASK)
+	or (dmgt == DMG_INSTAKILL)
+		takis.deathfunny = P_RandomChance(FU/2)
 	end
 	
 	if p == consoleplayer
