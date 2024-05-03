@@ -24,6 +24,7 @@ local achs = {
 	"RIPANDTEAR",
 	"PACIFIST",
 	"VERYLAME",
+	"SPECKI",
 	
 }
 for k,v in ipairs(achs)
@@ -34,6 +35,9 @@ for k,v in ipairs(achs)
 end
 
 rawset(_G,"NUMACHIEVEMENTS",#achs)
+addHook("ThinkFrame",do
+	NUMACHIEVEMENTS = #achs
+end)
 
 local achflags = {
 	"SECRET",
@@ -118,7 +122,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 	},
 	[ACHIEVEMENT_COMBOALMOST] = {
 		name = "Almost had it..!",
-		icon = "ACH_PLACEHOLDER",
+		icon = "ACH_ALMOST",
 		scale = FU/4,
 		text = "Start a new combo just\n".."after losing a high one.",
 		flags = 0,
@@ -175,7 +179,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 	},
 	[ACHIEVEMENT_HAPPYEXIT] = {
 		name = "It's Happy Hour!",
-		icon = "ACH_PLACEHOLDER",
+		icon = "ACH_HAPPYEXIT",
 		scale = FU/4,
 		text = "Exit a stage with Happy Hour.",
 		flags = AF_SP,
@@ -202,6 +206,20 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		scale = FU/4,
 		text = "Clear a level wihout getting\n".."a single combo.",
 		flags = AF_SP
+	},
+	[ACHIEVEMENT_VERYLAME] = {
+		name = "Very Lame...",
+		icon = "ACH_OFFICER",
+		scale = FU/4,
+		text = 'Get a "Very" on your combo.',
+		flags = 0
+	},
+	[ACHIEVEMENT_SPECKI] = {
+		name = "Better in Black",
+		icon = "ACH_OFFICER",
+		scale = FU/4,
+		text = "Switch your color to Carbon\nwith Specki loaded.",
+		flags = AF_MP
 	},
 })
 
@@ -325,6 +343,12 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 		return
 	end
 	
+	if (p.quittime)
+		if TAKIS_DEBUGFLAG & DEBUG_ACH
+			print("\x83TAKIS:\x80 "..p.name..": denied "..achinf[achieve].name.." because not in game (left)")
+		end
+		return
+	end
 	local trophy = P_SpawnMobjFromMobj(p.realmo,0,0,0,MT_TAKIS_TROPHY)
 	trophy.tracer = p.realmo
 	p.takistable.trophy = trophy

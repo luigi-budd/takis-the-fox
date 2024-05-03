@@ -467,20 +467,6 @@ rawset(_G,"TAKIS_BOSSCARDS",{
 rawset(_G, "TAKIS_HAMMERDISP", FixedMul(52*FU,9*FU/10))
 table.insert(constlist,{"TAKIS_HAMMERDISP",FixedMul(52*FU,9*FU/10)})
 
-SafeFreeslot("MT_TAKIS_TAUNT_HITBOX")
-SafeFreeslot("S_TAKIS_TAUNT_HITBOX")
-mobjinfo[MT_TAKIS_TAUNT_HITBOX] = {
-	doomednum = -1,
-	spawnstate = S_TAKIS_TAUNT_HITBOX,
-	height = 60*FRACUNIT,
-	radius = 35*FRACUNIT,
-	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SOLID
-}
-states[S_TAKIS_TAUNT_HITBOX] = {
-	sprite = SPR_RING,
-	frame = A
-}
-
 rawset(_G, "TakisInitTable", function(p)
 	--why print?
 	CONS_Printf(p,"\x86"+"Initializing Takis' table...")
@@ -874,6 +860,7 @@ rawset(_G, "TakisInitTable", function(p)
 				tweentic = 5*TR,
 				tweenwait = TR*3/2,
 				bump = 0,
+				nokarthud = false,
 			},
 			menutext = {
 				tics = 0,
@@ -1311,6 +1298,14 @@ for i = 0,12
 	end
 	SafeFreeslot("sfx_krte"..text)
 	sfxinfo[sfx_krte00+i].caption = "/"
+end
+for i = 1,16
+	local text = i
+	if i < 10
+		text = "0"..i
+	end
+	SafeFreeslot("sfx_pass"..text)
+	sfxinfo[sfx_pass01+(i-1)].caption = "/"
 end
 
 --spr_ freeslot

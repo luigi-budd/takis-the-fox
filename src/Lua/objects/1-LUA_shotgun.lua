@@ -61,6 +61,10 @@ addHook("MobjThinker",function(mo)
 		end
 		
 		local p = mo.target.player
+		if not (p.takistable.transfo & TRANSFO_SHOTGUN)
+			P_KillMobj(mo)
+			return
+		end
 		
 		local trans = 0
 		
@@ -262,6 +266,8 @@ end,MT_TAKIS_GUNSHOT)
 
 --SHOTGUN BOXES
 addHook("MapThingSpawn",function(mo,mt)
+	if not (mo and mo.valid) then return end
+	
 	if mt.options & MTF_AMBUSH
 		mo.type = MT_SHOTGUN_GOLDBOX
 		if mt.options & MTF_OBJECTSPECIAL

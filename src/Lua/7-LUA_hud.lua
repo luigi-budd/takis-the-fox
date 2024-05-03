@@ -975,12 +975,13 @@ local function drawscore(v,p)
 	end
 	
 	if (PTSR)
-		if PTSR.intermission_tics and (PTSR.intermission_tics < 324)
+		if PTSR.intermission_tics
 		or (PTSR:inVoteScreen())
 			return
 		end
 	end
 	
+	--some of
 	if (gametype == GT_TEAMARENA)
 	or (gametype == GT_SURVIVAL)
 	or (gametype == GT_TEAMSURVIVAL)
@@ -1172,6 +1173,10 @@ local function drawlivesbutton(v,p,x,y,flags)
 		disp = $-35*FU
 	end
 	
+	if (p.inkart and not p.takistable.HUD.lives.nokarthud)
+		disp = $-33*FU
+	end
+	
 	if not p.inkart
 		if (takis.transfo & TRANSFO_SHOTGUN)
 		and (takis.shotgunforceon == false)
@@ -1324,7 +1329,6 @@ local function drawlivesarea(v,p)
 	or (TAKIS_DEBUGFLAG & (DEBUG_SPEEDOMETER|DEBUG_BUTTONS))
 	or p.takistable.hhexiting
 	or (p.takis_noabil ~= nil)
-	or (p.inkart)
 		return
 	end
 	
@@ -1338,6 +1342,8 @@ local function drawlivesarea(v,p)
 	local nolivestext = false
 	
 	drawlivesbutton(v,p,15*FU,y-20*FU,flags)
+	
+	if (p.inkart and not p.takistable.HUD.lives.nokarthud) then return end
 	
 	if not (p.skincolor)
 	or modeattacking
@@ -2921,7 +2927,7 @@ local function drawpizzaranks(v,p)
 	if p.pizzaface then return end
 	
 	if (PTSR)
-		if PTSR.intermission_tics and (PTSR.intermission_tics < 324)
+		if PTSR.intermission_tics
 		or (PTSR:inVoteScreen())
 			return
 		end
@@ -4437,9 +4443,10 @@ local function drawkartmeters(v,p)
 	if not (me.tracer and me.tracer.valid) then return end
 	local car = me.tracer
 	if car.type ~= MT_TAKIS_KART_HELPER then return end
+	if takis.HUD.lives.nokarthud then return end
 	
 	local minx = -55*FU
-	local maxx = 15*FU
+	local maxx = 12*FU
 	local x = maxx
 	local y = 128*FU
 	if p.kartingtime < TR/2
@@ -4529,6 +4536,8 @@ local function drawviewmodel(v,p,cam)
 	if cam.chase
 		return
 	end
+	
+	if not (takis.transfo & TRANSFO_SHOTGUN) then return end
 	
 	local framenum = (takis.HUD.viewmodel.frameinc/4)+1
 	local patch = v.cachePatch("TA_VIEW_"..framenum)
@@ -5489,7 +5498,7 @@ customhud.SetupItem("takis_kart_meters",	modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_racelaps",		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_viewmodel",		modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
-
+local wastakis = false
 addHook("HUD", function(v,p,cam)
 	if not p
 	or not p.valid
@@ -5511,10 +5520,32 @@ addHook("HUD", function(v,p,cam)
 	local takis = p.takistable
 	local me = p.mo
 	
+	--haha FUNNY DRRR elemt
+	--THIS GAME IS SHIT
+	if (p.deadtimer
+	and (takis.deathfunny))
+		local thok = v.getSpritePatch(SPR_THOK,0,0)
+		local scale = FU*20
+		local deadtimer = p.deadtimer
+		if deadtimer > 0
+			if deadtimer > TR/2
+				scale = 0
+			else
+				scale = ease.linear((FU/(TR/2))*deadtimer,20*FU,0)
+			end
+		end
+		scale = max(0,scale)
+		v.drawScaled(160*FU,100*FU+(thok.height*scale/2),scale,
+			thok,
+			V_SUBTRACT,
+			v.getColormap(nil,p.skincolor)
+		)
+	end
 	if takis
 		drawhappytime(v,p)
 		if takis.isTakis
 			
+			wastakis = true
 			local opmode = (me and me.valid and me.state == S_OBJPLACE_DUMMY) or false
 			
 			--customhud.SetupItem("takis_wareffect", 		modname)
@@ -5778,6 +5809,7 @@ addHook("HUD", function(v,p,cam)
 			
 			if not takis.otherskin
 			or takis.otherskintime == 1
+			or wastakis
 				customhud.SetupItem("rings",altmodname)
 				if not (HAPPY_HOUR.othergt)
 					customhud.SetupItem("time",altmodname)
@@ -5793,6 +5825,7 @@ addHook("HUD", function(v,p,cam)
 				customhud.SetupItem("textspectator",altmodname)
 				customhud.SetupItem("crosshair",altmodname)
 			end
+			wastakis = false
 			--customhud.SetupItem("rank", "pizzatime2.0")
 			
 			--elfilin stuff

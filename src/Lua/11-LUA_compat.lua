@@ -8,7 +8,6 @@ local compat = {
 	peptext = false,
 	speckismash = false,
 	ptsrhook = false,
-	boat = false,
 }
 
 local function printf(...)
@@ -109,22 +108,29 @@ addHook("ThinkFrame",do
 	if (PTSR
 	and PTSR_AddHook)
 	and not compat.ptsrhook
-		PTSR_AddHook("onbonus",function(touch)
+		PTSR_AddHook("pfdamage",function(touch,pizza)
 			if not (touch and touch.valid) then return end
 			if touch.skin ~= TAKIS_SKIN then return end
 			
+			local p = touch.player
+			local takis = p.takistable
+			if takis.pitanim
+				return true
+			end
+			
+		end)
+		
+		PTSR_AddHook("onlap",function(lapper)
+			if not (lapper and lapper.valid) then return end
+			if lapper.skin ~= TAKIS_SKIN then return end
+			
+			local p = lapper.player
+			local takis = p.takistable
+			TakisGiveCombo(p,takis,false,true)
 		end)
 		
 		compat.ptsrhook = true
 		printf("Added PTSR stuff.")
-	end
-	if boatchars
-	/*
-	and not compat.boat
-		boatchars[TAKIS_SKIN] = {0, 1, 0}	
-		compat.boat = true
-		printf("Added boat stuff.")
-	*/
 	end
 end)
 

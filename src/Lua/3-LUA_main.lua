@@ -234,27 +234,6 @@ local function MeSoundHalfVolume(sfx,p)
 end
 
 --buggie gave me this
-local function peptoboxed(mobj)
-	--should work with no errors...
-	if mobj.player.pep and mobj.skin == "peppino"
-		mobj.player.height = mobj.player.spinheight
-		mobj.player.mo.radius = 3*skins[mobj.skin].radius/2
-		mobj.player.pflags = $&~PF_SPINNING
-		  
-		if not mobj.player.pep.transfo
-			PT_SpawnEffect(mobj,"sfx_peppino_transform") --Custom peppino function, would not work
-			mobj.player.pep.transfoappear = 16
-		end
-		PT_SpawnEffect(mobj,"poof") --Custom peppino function, would not work
-		mobj.player.pep.transfo = "box"
-		mobj.player.pep.transfovars = {}
-		mobj.state = S_BOXPEP_TRNS
-		mobj.player.pep.transfovars["transanimtime"] = 20
-		mobj.player.pep.transfotime = 30*TICRATE
-		mobj.player.jumpfactor = 2*skins[mobj.skin].jumpfactor/3
-	end
-end
-
 local function spillrings(p,spillall)
 	if p.rings
 		S_StartSoundAtVolume(p.mo,sfx_s3kb9,255/2)
@@ -1454,7 +1433,7 @@ addHook("PlayerThink", function(p)
 						me.momz = $-((me.scale*14/10)*takis.gravflip)
 					end
 					if p.powers[pw_shield] & SH_FORCE
-						me.momz = $*13/10
+						me.momz = $+P_GetMobjGravity(me)
 					end
 					
 					takis.hammerblastwentdown = true
@@ -1909,6 +1888,7 @@ addHook("PlayerThink", function(p)
 				if P_PlayerTouchingSectorSpecial(p, 3, 5)
 				and takis.onGround
 				and not takis.fakesprung
+				and leveltime == 0
 					P_Thrust(me,me.angle,takis.prevspeed)
 					takis.fakesprung = true
 				end
@@ -2053,29 +2033,31 @@ addHook("PlayerThink", function(p)
 				takis.clutchingtime = 0
 				takis.afterimaging = false
 				
-				if S_SoundPlaying(me,skins[TAKIS_SKIN].soundsid[SKSPLDET3])
-					S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSPLDET3])
-					me.frame = A
-					me.sprite2 = SPR2_TDED
-					TakisFancyExplode(
-						me.x, me.y, me.z,
-						P_RandomRange(60,64)*me.scale,
-						40,
-						MT_TAKIS_EXPLODE,
-						15,20
-					)
-					for i = 1, 6
-						A_BossScream(me,1,MT_SONIC3KBOSSEXPLODE)
+				if not takis.deathfunny
+					if S_SoundPlaying(me,skins[TAKIS_SKIN].soundsid[SKSPLDET3])
+						S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSPLDET3])
+						me.frame = A
+						me.sprite2 = SPR2_TDED
+						TakisFancyExplode(
+							me.x, me.y, me.z,
+							P_RandomRange(60,64)*me.scale,
+							40,
+							MT_TAKIS_EXPLODE,
+							15,20
+						)
+						for i = 1, 6
+							A_BossScream(me,1,MT_SONIC3KBOSSEXPLODE)
+						end
+						S_StartSound(me,sfx_tkapow)
+						DoQuake(p,me.scale*8,10,8*me.scale)
+						takis.altdisfx = 3
+					elseif S_SoundPlaying(me,skins[TAKIS_SKIN].soundsid[SKSPLDET4])
+						S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSPLDET4])
+						me.frame = A
+						me.sprite2 = SPR2_FASS
+						S_StartSound(me,sfx_takoww)
+						takis.altdisfx = 4
 					end
-					S_StartSound(me,sfx_tkapow)
-					DoQuake(p,me.scale*8,10,8*me.scale)
-					takis.altdisfx = 3
-				elseif S_SoundPlaying(me,skins[TAKIS_SKIN].soundsid[SKSPLDET4])
-					S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSPLDET4])
-					me.frame = A
-					me.sprite2 = SPR2_FASS
-					S_StartSound(me,sfx_takoww)
-					takis.altdisfx = 4
 				end
 				
 			elseif (p.playerstate == PST_REBORN
@@ -2476,7 +2458,14 @@ addHook("PlayerThink", function(p)
 			end
 		end
 		if takis.placement ~= takis.lastplacement
+		and takis.placement ~= 0
+		and takis.HUD.lives.useplacements
+		and not p.spectator
 			takis.HUD.lives.bump = FU*3/2
+			if me.skin == TAKIS_SKIN
+				local sound = min(takis.placement,16)
+				S_StartSound(nil,sfx_pass01+(sound-1),p)
+			end
 		end
 		
 		--holding FN, C3, C2 open menu
@@ -2544,7 +2533,7 @@ end
 
 --thanks to Unmatched Bracket for this code!!!
 --:iwantsummadat:
-addHook("PostThinkFrame", function ()
+addHook("PostThinkFrame", function()
     for p in players.iterate() do
         if not (p and p.valid) then continue end
 		if not (p.realmo and p.realmo.valid) then continue end
@@ -2615,6 +2604,9 @@ addHook("PostThinkFrame", function ()
 			me.momx,me.momy,me.momz = 0,0,0
 			me.flags = $|MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
 			me.frame = A
+			S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSPLDET3])
+			S_StopSoundByID(me,skins[TAKIS_SKIN].soundsid[SKSPLDET4])
+			takis.altdisfx = 0
 			if p.deadtimer == funnymax
 				me.flags = $ &~(MF_NOGRAVITY|MF_NOCLIPHEIGHT)
 				P_Thrust(me,
@@ -2625,6 +2617,18 @@ addHook("PostThinkFrame", function ()
 				)
 				L_ZLaunch(me,20*FU)
 				takis.deathfunny = false
+				TakisFancyExplode(
+					me.x, me.y, me.z,
+					P_RandomRange(60,64)*me.scale,
+					16,
+					MT_TAKIS_EXPLODE,
+					15,20
+				)
+				DoQuake(p,20*FU,TR)
+				SpawnEnemyGibs(me,me)
+				for i = 0,3
+					S_StartSound(me,sfx_tkapow)
+				end
 			end
 		end
 		if p.playerstate ~= PST_DEAD
@@ -2632,6 +2636,11 @@ addHook("PostThinkFrame", function ()
 			me.flags = $ &~(MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP)
 			takis.deathfunny = false
 			me.spritexoffset = 0
+		end
+		
+		if (p.skidtime)
+		and (me.state == S_PLAY_SKID)
+			p.drawangle = R_PointToAngle2(0,0, me.momx,me.momy)
 		end
 		
 		if (takis.transfo & TRANSFO_TORNADO)
@@ -2745,6 +2754,7 @@ addHook("PostThinkFrame", function ()
 					ghost.skin = TAKIS_SKIN
 					ghost.sprite2 = SPR2_STND
 					ghost.angle = takis.lastgroundedangle
+					ghost.colorized = true
 					if (displayplayer and displayplayer.valid)
 					and (displayplayer == p)
 						ghost.flags2 = $|MF2_DONTDRAW						
@@ -3674,6 +3684,9 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		*/
 		
 	elseif dmgt == DMG_CRUSHED
+		if p.inkart
+			return false
+		end
 		p.crushresistance = 4*TR
 		if takis.timescrushed < TR
 			if not takis.beingcrushed
@@ -3763,74 +3776,6 @@ addHook("PlayerCanEnterSpinGaps",function(p)
 		end
 	end
 end)
-
-local function tauntbox(t,tm)
-	if not t
-	or not t.valid
-		return
-	end
-	
-	if not tm
-	or not tm.valid
-		return
-	end
-	
-	if tm == t.tracer
-		return
-	end
-	
-	if not L_ZCollide(t,tm)
-		return
-	end
-	
-	if (t.boxtype == "bat")
-		if tm.type == MT_PLAYER
-			
-			if tm.battime then return end 
-			
-			SpawnEnemyGibs(t,tm)
-			SpawnEnemyGibs(t,tm)
-			TakisResetTauntStuff(tm.player.takistable)
-			TakisAwardAchievement(t.tracer.player,ACHIEVEMENT_HOMERUN)
-			
-			--this wont kill without ff in coop, but its funnier that way
-			P_DamageMobj(tm,t,t.tracer,1,DMG_INSTAKILL)
-			
-			local ang = t.tracer.player.drawangle
-			
-			P_InstaThrust(tm,ang, 175*FU)
-			L_ZLaunch(tm,60*FU)
-			
-			S_StartSound(nil,sfx_homrun,tm.player)
-			
-			local ghs = P_SpawnGhostMobj(t)
-			ghs.fuse = 10*TR
-			ghs.flags2 = $|MF2_DONTDRAW
-			S_StartSound(ghs,sfx_homrun)
-			
-			if tm.health
-				tm.state = S_PLAY_PAIN
-			end
-			
-			tm.battime = 4
-		else
-			if (t.alreadydid) then return end
-			
-			if CanFlingThing(tm)
-				SpawnEnemyGibs(t,tm)
-				SpawnEnemyGibs(t,tm)
-				spawnragthing(tm,t.tracer)
-				local ghs = P_SpawnGhostMobj(t)
-				ghs.fuse = 10*TR
-				ghs.flags2 = $|MF2_DONTDRAW
-				S_StartSound(ghs,sfx_homrun)
-				t.alreadydid = true
-			end
-		end
-	end
-end
-
-addHook("MobjCollide",tauntbox,MT_TAKIS_TAUNT_HITBOX)
 
 local function givecardpieces(mo, _, source)
 
@@ -4114,8 +4059,16 @@ addHook("MobjDeath", function(mo,i,s,dmgt)
 	end
 	
 	if not (dmgt &~DMG_DEATHMASK)
-	or (dmgt == DMG_INSTAKILL)
 		takis.deathfunny = P_RandomChance(FU/2)
+	end
+	if (dmgt == DMG_INSTAKILL)
+		takis.deathfunny = true
+	end
+	if takis.deathfunny
+	or p.inkart
+		S_StopSound(mo)
+		S_StartSound(mo,sfx_buzz3)
+		takis.altdisfx = 0
 	end
 	
 	if p == consoleplayer

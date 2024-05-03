@@ -52,6 +52,7 @@ rawset(_G, "TakisButtonStuff", function(p,takis)
 	if (takis.nocontrol)
 	or (p.pflags & PF_STASIS)
 	or (p.powers[pw_nocontrol])
+	or (p.realmo.flags & MF_NOTHINK)
 		if takis.nocontrol
 			takis.nocontrol = $-1
 		end
@@ -713,6 +714,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 	or modeattacking
 	or takis.lastskincolor ~= p.skincolor
 	or HAPPY_HOUR.othergt
+	or p.inkart
 		if not hud.lives.tweentic
 			hud.lives.tweentic = 5*TR
 		else
@@ -1474,6 +1476,12 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 		if not takis.shotgunned
 			takis.transfo = $ &~TRANSFO_SHOTGUN
 		end
+	else
+		local gun = takis.shotgun
+		if (gun and gun.valid)
+			P_RemoveMobj(gun)
+			gun = nil
+		end
 	end
 end)
 
@@ -1661,10 +1669,12 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	local lastspeed = takis.accspeed
 	
 	local spd = 6*skins[me.skin].runspeed/5
+	takis.accspeed = abs(FixedHypot(FixedHypot(me.momx,me.momy),me.momz))
 	if (p.powers[pw_carry] == CR_NIGHTSMODE)
 		spd = 23*FU
+	else
+		takis.accspeed = FixedDiv($,me.scale)
 	end
-	takis.accspeed = abs(FixedHypot(FixedHypot(me.momx,me.momy),me.momz))
 	
 	--wind effect
 	for i = 1,10
@@ -1999,6 +2009,10 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if p.skincolor == SKINCOLOR_SALMON
 	and takis.lastskincolor ~= SKINCOLOR_SALMON
 		TakisAwardAchievement(p,ACHIEVEMENT_RAKIS)
+	elseif p.skincolor == SKINCOLOR_CARBON
+	and takis.lastskincolor ~= SKINCOLOR_CARBON
+	and (skins["specki"] ~= nil)
+		TakisAwardAchievement(p,ACHIEVEMENT_SPECKI)
 	end
 	
 	if takis.clutchspamtime
@@ -2344,6 +2358,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if (p.skidtime)
 	and (me.state == S_PLAY_SKID)
 		local ang = R_PointToAngle2(0,0, me.momx,me.momy)
+		
 		if P_RandomChance(FU/3)
 			TakisKart_SpawnSpark(me,
 				ang+FixedAngle(P_RandomRange(-25,25)*FU+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
@@ -3124,6 +3139,7 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 			return
 		end
 		
+		local prevcount = takis.combo.count
 		takis.combo.pacifist = false
 		takis.combo.count = $+1
 		local cc = takis.combo.count
@@ -3159,6 +3175,11 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 			and not (takis.combo.rank % 2)
 				takis.HUD.statusface.evilgrintic = TR*3/2
 			end
+		end
+		
+		if takis.combo.count/(#TAKIS_COMBO_RANKS*TAKIS_COMBO_UP) == 1
+		and prevcount/(#TAKIS_COMBO_RANKS*TAKIS_COMBO_UP) == 0
+			TakisAwardAchievement(p,ACHIEVEMENT_VERYLAME)
 		end
 		
 		takis.combo.time = TAKIS_MAX_COMBOTIME
@@ -3288,6 +3309,7 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 	local capdead = false
 	
 	if p.deadtimer == 1
+	and not takis.deathfunny
 		DoFlash(p,PAL_NUKE,7)
 	end
 	
@@ -5492,6 +5514,29 @@ rawset(_G,"TakisDoHammerBlastLand",function(p,domoves)
 	takis.hammerblastdown = 0
 end)
 
+local function peptoboxed(mobj)
+	--should work with no errors...
+	if mobj.player.pep and mobj.skin == "peppino"
+		mobj.player.height = mobj.player.spinheight
+		mobj.player.mo.radius = 3*skins[mobj.skin].radius/2
+		mobj.player.pflags = $&~PF_SPINNING
+		  
+		if not mobj.player.pep.transfo
+			PT_SpawnEffect(mobj,"sfx_peppino_transform") --Custom peppino function, would not work
+			mobj.player.pep.transfoappear = 16
+		end
+		PT_SpawnEffect(mobj,"poof") --Custom peppino function, would not work
+		mobj.player.pep.transfo = "box"
+		mobj.player.pep.transfovars = {}
+		mobj.state = S_BOXPEP_TRNS
+		mobj.player.pep.transfovars["transanimtime"] = 20
+		mobj.player.pep.transfotime = 30*TICRATE
+		mobj.player.jumpfactor = 2*skins[mobj.skin].jumpfactor/3
+		return true
+	end
+	return false
+end
+
 rawset(_G,"TakisHammerBlastHitbox",function(p)
 	local me = p.realmo
 	local takis = p.takistable
@@ -5553,14 +5598,18 @@ rawset(_G,"TakisHammerBlastHitbox",function(p)
 				didit = true
 			elseif SPIKE_LIST[found.type]
 				P_KillMobj(found,me,me)
-			elseif CanPlayerHurtPlayer(p,found.player)
-				SpawnBam(ref)
-				SpawnEnemyGibs(thok,found)
-				S_StartSound(found,sfx_smack)
-				S_StartSound(me,sfx_sdmkil)
-				P_KillMobj(found,me,me,DMG_CRUSHED)
-				TakisAddHurtMsg(found.player,HURTMSG_HAMMERBOX)
-				didit = true
+			elseif (found.player and found.player.valid)
+				if CanPlayerHurtPlayer(p,found.player)
+					SpawnBam(ref)
+					SpawnEnemyGibs(thok,found)
+					S_StartSound(found,sfx_smack)
+					S_StartSound(me,sfx_sdmkil)
+					P_KillMobj(found,me,me,DMG_CRUSHED)
+					TakisAddHurtMsg(found.player,HURTMSG_HAMMERBOX)
+					didit = true
+				elseif peptoboxed(found)
+					didit = true
+				end
 			elseif (found.flags & MF_SPRING)
 			and (found.info.painchance ~= 3)
 				if (GetActorZ(found,me,2) > (takis.gravflip == 1 and me.floorz or me.ceilingz))

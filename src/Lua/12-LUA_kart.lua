@@ -3,11 +3,13 @@
 	-[done]teleporters dont tp the kart, snaps the player back
 	-[done]springs unsuable
 	-[done]solids passable
-	-joystick support
+	-[done]joystick support
 	-clean up code and make it easier to port (seperate taksi stuff)
-	-make drift more accurate
+	-[done]make drift more accurate
 	
 */
+
+local CMD_DEADZONE = 12
 
 SafeFreeslot("MT_TAKIS_KART_HELPER")
 SafeFreeslot("S_TAKIS_KART_HELPER")
@@ -113,6 +115,76 @@ addHook("PlayerSpawn",function(p)
 end)
 */
 
+local function lookatpeople(p,car)
+	local me = p.mo
+	local takis = p.takistable
+	
+	local maxdist = 1280*car.scale
+	local blindspot = ANG10
+	local glancedir = 0
+	local lastvalidglance
+	
+	for player in players.iterate
+		local back,diff,distance
+		local dir = -1
+		
+		if player ~= nil
+			local victim = player.mo
+			
+			--why are you glancing at yourself
+			if player == p
+				continue
+			end
+			
+			if player.spectator
+				continue
+			end
+			
+			distance = R_PointToDist2(car.x, car.y, victim.x, victim.y)
+			distance = R_PointToDist2(0, car.z, distance, victim.z)
+			if distance > maxdist
+				continue
+			end
+			
+			back = car.angle+ANGLE_180
+			diff = R_PointToAngle2(car.x, car.y, victim.x, victim.y)-back
+			if diff > ANGLE_180
+				diff = InvAngle($)
+				dir = -$
+			end
+			
+			--not behind
+			if diff > ANGLE_90
+				continue
+			end
+			
+			--idk
+			if diff < blindspot
+				dir = -$
+				--continue
+			end
+			
+			if not P_CheckSight(car,victim)
+				continue
+			end
+			
+			glancedir = $+dir
+			lastvalidglance = dir
+			
+			--horn
+			
+		end
+	end
+	
+	if glancedir > 0
+		return 1
+	elseif glancedir < 0
+		return -1
+	end
+	return lastvalidglance
+	
+end
+
 local function animhandle(p,car)
 	local me = p.mo
 	if me.state ~= S_PLAY_TAKIS_KART
@@ -122,15 +194,36 @@ local function animhandle(p,car)
 	local rumble = leveltime % 2 == 0
 	local frame = A
 	local dontrumble = false
+	local takis = p.takistable
 	
 	if car.turning
 		local turn = p.cmd.sidemove
+		if abs(p.cmd.sidemove) < CMD_DEADZONE
+			turn = 0
+		end
+		
 		--left
 		if turn > 0
 			frame = G
 		--right
 		elseif turn < 0
 			frame = D
+		end
+	end
+	
+	if takis.c3
+	or p.cmd.forwardmove < -5
+		frame = R
+	end
+	
+	if abs(p.cmd.sidemove) < CMD_DEADZONE
+	and car.drift == 0
+	and P_IsObjectOnGround(car)
+		local destglance = lookatpeople(p,car)
+		if destglance == 1
+			frame = O
+		elseif destglance == -1
+			frame = R
 		end
 	end
 	
@@ -300,13 +393,13 @@ local function driftval(p,car, countersteer)
 	end
 	
 	/*
-	if (player->kartstuff[k_driftend] != 0)
+	if (player.kartstuff[k_driftend] != 0)
 		return -266*car.drift; // Drift has ended and we are tweaking their angle back a bit
 	end
 	*/
 	
-	//basedrift = 90*player->kartstuff[k_drift]; // 450
-	//basedrift = 93*player->kartstuff[k_drift] - driftweight*3*player->kartstuff[k_drift]/10; // 447 - 303
+	//basedrift = 90*player.kartstuff[k_drift]; // 450
+	//basedrift = 93*player.kartstuff[k_drift] - driftweight*3*player.kartstuff[k_drift]/10; // 447 - 303
 	basedrift = 83*car.drift - (driftweight - 14)*car.drift/5; // 415 - 303
 	driftangle = abs((252 - driftweight)*car.drift/5);
 
@@ -522,7 +615,7 @@ local function driftstuff(p,car)
 end
 
 addHook("MobjMoveCollide",function(car,mo)
-	if (mo.type == MT_PLAYER and mo == car.target)
+	if (mo.type == MT_PLAYER)-- and mo == car.target)
 	or (mo.flags & MF_SPRING)
 		return false
 	end
@@ -608,14 +701,18 @@ addHook("MobjThinker",function(car)
 	if not (me.health)
 	or not P_IsValidSprite2(me,SPR2_KART)
 	or (me.skin ~= TAKIS_SKIN and car.takiscar)
-		TakisFancyExplode(
-			car.x, car.y, car.z,
-			P_RandomRange(60,64)*car.scale,
-			32,
-			MT_TAKIS_EXPLODE,
-			15,20
-		)
-		P_KillMobj(car)
+		if me.health
+			TakisFancyExplode(
+				car.x, car.y, car.z,
+				P_RandomRange(60,64)*car.scale,
+				32,
+				MT_TAKIS_EXPLODE,
+				15,20
+			)
+			P_KillMobj(car)
+		else
+			P_RemoveMobj(car)
+		end
 		P_MovePlayer(p)
 		if p.powers[pw_carry] == CR_TAKISKART
 			p.powers[pw_carry] = 0
@@ -646,7 +743,7 @@ addHook("MobjThinker",function(car)
 	end
 	
 	local dist = 150
-	local x,y = me.x,me.y
+	local x,y = me.x - me.momx, me.y - me.momy
 	
 	--takis.lastpos is {x=me.x,y=me.y,z=me.z} in a PostThink, where "me" is p.realmo
 	if x+(dist*me.scale) < takis.lastpos.x - me.momx
@@ -708,27 +805,34 @@ addHook("MobjThinker",function(car)
 		and (FixedHypot(car.momx,car.momy) >= 10*car.scale)
 		and car.drift == 0
 		and grounded
+		and abs(p.cmd.sidemove) >= CMD_DEADZONE
 			car.drift = $+turndir
 			car.driftangle = car.angle
 		end
 		
 		if (FixedHypot(car.momx,car.momy) >= car.scale/2)
+			local sidemove = 0
+			--deadzone = 10
+			if abs(cmd.sidemove) >= CMD_DEADZONE
+				sidemove = FixedDiv(abs(cmd.sidemove),32)
+			end
+			
 			if car.drift ~= 0
 			and grounded
 				--if we're drifting, then countersteer a bit
 				if turndir ~= driftdir
-					car.momt = -4*FU*driftdir
+					car.momt = FixedMul(-4*FU,sidemove)*driftdir
 					car.driftspark = $-(FU/2)
 				else
 					if turndir == driftdir
 					and car.maxspeed > 15*car.scale
 						car.maxspeed = $*198/201
 					end
-					car.momt = 40*FU*turndir
+					car.momt = FixedMul(40*FU,sidemove)*turndir
 					car.driftspark = $+(FU/2)
 				end
 			else
-				car.momt = 40*FU*turndir
+				car.momt = FixedMul(40*FU,sidemove)*turndir
 			end
 		end
 		car.turning = true
@@ -770,19 +874,20 @@ addHook("MobjThinker",function(car)
 	
 	if cmd.forwardmove
 		local acceldir = (cmd.forwardmove > 0) and 1 or -1
+		local cmaxspeed = FixedMul(car.maxspeed,FixedDiv(abs(cmd.forwardmove),25))
 		if acceldir == 1
 			if car.accel < 0
 				local ab = (car.accel > 0) and 1 or -1
 				car.accel = (abs($)*4/5)*ab
 			end
-			if car.accel+accel < car.maxspeed/8
+			if car.accel+accel < cmaxspeed/8
 				car.accel = $+accel
 			end
 		else
 			if car.accel > 0
 				car.accel = $*4/5
 			end
-			if car.accel-accel > -car.maxspeed/8
+			if car.accel-accel > -cmaxspeed/16
 				car.accel = $-accel
 			end
 		end
@@ -806,6 +911,9 @@ addHook("MobjThinker",function(car)
 	local movethrust = FixedMul(FixedMul(car.friction,car.movefactor), car.accel)
 	if not grounded
 		movethrust = $/10
+		if FixedHypot(car.momx,car.momy) > car.maxspeed
+			movethrust = 0
+		end
 	end
 	P_Thrust(car, thrustangle, movethrust)
 	
@@ -828,6 +936,8 @@ addHook("MobjThinker",function(car)
 	
 	P_ButteredSlope(car)
 	P_ButteredSlope(car)
+	P_ButteredSlope(me)
+	P_ButteredSlope(me)
 	
 	if grounded
 	and (FixedHypot(car.momx,car.momy) >= 60*car.scale
@@ -909,7 +1019,17 @@ addHook("MobjThinker",function(car)
 	animhandle(p,car)
 	soundhandle(p,car)
 	
+	--funny???
+	if (gametype == GT_RACE
+	or HAPPY_HOUR.othergt)
+		car.fuel = 100*FU
+	end
+	
 	--set the stuff for the player
+	if p.ai
+	or p.bot
+		car.angle = me.angle
+	end
 	me.angle = car.angle
 	--look behind
 	if p.cmd.buttons & BT_CUSTOM3
@@ -975,6 +1095,9 @@ addHook("MobjThinker",function(car)
 	car.oldmomz = car.momz
 	if car.standingslope
 		me.z = P_GetZAt(car.standingslope,me.x,me.y)
+	end
+	if takis.firenormal == 1
+		takis.HUD.lives.nokarthud = not $
 	end
 	--
 	

@@ -51,8 +51,13 @@ end)
 rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 	if not hh.happyhour
 		
+		--get map's default timelimit
 		if timelimit == nil
-			timelimit = 3*60*TR
+			local timelimit = tonumber(mapheaderinfo[gamemap].takis_hh_timelimit or 3*60)*TR
+			if mapheaderinfo[gamemap].takis_hh_timelimit ~= nil
+			and string.lower(tostring(mapheaderinfo[gamemap].takis_hh_timelimit)) == "none"
+				timelimit = 0
+			end
 		end
 		--add 2 more seconds for the timer tween
 		if timelimit ~= 0
