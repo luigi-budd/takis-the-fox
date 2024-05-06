@@ -233,7 +233,6 @@ local function MeSoundHalfVolume(sfx,p)
 	S_StartSoundAtVolume(nil,sfx,4*255/5,p)
 end
 
---buggie gave me this
 local function spillrings(p,spillall)
 	if p.rings
 		S_StartSoundAtVolume(p.mo,sfx_s3kb9,255/2)
@@ -267,6 +266,7 @@ local ranktonum = {
 }
 
 --"Trust me, I'm a programmer."
+--theres GOTTA be a better way to do this
 local emdex = {
 	[0] = 0,
 	[EMERALD1] = 1,
@@ -305,6 +305,8 @@ addHook("PreThinkFrame",function()
 			takis.io.minhud = 0
 		end
 		if takis.pitanim
+		or p.inkart
+		or (gametyperules & GTR_RACE and p.realtime == 0)
 			takis.noability = $|NOABIL_ALL|NOABIL_THOK
 		end
 		
@@ -314,7 +316,6 @@ addHook("PreThinkFrame",function()
 			if P_IsObjectOnGround(me)
 			and not P_CheckDeathPitCollide(me)
 			and not takis.pitanim
-			and not p.inkart
 				if not ((me.eflags & MFE_TOUCHWATER) and not ((me.eflags & MFE_UNDERWATER) or (P_IsObjectInGoop(me))))
 					takis.lastgroundedpos = {me.x,me.y,me.z}
 					takis.lastgroundedangle = me.angle
@@ -329,7 +330,7 @@ addHook("PreThinkFrame",function()
 				takis.ropeletgo = TR/2
 			end
 			
-		end
+		end  
 		
 		if (takis.cosmenu.menuinaction)
 			TakisMenuThinker(p)
@@ -350,11 +351,7 @@ addHook("PreThinkFrame",function()
 		if p.oldc_infoscreen
 			takis.noability = $|NOABIL_CLUTCH
 		end
-	
-		if p.inkart
-			takis.noability = $|NOABIL_ALL|NOABIL_THOK
-		end
-		
+			
 	end
 end)
 
@@ -1187,6 +1184,7 @@ addHook("PlayerThink", function(p)
 				
 				--taunt anims
 				if me.health
+				and not (takis.inPain or takis.inFakePain)
 					local think = TAKIS_TAUNT_THINK[takis.tauntid]
 					think(p)
 				else
@@ -1671,7 +1669,9 @@ addHook("PlayerThink", function(p)
 			
 			--stuff to do while grounded
 			if takis.onGround
-				takis.coyote = 8+(p.cmd.latency)
+				if not p.inkart
+					takis.coyote = 8+(p.cmd.latency)
+				end
 				takis.bashcooldown = false
 				
 				if not takis.pitanim
@@ -1842,6 +1842,7 @@ addHook("PlayerThink", function(p)
 						end
 						if not takis.crushtime
 						and (takis.saveddmgt ~= DMG_CRUSHED)
+						and (takis.taunttime == 0)
 							DoTakisSquashAndStretch(p,me,takis)
 						else
 							p.jt = 0
@@ -2085,21 +2086,36 @@ addHook("PlayerThink", function(p)
 				or (takis.nocontrol)
 				or (me.pizza_in or me.pizza_out)
 				or (takis.inWaterSlide)
-				or (p.ptsr_outofgame)
+				or (p.ptsr and p.ptsr.outofgame)
 				or (HAPPY_HOUR.othergt and HAPPY_HOUR.overtime)
-					takis.combo.frozen = true
+					if not p.ptsr
+						takis.combo.frozen = true
+					end
 					if ((p.exiting) and not (p.pflags & PF_FINISHED))
-					or (p.ptsr_outofgame)
+					or (p.ptsr and p.ptsr.outofgame)
 						takis.combo.cashable = true
 					end
 				else
 					takis.combo.time = $-1
-					takis.combo.frozen = false
+					if not p.ptsr
+						takis.combo.frozen = false
+					end
+					takis.combo.cashable = false
+				end
+				if p.ptsr
+					takis.combo.frozen = not PTSR.CanComboTimeDecrease(p)
 					takis.combo.cashable = false
 				end
 				
-				if takis.combo.time > TAKIS_MAX_COMBOTIME	
-					takis.combo.time = TAKIS_MAX_COMBOTIME
+				--weird hybrid with ptsr's and takis' combo meters
+				local maxtime = TAKIS_MAX_COMBOTIME
+				if (p.ptsr)
+					maxtime = p.ptsr.combo_maxtime
+					takis.combo.time = p.ptsr.combo_timeleft
+				end
+				
+				if takis.combo.time > maxtime	
+					takis.combo.time = maxtime
 				end
 				
 				--give ultiamte combo token
@@ -2117,7 +2133,11 @@ addHook("PlayerThink", function(p)
 				local cc = takis.combo.count
 				--be fair to the other runners
 				if (HAPPY_HOUR.othergt)
-					takis.combo.score = ((cc*cc)/2)+(10*cc)
+					if p.ptsr
+						takis.combo.score = "dontdraw"
+					else
+						takis.combo.score = ((cc*cc)/2)+(10*cc)
+					end
 				else
 					takis.combo.score = ((cc*cc)/2)+(17*cc)
 				end
@@ -2145,16 +2165,22 @@ addHook("PlayerThink", function(p)
 					takis.HUD.combo.momy = 3*FU
 					takis.HUD.combo.momx = 3*FU
 					
-					S_StartSound(nil,sfx_chchng,p)
-					P_AddPlayerScore(p,takis.combo.score)
+					if not p.ptsr
+						S_StartSound(nil,sfx_chchng,p)
+						if takis.combo.score ~= "dontdraw"
+							P_AddPlayerScore(p,takis.combo.score)
+						end
+					end
 					
-					takis.HUD.flyingscore.num = takis.combo.score
-					takis.HUD.flyingscore.tics = $+2*TR
-					local backx = 15*FU
-					local backy = takis.HUD.combo.basey
-					takis.HUD.flyingscore.x = backx+5*FU+takis.HUD.combo.patchx
-					takis.HUD.flyingscore.y = backy+7*FU
-				
+					if takis.combo.score ~= "dontdraw"
+						takis.HUD.flyingscore.num = takis.combo.score
+						takis.HUD.flyingscore.tics = $+2*TR
+						local backx = 15*FU
+						local backy = takis.HUD.combo.basey
+						takis.HUD.flyingscore.x = backx+5*FU+takis.HUD.combo.patchx
+						takis.HUD.flyingscore.y = backy+7*FU
+					end
+					
 					if not (p.pflags & PF_FINISHED)
 						if not takis.combo.dropped
 							takis.combo.dropped = true
@@ -2343,11 +2369,11 @@ addHook("PlayerThink", function(p)
 			end
 			*/
 			
-			if p.ptsr_rank
+			if (p.ptsr and p.ptsr.rank)
 			and (HAPPY_HOUR.othergt)
 				local per = (PTSR.maxrankpoints)/6
 				takis.HUD.rank.percent = per
-				local rank = p.ptsr_rank
+				local rank = p.ptsr.rank
 				
 				if (rank == "D")
 					takis.HUD.rank.score = p.score
@@ -2364,7 +2390,9 @@ addHook("PlayerThink", function(p)
 					takis.HUD.rank.percent = $*4
 				end
 				
-				takis.HUD.rank.score = $+takis.combo.score
+				if takis.combo.score ~= "dontdraw"
+					takis.HUD.rank.score = $+takis.combo.score
+				end
 				if takis.HUD.flyingscore.tics
 					takis.HUD.rank.score = $-takis.HUD.flyingscore.lastscore
 				end
@@ -2409,13 +2437,9 @@ addHook("PlayerThink", function(p)
 			takis.lastmomz = me.momz
 			--these are stupid
 			takis.lastskincolor = p.skincolor
-			takis.lastlives = p.lives
-			if CV_FindVar("cooplives").value == 3
-			and (netgame or multiplayer)
-				takis.lastlives = TAKIS_MISC.livescount
-			end
 		else
-		
+			
+			TakisHUDStuff(p)
 			--just switched
 			if not takis.otherskin
 				takis.otherskin = true
@@ -2436,11 +2460,9 @@ addHook("PlayerThink", function(p)
 			end
 		end
 		
-		TakisHUDStuff(p)
-		
 		--outside of shorts (and skin check!!!!) to check for
 		--last rank
-		takis.lastrank = ranktonum[p.ptsr_rank or "D"]
+		takis.lastrank = ranktonum[p.ptsr and p.ptsr.rank or "D"]
 
 		for i = 0,#takis.hurtmsg
 			if takis.hurtmsg[i].tics > 0
@@ -2496,12 +2518,18 @@ addHook("PlayerThink", function(p)
 		takis.lastplacement = takis.placement
 		takis.lastcarry = p.powers[pw_carry]
 		takis.lastrings = p.rings
+		takis.lastlives = p.lives
+		if CV_FindVar("cooplives").value == 3
+		and (netgame or multiplayer)
+			takis.lastlives = TAKIS_MISC.livescount
+		end
 	end
 	
 end)
 
 --this is really stupid
 addHook("ThinkFrame", function ()
+	PTSR.untilend = 0
     for p in players.iterate() do
         if not (p and p.valid) then continue end
 		
@@ -3090,7 +3118,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 	
 	if takis.pitanim then return end
 	if takis.pittime then return end
-	if p.ptsr_outofgame then return end
+	if p.ptsr and p.ptsr.outofgame then return end
 	
 	--BUT!!
 	if (p.powers[pw_shield] == SH_ARMAGEDDON)
@@ -3579,7 +3607,7 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		if p.exiting then return end
 		if TAKIS_MISC.inspecialstage then return end
 		if p.pflags & PF_GODMODE then return false end
-		if (p.ptsr_outofgame) then return false end
+		if (p.ptsr and p.ptsr.outofgame) then return false end
 		
 		--cartoony effect where takis drops with a
 		--smoke cloud in his shape
@@ -4262,6 +4290,11 @@ addHook("MobjMoveCollide",function(tm,t)
 				
 				return false
 			end
+		elseif (t.type == MT_STEAM)
+		and L_ZCollide(t,tm)
+		and p.inkart
+		and (tm.tracer and tm.tracer.valid)
+			P_SetObjectMomZ(tm.tracer, 20*FU, false)
 		--springs keep our momentum!
 		--only horizontal springs
 		elseif (t.flags & MF_SPRING)
@@ -4328,6 +4361,7 @@ addHook("MobjMoveCollide",function(tm,t)
 		and ((t.player) and (t.player.valid))
 		and (p.pflags & PF_SPINNING)
 		and L_ZCollide(t,tm)
+		and not (t.player.inkart or p.inkart)
 			if CanPlayerHurtPlayer(p,t.player)
 				if not (takis.transfo & TRANSFO_BALL)
 					TakisAddHurtMsg(t.player,HURTMSG_SLIDE)
@@ -4455,6 +4489,7 @@ addHook("MobjMoveCollide",function(tm,t)
 		and (p.inkart)
 		and L_ZCollide(t,tm)
 		and (takis.accspeed >= 15*FU)
+		and not t.player.inkart
 			if CanPlayerHurtPlayer(p,t.player)
 				P_DamageMobj(t,tm,tm,10)
 				LaunchTargetFromInflictor(1,t,tm,63*tm.scale,takis.accspeed/5)

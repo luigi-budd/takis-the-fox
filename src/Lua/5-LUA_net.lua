@@ -116,6 +116,16 @@ CV_TAKIS.noeffects = CV_RegisterVar({
 		debugf("noeffects",string.lower(cv.string),tostring(t.noeffects))
 	end
 })
+CV_TAKIS.forcekart = CV_RegisterVar({
+	name = "takis_forcekart",
+	defaultvalue = "false",
+	flags = CV_NETVAR|CV_SHOWMODIF|CV_CALL,
+	PossibleValue = CV_TrueFalse,
+	func = function(cv)
+		t.forcekart = boolean[string.lower(cv.string)]
+		debugf("forcekart",string.lower(cv.string),tostring(t.forcekart))
+	end
+})
 
 local function livesCount()
 	if (gametyperules & GTR_TAG)
@@ -329,12 +339,18 @@ addHook("ThinkFrame", do
 		
 		if gametype == GT_RACE
 			if circuitmap
-				if p1.laps+1 > p2.laps+1 then
+				if p1.laps > p2.laps then
+					return true
+				elseif p1.laps < p2.laps
+					return false
+				end
+				if p1.starpostnum > p2.starpostnum
+					return true
+				else
 					if p1.realtime < p2.realtime
 						return true
 					end
 				end
-				
 			else
 				if p1.realtime < p2.realtime then
 					return true
@@ -351,6 +367,19 @@ addHook("ThinkFrame", do
 	m.exitingcount = exitingCount
 	m.playercount = playerCount
 	m.takiscount = takisCount
+	
+	if t.forcekart
+		for p in players.iterate
+			if skins[p.skin].name ~= TAKIS_SKIN
+			or p.playerstate ~= PST_LIVE
+			or p.spectator
+			or p.inkart
+				continue
+			end
+			local k = P_SpawnMobjFromMobj(p.mo,0,0,0,MT_TAKIS_KART)
+			k.angle = p.mo.angle
+		end
+	end
 	
 	if not (leveltime % 3*TR)
 	and ((multiplayer) and not splitscreen)

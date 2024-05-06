@@ -1196,14 +1196,15 @@ local function drawlivesbutton(v,p,x,y,flags)
 			disp = $-20*FU
 		end
 	else
-		v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C3"), flags)
+		v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C3"), flags|V_HUDTRANS)
 		v.drawString(x+20*FU, y+disp+5*FU, "Look behind",V_ALLOWLOWERCASE|flags|V_HUDTRANS, "thin-fixed")	
 		disp = $-20*FU
 		
-		v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C2"), flags)
-		v.drawString(x+20*FU, y+disp+5*FU, "Dismount",V_ALLOWLOWERCASE|flags|V_HUDTRANS, "thin-fixed")
-		disp = $-20*FU
-	
+		if not TAKIS_NET.forcekart
+			v.drawScaled(x, y+disp, (FU/2)+(FU/12), v.cachePatch("TB_C2"), flags|V_HUDTRANS)
+			v.drawString(x+20*FU, y+disp+5*FU, "Dismount",V_ALLOWLOWERCASE|flags|V_HUDTRANS, "thin-fixed")
+			disp = $-20*FU
+		end
 	end
 	
 	if (p.powers[pw_carry] == CR_MINECART)
@@ -1263,10 +1264,19 @@ local function drawemeralds(v,emeraldpics,x,y,scale,f,pemeralds)
 	
 end
 
+--ordinal numbers
 local placetext = {
 	[1] = ",",
 	[2] = ":",
 	[3] = "!",
+	
+	[21] = ",",
+	[22] = ":",
+	[23] = "!",
+	
+	[31] = ",",
+	[32] = ":",
+	[33] = "!",
 }
 
 local placetext2 = {
@@ -1479,7 +1489,8 @@ local function drawlivesarea(v,p)
 			score = $..(placetext[takis.placement] or "?")
 			local scale = FU
 			
-			if (gametype == GT_RACE)
+			if (gametyperules & GTR_RACE)
+			and circuitmap
 				local maxlaps = CV_FindVar("numlaps").value
 				if p.laps == maxlaps-1 
 					scorenum = (top3 and not inlosingplace) and "CMBCF"..placestring[takis.placement] or (losing and "CMBCFR" or "CMBCF")
@@ -1601,6 +1612,49 @@ local function drawlivesarea(v,p)
 		disp = $+55*FU
 	end
 	
+	if (p.ptsr)
+	and me.pfstuntime
+		v.drawScaled(
+			x+60*FU+disp,
+			y-24*FU,
+			FU,
+			v.cachePatch("TA_ICE2"),
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF))|V_HUDTRANS
+		)
+		
+		local stunmax = CV_PTSR.pizzatimestun.value*TR
+		local stuntime = me.pfstuntime
+		local tics = L_FixedDecimal(FixedDiv(stuntime*FU,TR*FU),1)
+		
+		local erm = FixedDiv(stuntime*FU,stunmax*FU)
+		local height = v.cachePatch("TA_ICE").height*FU - FixedMul(erm,v.cachePatch("TA_ICE").height*FU)
+		if height < 0 then
+			height = 0
+		end
+		
+		v.drawCropped(
+			x+60*FU+disp,
+			y-24*FU+height,
+			FU,FU,
+			v.cachePatch("TA_ICE"),
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF))|V_HUDTRANS,
+			nil,
+			0,height,
+			v.cachePatch("TA_ICE").width*FU,
+			v.cachePatch("TA_ICE").height*FU
+		)
+		
+		v.drawString(x+60*FU+disp+(v.cachePatch("TA_ICE").width*FU/2),
+			y-27*FU+(v.cachePatch("TA_ICE").height*FU/2),
+			tics,
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF))|V_HUDTRANS|V_YELLOWMAP,
+			"thin-fixed-center"
+		)
+		
+		disp = $+30*FU
+		
+	end
+
 	--lives fill
 	if (takis.firenormal)
 	--?
@@ -1950,7 +2004,7 @@ end
 
 --COMBO ----------
 
-local function drawmincombo(v,p)
+local function drawmincombo(v,p,maxtime)
 	local takis = p.takistable
 	local me = p.mo
 	
@@ -1964,7 +2018,7 @@ local function drawmincombo(v,p)
 		if (takis.combo.outrotics)
 			combonum = takis.combo.failcount
 		end
-		local max = TAKIS_MAX_COMBOTIME*FU or 1
+		local max = maxtime*FU or 1
 		local erm = FixedDiv((takis.HUD.combo.fillnum),max)
 		local width = FixedMul(erm,v.cachePatch(pre.."FILL").width*FU)
 		if width < 0 then
@@ -1978,7 +2032,7 @@ local function drawmincombo(v,p)
 		v.drawScaled(backx+ax,
 			backy+ay,
 			scale*2,
-			v.cachePatch(pre.."BAR"),
+			v.cachePatch(pre.."BAR2"),
 			V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANSHALF|V_PERPLAYER
 		)
 		
@@ -2022,12 +2076,14 @@ local function drawmincombo(v,p)
 				V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
 				"thin-fixed-right"
 			)
-			v.drawString(backx,
-				backy-18*FU,
-				"+"..takis.combo.score,
-				V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
-				"thin-fixed-right"
-			)
+			if takis.combo.score ~= "dontdraw"
+				v.drawString(backx,
+					backy-18*FU,
+					"+"..takis.combo.score,
+					V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
+					"thin-fixed-right"
+				)
+			end
 		end
 
 	end
@@ -2042,7 +2098,7 @@ local function drawmincombo(v,p)
 		local x = fs.scorex*FU-(patch.width*FU/3)
 		local y = (fs.scorey+15)*FU
 		
-		if p.ptsr_rank
+		if (p.ptsr and p.ptsr.rank)
 		and HAPPY_HOUR.othergt
 			x = $-20*FU
 		end
@@ -2141,8 +2197,14 @@ local function drawcombostuff(v,p,cam)
 	local takis = p.takistable
 	local me = p.mo
 	
+	local maxtime = TAKIS_MAX_COMBOTIME
+	if (p.ptsr)
+		maxtime = p.ptsr.combo_maxtime
+		takis.combo.time = p.ptsr.combo_timeleft
+	end
+
 	if takis.io.minhud
-		drawmincombo(v,p)
+		drawmincombo(v,p,maxtime)
 		return
 	end
 	
@@ -2240,15 +2302,15 @@ local function drawcombostuff(v,p,cam)
 		end
 		*/
 		
-		local max = TAKIS_MAX_COMBOTIME*FU or 1
+		local max = maxtime*FU or 1
 		local erm = FixedDiv((takis.HUD.combo.fillnum),max)
 		local width = FixedMul(erm,v.cachePatch("TAKCOFILL").width*FU)
 		local color
-		if takis.HUD.combo.fillnum <= TAKIS_MAX_COMBOTIME*FU/4
+		if takis.HUD.combo.fillnum <= maxtime*FU/4
 			color = SKINCOLOR_RED
-		elseif takis.HUD.combo.fillnum <= TAKIS_MAX_COMBOTIME*FU/2
+		elseif takis.HUD.combo.fillnum <= maxtime*FU/2
 			color = SKINCOLOR_ORANGE
-		elseif takis.HUD.combo.fillnum <= TAKIS_MAX_COMBOTIME*FU*3/4
+		elseif takis.HUD.combo.fillnum <= maxtime*FU*3/4
 			color = SKINCOLOR_YELLOW
 		end
 		if (takis.combo.frozen)
@@ -2273,13 +2335,27 @@ local function drawcombostuff(v,p,cam)
 			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER
 		)
 		
+		
 		if not (takis.combo.outrotics)
-			v.drawString(backx+5*comboscale+(FixedMul(patchx,comboscale)),
-				backy+6*comboscale+(v.cachePatch("TAKCOFILL").height*comboscale/2)-(7*comboscale/2),
-				takis.combo.score,
-				V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
-				"thin-fixed-center"
-			)
+			if p.ptsr
+				local prank_able = p.ptsr.combo_timesfailed == 0 and p.ptsr.combo_times_started == 1 
+				if not prank_able
+					v.drawString(backx+5*comboscale+(FixedMul(patchx,comboscale)),
+						backy+6*comboscale+(v.cachePatch("TAKCOFILL").height*comboscale/2)-(7*comboscale/2),
+						"no p-rank",
+						V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
+						"thin-fixed-center"
+					)
+				end
+			end
+			if takis.combo.score ~= "dontdraw"
+				v.drawString(backx+5*comboscale+(FixedMul(patchx,comboscale)),
+					backy+6*comboscale+(v.cachePatch("TAKCOFILL").height*comboscale/2)-(7*comboscale/2),
+					takis.combo.score,
+					V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOTOP|V_PERPLAYER,
+					"thin-fixed-center"
+				)
+			end
 		end
 		
 		/*
@@ -2389,7 +2465,7 @@ local function drawcombostuff(v,p,cam)
 		local x = fs.scorex*FU-(patch.width*FU/3)
 		local y = (fs.scorey+20)*FU
 		
-		if p.ptsr_rank
+		if (p.ptsr and p.ptsr.rank)
 		and HAPPY_HOUR.othergt
 			x = $-20*FU
 		end
@@ -2643,13 +2719,17 @@ local function getlaptext(p)
 	local laps = (PTSR.laps)
 	local maxlaps = PTSR.maxlaps
 	
+	if p.ptsr.pizzaface
+		return '',"dontdraw"
+	end
+	
 	if CV_PTSR.default_maxlaps.value
 		text = lapsperplayertext
-		num = p.lapsdid.." / "..PTSR.maxlaps
+		num = p.ptsr.laps.." / "..PTSR.maxlaps
 		return text,num
 	else
 		text = inflaps
-		num = p.lapsdid
+		num = p.ptsr.laps
 		return text,num
 	end
 
@@ -2662,44 +2742,46 @@ local function drawtelebar(v,p)
 	local me = p.mo
 	local h = takis.HUD.ptsr
 	
-	local charge = p.pizzacharge or 0
+	local color = SKINCOLOR_GREEN
+	local pre = "CLTCHMET_"
 	
-		local maxammo = TR*7/5
-		local curammo = charge*7/5
-		local x = 153
-		local y = 168
-		local barx = x+(h.xoffset)
-		local bary = y+(h.yoffset/FU)
-		local patch1 = v.cachePatch("TAKISEG1") --blue
-		local patch3 = v.cachePatch("TAKISEG2") --black
-		local color = p.skincolor
-		
-			--Ammo bar
-			local pos = 0 
-			while (pos < maxammo)
-				local patch = patch3
-				pos = $ + 1
-				
-				
-					if pos <= curammo
-						v.draw(barx + pos - 1, bary, patch3, V_SNAPTOBOTTOM|V_HUDTRANS)
-						if pos > curammo - 1
-							if (curammo <= 1)
-								--first
-								patch = patch1
-							else
-								--fill
-								patch = patch1
-							end
-						else
-							patch = patch1
-						end
-					end
-					
-				v.draw(barx + pos - 1, bary, patch, V_SNAPTOBOTTOM|V_HUDTRANS,v.getColormap(nil,color))
-			end
-			
+	local charge = (p.pizzacharge or 0)
+	
+	if p.pizzachargecooldown
+		charge = CV_PTSR.pizzatpcooldown.value - p.pizzachargecooldown
+		color = SKINCOLOR_RED
+	end
+	
+	local back = v.cachePatch(pre.."BACK")
+	local x = 220*FU
+	local y = 190*FU+h.yoffset
+	local scale = FU/2
+	
+	v.drawScaled(
+		x,
+		y,
+		scale,
+		back,
+		V_SNAPTOBOTTOM|V_HUDTRANS
+	)
 
+	local max = TR*FU
+	local timer = charge*FU
+	local erm = FixedDiv((timer),max)
+	local width = v.cachePatch(pre.."FILL").height*FU-FixedMul(erm,v.cachePatch(pre.."FILL").height*FU)
+	if width < 0 then
+		width = 0
+	end
+	
+	v.drawCropped(x,
+		y+FixedMul(width,scale),
+		scale,scale,
+		v.cachePatch(pre.."FILL"),
+		V_SNAPTOBOTTOM|V_HUDTRANS, 
+		v.getColormap(nil,color),
+		0,width,
+		v.cachePatch(pre.."FILL").width*FU,v.cachePatch(pre.."FILL").height*FU
+	)
 end
 
 local function drawpizzatips(v,p)
@@ -2712,6 +2794,7 @@ local function drawpizzatips(v,p)
 	
 	local takis = p.takistable
 	local h = takis.HUD.ptsr
+	local me = p.realmo
 	
 	if (takis.hhexiting) then return end
 	
@@ -2720,15 +2803,16 @@ local function drawpizzatips(v,p)
 	end
 	
 	local tics = HAPPY_HOUR.time
-
+	
+	if p.ptsr == nil then return end
 	
 	local text,num = getlaptext(p)
 	local exitingCount, playerCount = PTSR_COUNT()
 
-	if (not p.pizzaface)
-	and (p.ptsr_outofgame)
+	if (not p.ptsr.pizzaface)
+	and (p.ptsr.outofgame)
 	and (p.playerstate ~= PST_DEAD) 
-	and not (p.lapsdid >= PTSR.maxlaps and CV_PTSR.default_maxlaps.value)
+	and not (p.ptsr.laps >= PTSR.maxlaps and CV_PTSR.default_maxlaps.value)
 	and not PTSR.gameover then
 		if not p.hold_newlap then
 			v.drawString(160, 130, "\x85Hold FIRE to try a new lap!", V_ALLOWLOWERCASE|V_SNAPTOBOTTOM, "thin-center")
@@ -2739,6 +2823,7 @@ local function drawpizzatips(v,p)
 	end
 	
 	if tics > 3
+		h.xoffset = 0
 		if num ~= 'dontdraw'
 			h.xoffset = 31
 			
@@ -2754,36 +2839,17 @@ local function drawpizzatips(v,p)
 		end
 		
 	end
-	
-	if p.stuntime
-	and tics > 3
-		local ft = ((CV_PTSR) and (CV_PTSR.pizzatimestun.value))
-		ft = $*TR
 		
-		local max = ft*FU
-		local erm = FixedDiv(p.stuntime*FU,max)
-		
-		local scale2 = (30*FU)-FixedMul(erm,30*FU)
-		
-		if scale2 < 0 then scale2 = FU end
-		
-		v.drawString(165*FU,(120*FU)+(h.yoffset),"Frozen for "..p.stuntime/TR.." seconds",V_10TRANS|V_HUDTRANS|V_ALLOWLOWERCASE,"thin-fixed-center")
-		v.drawScaled(145*FU,135*FU+(h.yoffset),FU,v.cachePatch("TA_ICE2"), V_HUDTRANS)
-		v.drawCropped(
-		145*FU, 135*FU+(scale2)+(h.yoffset),
-		FU,FU,v.cachePatch("TA_ICE"), V_HUDTRANS,nil,
-		0,scale2,30*FU,30*FU)	
-		
-	end
-	
-	if p.pizzaface
+	if p.ptsr.pizzaface
+		/*
 		if (p.pizzachargecooldown)
-			v.drawString(153+(h.xoffset),162+(h.yoffset/FU),"Cooling down...",V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small")
+			v.drawString(153+(h.xoffset),162+(h.yoffset),"Cooling down...",V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small-fixed")
 		elseif (p.pizzacharge)
-			v.drawString(153+(h.xoffset),162+(h.yoffset/FU),"Charging!",V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small")
+			v.drawString(153+(h.xoffset),162+(h.yoffset),"Charging!",V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small-fixed")
 		else
-			v.drawString(153+(h.xoffset),162+(h.yoffset/FU),"Hold FIRE to teleport!", V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small")
+			v.drawString(153+(h.xoffset),162+(h.yoffset),"Hold FIRE to teleport!", V_SNAPTOBOTTOM|V_HUDTRANS|V_ALLOWLOWERCASE,"small-fixed")
 		end
+		*/
 		drawtelebar(v,p)
 	end
 end
@@ -2935,9 +3001,9 @@ local function drawpizzaranks(v,p)
 	
 	local takis = p.takistable
 	local h = takis.HUD.rank
+	if p.ptsr == nil then return end
 	
-		
-	local patch = v.cachePatch("HUDRANK"..p.ptsr_rank)
+	local patch = v.cachePatch("HUDRANK"..p.ptsr.rank)
 	
 	local fs = takis.HUD.flyingscore
 	local x = fs.scorex*FU-(patch.width*FU/3)
@@ -2946,28 +3012,33 @@ local function drawpizzaranks(v,p)
 		y = (fs.scorey+15)*FU
 	end
 		
-	if p.ptsr_rank
+	if (p.ptsr and p.ptsr.rank)
 		v.drawScaled(x-(h.grow*25),y-(h.grow*20),FU/3+h.grow,
 			patch,
 			V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP
 		)
 		if h.percent
-		and (p.ptsr_rank ~= "P")
+		and (p.ptsr.rank ~= "P")
 			--thanks jisk for the help lol
+			
+			if p.ptsr.rank == "S"
+			and (takis.combo.dropped)
+				return
+			end
 			
 			local max = h.percent
 			local erm = FixedDiv((h.score),max)
 			
-			local scale2 = rankheights[p.ptsr_rank]-(FixedMul(erm,rankheights[p.ptsr_rank]))
+			local scale2 = rankheights[p.ptsr.rank]-(FixedMul(erm,rankheights[p.ptsr.rank]))
 			
  			if scale2 < 0 then scale2 = FU end
 			
 			v.drawCropped(x,y+(scale2/3),FU/3,FU/3,
-				v.cachePatch("RANKFILL"..p.ptsr_rank),
+				v.cachePatch("RANKFILL"..p.ptsr.rank),
 				V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP, 
 				v.getColormap(nil, nil),
 				0,scale2,
-				rankwidths[p.ptsr_rank],rankheights[p.ptsr_rank]
+				rankwidths[p.ptsr.rank],rankheights[p.ptsr.rank]
 			)
 			
 		end
@@ -5595,6 +5666,8 @@ addHook("HUD", function(v,p,cam)
 				customhud.SetupItem("PTSR_tooltips","spicerunners")
 			end
 			customhud.SetupItem("PTSR_rank", modname)
+			--UGH YOU STUPID BITCH JISK
+			customhud.SetupItem("PTSR_combo", modname)
 			--customhud.SetupItem("rank", modname)
 			
 			if p.takis
@@ -5796,7 +5869,7 @@ addHook("HUD", function(v,p,cam)
 					"thin-center"
 				)
 			end
-			
+		--not takis lol
 		else
 			if takis.io.morehappyhour == 0
 			and (not takis.otherskin
@@ -5822,6 +5895,7 @@ addHook("HUD", function(v,p,cam)
 				customhud.SetupItem("PTSR_bar","spicerunners")
 				customhud.SetupItem("PTSR_tooltips","spicerunners")
 				customhud.SetupItem("PTSR_rank", "spicerunners")
+				customhud.SetupItem("PTSR_combo", "spicerunners")
 				customhud.SetupItem("textspectator",altmodname)
 				customhud.SetupItem("crosshair",altmodname)
 			end

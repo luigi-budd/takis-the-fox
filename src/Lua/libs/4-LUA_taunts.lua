@@ -104,12 +104,23 @@ local function think_smug(p)
 
 end
 
+local congalist = {
+	[0] = {FU*12/10,	FixedDiv(FU,FU*12/10)	},
+	[1] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
+	[2] = {FU*8/10,		FixedDiv(FU,FU*7/10)	},
+	[3] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
+	[4] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
+	[5] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
+	[6] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
+	[7] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
+}
+
 local function think_conga(p)
 	local me = p.mo
 	local takis = p.takistable
 	
 	takis.nocontrol = 2
-	takis.taunttime = 2
+	takis.taunttime = 4
 	takis.tauntjoinable = true
 	
 	p.drawangle = me.angle
@@ -117,10 +128,11 @@ local function think_conga(p)
 	P_MovePlayer(p)
 	if me.state ~= S_PLAY_TAKIS_CONGA
 		me.state = S_PLAY_TAKIS_CONGA
-	else
-		me.frame = (leveltime/3)%8
 	end
 	
+	local tic = (leveltime/3)%8
+	me.spritexscale = congalist[tic][1]
+	me.spriteyscale = congalist[tic][2]
 	
 	--cancel conga
 	if (takis.c1)
@@ -199,6 +211,8 @@ local function think_bat(p)
 						
 						P_InstaThrust(found,ang,175*FU)
 						L_ZLaunch(found,60*FU)
+						P_MovePlayer(found.player)
+						found.state = S_PLAY_PAIN
 						
 						local ghs = P_SpawnGhostMobj(me)
 						ghs.fuse = 10*TR

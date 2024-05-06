@@ -624,8 +624,10 @@ addHook("MobjDeath",function(t,i,s)
 		end
 		
 		if s.player.powers[pw_shield] & SH_FIREFLOWER
-			TakisHealPlayer(s.player,s,s.player.takistable,1,1)
-			S_StartSound(s,sfx_takhel,s.player)
+			if s.player.takistable.heartcards ~= TAKIS_MAX_HEARTCARDS
+				TakisHealPlayer(s.player,s,s.player.takistable,1,1)
+				S_StartSound(s,sfx_takhel,s.player)
+			end
 		end
 	end
 end,MT_FIREFLOWER)
@@ -1854,6 +1856,7 @@ end,MT_TAKIS_FETTI)
 
 local gibbinglist = {
 	MT_FANG,
+	MT_ROSY,
 }
 local function regulargib(mo)
 	if not (mo and mo.valid) then return end

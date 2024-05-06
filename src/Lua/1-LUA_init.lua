@@ -244,6 +244,7 @@ rawset(_G, "TAKIS_NET", {
 	hammerquakes = true,
 	chaingun = false,
 	noeffects = false,
+	forcekart = false,
 	--happytime = false,
 	
 	usedcheats = false,
@@ -1559,9 +1560,7 @@ states[S_TAKIS_TROPHY2] = {
 SafeFreeslot("S_PLAY_TAKIS_CONGA")
 states[S_PLAY_TAKIS_CONGA] = {
     sprite = SPR_PLAY,
-    frame = SPR2_WALK|A|FF_ANIMATE,
-    var1 = 8,
-	var2 = 1,
+    frame = SPR2_STND|A,
 	tics = -1,
     nextstate = S_PLAY_TAKIS_CONGA
 }

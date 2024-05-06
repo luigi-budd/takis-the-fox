@@ -326,8 +326,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 		or (gametyperules & GTR_TAG)
 	))
 	or HAPPY_HOUR.othergt
-	or gametype == GT_RACE
-	or gametype == GT_COMPETITION)	
+	or gametyperules & GTR_RACE)	
 		hud.lives.useplacements = true
 	end
 	
@@ -742,7 +741,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 				hud.lives.tweenx = maxx
 			end
 			
-			if intic == TR
+			if intic >= TR
 			and takis.oldlives ~= lives
 				takis.oldlives = lives
 				hud.lives.bump = FU*3/2
@@ -768,10 +767,15 @@ rawset(_G, "TakisHUDStuff", function(p)
 	if hud.lives.bump then hud.lives.bump = $*4/5 end
 	
 	--red
-	if hud.combo.fillnum <= TAKIS_MAX_COMBOTIME*FU/4
+	local maxtime = TAKIS_MAX_COMBOTIME
+	if (p.ptsr)
+		maxtime = p.ptsr.combo_maxtime
+		takis.combo.time = p.ptsr.combo_timeleft
+	end
+	if hud.combo.fillnum <= maxtime*FU/4
 		hud.combo.shake = (P_RandomFixed())*3/2
 	--orange
-	elseif hud.combo.fillnum <= TAKIS_MAX_COMBOTIME*FU/2
+	elseif hud.combo.fillnum <= maxtime*FU/2
 		hud.combo.shake = P_RandomFixed()*2/3
 	else
 		/*
@@ -1518,6 +1522,8 @@ end
 
 rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
+	TakisHUDStuff(p)
+	
 	--fake pw_flashing
 	if takis.fakeflashing > 0
 		p.powers[pw_flashing] = takis.fakeflashing
@@ -2035,10 +2041,14 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 
 	if p.name
-		if (p.ctfteam == 1)
-			p.ctfnamecolor = "\x85"+p.name+"\x80"
-		elseif (p.ctfteam == 2)
-			p.ctfnamecolor = "\x84"+p.name+"\x80"
+		if G_GametypeHasTeams()
+			if (p.ctfteam == 1)
+				p.ctfnamecolor = "\x85"+p.name+"\x80"
+			elseif (p.ctfteam == 2)
+				p.ctfnamecolor = "\x84"+p.name+"\x80"
+			else
+				p.ctfnamecolor = p.name
+			end
 		else
 			p.ctfnamecolor = p.name
 		end
@@ -2054,6 +2064,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	if (takis.heartcards > TAKIS_MAX_HEARTCARDS)
 		takis.heartcards = TAKIS_MAX_HEARTCARDS
+	elseif takis.heartcards < 0
+		takis.heartcards = 0
 	end
 	
 	if (takis.afterimaging
@@ -2456,6 +2468,7 @@ rawset(_G, "TakisCreateAfterimage", function(p,me)
 		--not everyone is salmon
 		local salnum = #skincolors[ColorOpposite(p.skincolor)]
 		if not (takis.starman)
+		and (consoleplayer and consoleplayer.valid)
 		--laggy model? dont color shift if it is!
 		and not (models and consoleplayer.takistable.io.laggymodel and CV_FindVar("renderer").value == 2)
 			takis.afterimagecolor = $+1
@@ -2517,6 +2530,7 @@ rawset(_G, "DoTakisSquashAndStretch", function(p, me, takis)
 	or (p.powers[pw_carry] == CR_ROPEHANG)
 	or (me.pizza_out or me.pizza_in)
 	or (p.inkart)
+	or (takis.taunttime)
 		dontdo = true
 	end
 	
@@ -3144,7 +3158,11 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 		takis.combo.count = $+1
 		local cc = takis.combo.count
 		if (HAPPY_HOUR.othergt)
-			takis.combo.score = ((cc*cc)/2)+(10*cc)
+			if p.ptsr
+				takis.combo.score = "dontdraw"
+			else
+				takis.combo.score = ((cc*cc)/2)+(10*cc)
+			end
 		else
 			takis.combo.score = ((cc*cc)/2)+(17*cc)
 		end
@@ -4777,7 +4795,6 @@ rawset(_G,"TakisDoClutch",function(p)
 	
 	
 	local mo = (p.powers[pw_carry] == CR_ROLLOUT) and me.tracer or me
-	if mo ~= me then ang = me.angle end
 	thrust = FixedMul(thrust,me.scale)
 	
 	local twod = (mo.flags2 & MF2_TWOD or twodlevel)
@@ -5514,6 +5531,7 @@ rawset(_G,"TakisDoHammerBlastLand",function(p,domoves)
 	takis.hammerblastdown = 0
 end)
 
+--buggie gave me this
 local function peptoboxed(mobj)
 	--should work with no errors...
 	if mobj.player.pep and mobj.skin == "peppino"
