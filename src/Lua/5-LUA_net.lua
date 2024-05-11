@@ -319,7 +319,7 @@ addHook("ThinkFrame", do
 			if p.exiting
 			or p.spectator 
 			or p.pizzaface
-			or p.ptsr_outofgame
+			or (p.ptsr_outofgame or (p.ptsr and p.ptsr.outofgame))
 			or p.playerstate == PST_DEAD
 				exitingCount = $+1
 			end
@@ -329,6 +329,10 @@ addHook("ThinkFrame", do
 			
 			if not p.spectator
 				table.insert(m.scoreboard,p)
+			end
+			
+			if (leveltime % (60*TR)) == 0
+				TakisSaveStuff(p,true)
 			end
 			playerCount = $+1
 		end

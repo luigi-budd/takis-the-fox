@@ -37,7 +37,7 @@ Lua.Takis_HH_Tag = 9999
 
 Level Z3
 Levelname = Test Room
-Act = 0
+Act = 1
 NoZone = true
 Music = TESTMP
 TypeOfLevel = Singleplayer,Coop,CTF,Match
@@ -47,4 +47,16 @@ Lua.Takis_HH_Timelimit = 8
 Lua.Takis_HH_NoHappyHour = true
 NoVisitNeeded = true
 LevelSelect = 1
+SkyNum = 1
+
+Level Z4
+Levelname = Test Room
+SubTitle = Kart Test Room
+Act = 2
+NoZone = true
+Music = TESTMP
+TypeOfLevel = Coop,Race
+NoVisitNeeded = true
+LevelSelect = 1
+Lua.ForceKartExtra = true
 SkyNum = 1

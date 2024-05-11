@@ -7,7 +7,9 @@ local function choosething(...)
 	return args[choice]
 end
 
-if CFTextBoxes then
+--migth as well make a new rawset, takis' textboxes are very different
+--from cf's
+if TakisTextBoxes then
     filesdone = $+1
     error("A version of Clone Fighter's Text Boxes is already loaded. Aborting...", -1)
 	return
@@ -15,7 +17,7 @@ end
 
 -- The main library for the textboxes.
 -- Made by Clone Fighter; v1.0.0
-rawset(_G, "CFTextBoxes", {
+rawset(_G, "TakisTextBoxes", {
     version = {1, 0, 0}, -- Major, minor, hotfix
     globalBox = {}
 })
@@ -67,7 +69,7 @@ end
 
 SafeFreeslot("SPR2_TBXA", "SPR2_TBXM") -- Slots for any custom animations required. I'm generous enough to give you a whole 64 extra slots for free! As well as 64 mini slots.
 
-local TB = CFTextBoxes -- shortcut
+local TB = TakisTextBoxes -- shortcut
 
 -- Set up a textbox set. This makes the affected player unable to move, just so that they can interact with the textbox.
 -- You can set a delay for the textboxes to close/progress automatically in their options.
@@ -464,6 +466,7 @@ local function textboxStringDrawer(v, x, y, sss, f, box)
     end
 end
 
+--maybe let textboxes draw to hud?
 hud.add(function(v, player)
 	if (player.textBoxClose)
 		local box = player.textBoxClose
@@ -732,7 +735,7 @@ addHook("LinedefExecute",function(line,mo,sec)
 		end
 		
 		if TAKIS_TEXTBOXES["gmap"..gamemap][tag] ~= nil
-			CFTextBoxes:DisplayBox(mo.player,
+			TakisTextBoxes:DisplayBox(mo.player,
 				TAKIS_TEXTBOXES["gmap"..gamemap][tag],
 				TAKIS_TEXTBOXES["gmap"..gamemap][tag][1].move
 			)

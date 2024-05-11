@@ -21,7 +21,7 @@ tm.entries = {
 			"Show the controls.",
 			"Print the manual URL in console.",
 			"Warp to the Tutorial level. Singleplayer only.",
-			"..."
+			"Why are you even doing this in the first place?"
 		}
 	},
 	--hardcoded so you cant mess with it
@@ -113,7 +113,7 @@ tm.entries = {
 			"Heartcards",
 			"Hammer quakes",
 			"Toggle Happy Hour",
-			"Effects",
+			"No effects",
 		},
 		values = {
 			"nerfarma",
@@ -164,11 +164,13 @@ if (TAKIS_ISDEBUG)
 			"Instant exit",
 			"Panic!",
 			"Shotgunify",
-			"Test Map",
+			"Test Map 1",
+			"Test Map 2",
 			"\x82".."Debug Flags:",
 		},
 		table = "_G",
 		values = {
+			nil,
 			nil,
 			nil,
 			nil,
@@ -179,7 +181,8 @@ if (TAKIS_ISDEBUG)
 			"leave",
 			"panic 3 2",
 			"shotgun",
-			"testmap",
+			"testmap 1",
+			"testmap 2",
 			nil,
 		},
 		hints = {
@@ -187,6 +190,7 @@ if (TAKIS_ISDEBUG)
 			"Triggers Happy Hour with 3 minutes.",
 			"Instant shotgunify.",
 			"Warp to Test Room.",
+			"Warp to Kart Test Room.",
 			"Clientside debug flags.",
 		}
 	}
@@ -206,15 +210,15 @@ if (TAKIS_ISDEBUG)
 		"NET",
 	}
 	for k,v in ipairs(dbgflags)
-		tm.entries[5].text[5+k] = v
+		tm.entries[5].text[6+k] = v
 	end
 	for k,v in ipairs(dbgflags)
-		tm.entries[5].commands[5+k] = "setdebug "..v
+		tm.entries[5].commands[6+k] = "setdebug "..v
 	end
 	addHook("ThinkFrame",do
 		for i = 1,#dbgflags
 			local bit = 1<<(i-1)
-			tm.entries[5].values[5+i] = (TAKIS_DEBUGFLAG&bit)==bit
+			tm.entries[5].values[6+i] = (TAKIS_DEBUGFLAG&bit)==bit
 		end
 	end)
 	

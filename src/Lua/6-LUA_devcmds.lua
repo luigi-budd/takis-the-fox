@@ -535,7 +535,7 @@ COM_AddCommand("pong", function(p)
 	
 end,COM_ADMIN)
 
-COM_AddCommand("testmap", function(p)
+COM_AddCommand("testmap", function(p,act)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
 		return
@@ -546,12 +546,28 @@ COM_AddCommand("testmap", function(p)
 		return	
 	end
 	
-	if G_BuildMapTitle(1003) ~= "Test Room"
-		prn(p,"Test map has been replaced, cannot teleport.")
+	act = tonumber(act)
+	if act == nil
+		act = 1
+	elseif act < 1
+		act = 1
+	elseif act > 2
+		act = 2
+	end
+	print(act)
+	
+	local map = 1002+act
+	
+	print(map)
+	print(G_BuildMapTitle(map))
+	print("Test Room "..act)
+	
+	if G_BuildMapTitle(map) ~= "Test Room "..act
+		prn(p,"Test map "..act.." has been replaced, cannot teleport.")
 		return	
 	end
 	
-	G_SetCustomExitVars(1003,2)
+	G_SetCustomExitVars(map,2)
 	G_ExitLevel()
 	
 end,COM_ADMIN)

@@ -149,6 +149,8 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 	end
 
 	CONS_Printf(p, "\x82Loaded "..skins[TAKIS_SKIN].realname.."' Settings!")
+	p.takistable.io.savestate = 2
+	p.takistable.io.savestatetime = 2*TR
 end)
 
 rawset(_G, "TakisSaveStuff", function(p, silent)
@@ -156,6 +158,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	
 	--well i dont see why not
 	TakisSaveAchievements(p)
+	p.takistable.io.savestate = 1
 	
 	--write
 	local a1 = 0 
@@ -208,8 +211,12 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 		end
 			
 		file:close()
-		
+		p.takistable.io.savestate = 2
+		p.takistable.io.savestatetime = 2*TR
+		return
 	end
+	p.takistable.io.savestate = 3
+	p.takistable.io.savestatetime = 2*TR
 end)
 
 rawset(_G, "TakisLoadStuff", function(p)
@@ -232,6 +239,7 @@ rawset(_G, "TakisLoadStuff", function(p)
 			local code = file:read("*a")
 			
 			if code ~= nil and not (string.find(code, ";"))
+				p.takistable.io.savestate = 1
 				COM_BufInsertText(p, "takis_load "..TAKIS_ACHIEVEMENTINFO.luasig..code)
 				p.takistable.io.loaded = true
 			end

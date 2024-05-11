@@ -211,6 +211,16 @@ local function drawbosscards(v,p)
 	if TAKIS_BOSSCARDS.bossprefix[bosscards.mo.type] ~= nil then xoff = 4*FU end
 	if takis.io.minhud then xoff = -20*FU end
 	
+	--tween in/out
+	local et = TR/2
+	local tween = 0
+	if not (TAKIS_MISC.inbossmap and bosscards.mo.health)
+	and (bosscards.mo)
+		local tics = min(bosscards.timealive,et+1)
+		tween = ease.outback((FU/et)*tics,-300*FU,0,FU*3/2)
+	end
+	xoff = $+tween
+	
 	--boss cards
 	for i = 1, bosscards.maxcards do
 		
@@ -618,7 +628,16 @@ local function drawbossface(v,p)
 	
 	headpatch = v.cachePatch(headstring)
 	
-	v.drawScaled((300-5)*FU,
+	--tween in/out
+	local et = TR/2
+	local tween = 0
+	if not (TAKIS_MISC.inbossmap and bosscards.mo.health)
+	and (bosscards.mo)
+		local tics = min(bosscards.timealive,et+1)
+		tween = ease.outback((FU/et)*tics,-300*FU,0,FU*3/2)
+	end
+	
+	v.drawScaled((300-5)*FU-tween,
 		27*FU,
 		scale,
 		headpatch,
@@ -1493,6 +1512,8 @@ local function drawlivesarea(v,p)
 			and circuitmap
 				local maxlaps = CV_FindVar("numlaps").value
 				if p.laps == maxlaps-1 
+				or (p.pflags & PF_FINISHED)
+				or (p.exiting)
 					scorenum = (top3 and not inlosingplace) and "CMBCF"..placestring[takis.placement] or (losing and "CMBCFR" or "CMBCF")
 				end
 			else
@@ -1654,7 +1675,26 @@ local function drawlivesarea(v,p)
 		disp = $+30*FU
 		
 	end
-
+	
+	if takis.io.savestate ~= 0
+		local state = "IDLE"
+		if takis.io.savestate == 2
+			state = "GOOD"
+		elseif takis.io.savestate == 3
+			state = "BAD"
+		end
+		
+		v.drawScaled(
+			x+70*FU+disp,
+			y-8*FU,
+			FU,
+			v.cachePatch("TA_SAVE_"..state),
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF))|V_HUDTRANS
+		)
+		
+		disp = $+25*FU
+	end
+	
 	--lives fill
 	if (takis.firenormal)
 	--?
@@ -3204,7 +3244,7 @@ local letter = {
 	"Special Stages. I dare you to find them...",
 	"If you can!"
 }
-		
+	
 
 --		needa make a font for this
 local function drawcosmenu(v,p)
@@ -3266,35 +3306,35 @@ local function drawcosmenu(v,p)
 		skincolors[pagecolor].ramp[15]|V_SNAPTOLEFT|V_SNAPTOTOP
 	)
 	
-	--need the scale before the loops
-	local s = FU*3/2
 	local bgp = v.cachePatch("TA_MENUBG")
-	--this will overflow in 15 minutes + some change
-	local timer = FixedDiv(leveltime*FU,2*FU) or 1
-	local bgoffx = FixedDiv(timer,2*FU)%(bgp.width*s)
-	local bgoffy = FixedDiv(timer,4*FU)%(bgp.height*s)
-	for i = 0,(v.width()/bgp.width)--+1
-		for j = 0,(v.height()/bgp.height)--+1
-			--Complicated
-			local x = 300
-			local y = bgp.height*(j-1)
-			local f = V_SNAPTORIGHT|V_SNAPTOTOP|V_70TRANS
-			local c = v.getColormap(nil,pagecolor)
-			
-			v.drawScaled(((x-bgp.width*(i-1)))*s-bgoffx,
-				(y)*s+bgoffy,
-				s,
-				bgp, --v.cachePatch("?"),
-				f,
-				c
+	local bgscale = FU
+	local total_width = (v.width() / v.dupx()) + 1
+	local total_height = (v.height() / v.dupy()) + 1
+	local bgflags = V_SNAPTOTOP|V_SNAPTOLEFT|V_10TRANS
+	local bgmaxi = FixedInt(FixedDiv(total_width*FU,bgp.width*bgscale))+1
+	local bgmaxj = FixedInt(FixedDiv(total_height*FU,bgp.height*bgscale))+1
+	local bgxoff = (-leveltime*5000)%(bgp.width*bgscale)
+	local bgyoff = (leveltime*5000)%(bgp.height*bgscale)
+	
+	-- +1 for scrolling
+	for i = 0,bgmaxi
+		for j = 0,bgmaxj
+			local x = (bgp.width*bgscale*i)
+			local y = -bgp.height*bgscale+(bgp.height*bgscale*j)
+			v.drawScaled(x+bgxoff,
+				y+bgyoff,
+				bgscale,bgp,bgflags,
+				v.getColormap(nil,pagecolor)
 			)
-			v.drawScaled(((x-bgp.width*i))*s-bgoffx,
-				(y)*s+bgoffy,
-				s,
-				bgp, --v.cachePatch("?"),
-				f,
-				c
+			/*
+			v.drawString(x+bgxoff,
+				y+bgyoff,
+				"i"..i..", j"..j.."\n"
+				.."max "..bgmaxi..", "..bgmaxj,
+				bgflags|V_ALLOWLOWERCASE|V_RETURN8,
+				"thin-fixed"
 			)
+			*/
 		end
 	end
 	
@@ -3315,19 +3355,46 @@ local function drawcosmenu(v,p)
 		"left"
 	)
 	
-	/*
-	local doscroll = false
-	local hinty = greenToReal(v,
-	if (pos.y*FU+10*FU*#page.text) 
-	
-	end
-	*/
+	local longestwidth = 0
+	local lowestheight = ((100*FU)+(total_height*FU/2))-(60*FU)
+	local lowestiter = 0
+	local alreadysetwrap = false
 	
 	--the TEXT.
+	local lastx = pos.x
 	for i = 1,#page.text
 		shakex,shakey = happyshakelol(v,i)
 		if (menu.page ~= 1)
+			
+			--handles text wrapping if it goes too close to the
+			--bottom of the screen
+			--ONLY WRAPS ONCE so try not to use so many entries :)
 			local txtlength = 0
+			local texty = pos.y*FU+10*FU*i
+			--absolute coords on screen
+			local absy = ((100*FU)-(total_height*FU/2))+texty
+			--check bottom of string (+8)
+			--idea is to generally keep the entries away from the hints & controls
+			local toolow = (absy+8*FU >= lowestheight) and true or false
+			if toolow
+				if lowestiter == 0
+					lowestiter = i
+				end
+				if not alreadysetwrap
+					pos.x = $+(longestwidth/FU)+10
+				end
+				texty = pos.y*FU+10*FU*((i-lowestiter)+1)
+				alreadysetwrap = true
+			end
+			
+			if i-1 == takis.cosmenu.y
+				v.drawScaled(pos.x*FU,texty,FU,
+					v.cachePatch("TA_MENUTXTCUR"),
+					V_SNAPTOLEFT|V_SNAPTOTOP,
+					v.getColormap(nil,ColorOpposite(pagecolor))
+				)
+			end
+			
 			if (page.text[i] == "$$$$$")
 				local txt = ''
 				if io
@@ -3348,14 +3415,14 @@ local function drawcosmenu(v,p)
 				else
 					txt = "\x85Other person's config."
 				end
-				v.drawString(pos.x*FU, pos.y*FU+10*FU*i,
+				v.drawString(pos.x*FU, texty,
 					txt,
 					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
 					"thin-fixed"
 				)
 				txtlength = v.stringWidth(txt,V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,"thin")*FU
 			else
-				v.drawString(pos.x*FU+shakex, pos.y*FU+10*FU*i+shakey,
+				v.drawString(pos.x*FU+shakex, texty+shakey,
 					page.text[i],
 					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
 					"thin-fixed"
@@ -3387,12 +3454,16 @@ local function drawcosmenu(v,p)
 					if value == nil or value == "nil" then value = '\x85???' end
 					
 					v.drawString(pos.x*FU+txtlength+shakex,
-						pos.y*FU+10*FU*i+shakey,
+						texty+shakey,
 						": \x82"..value,
 						V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
 						"thin-fixed"
 					)
+					txtlength = $+(v.stringWidth(": \x82"..value,V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,"thin")*FU)
 				end
+			end
+			if txtlength > longestwidth
+				longestwidth = txtlength
 			end
 		--achs page
 		else
@@ -3571,6 +3642,7 @@ local function drawcosmenu(v,p)
 			
 		end
 	end
+	pos.x = lastx
 	
 	if (page.hints ~= nil)
 	and (#page.hints)
@@ -3616,7 +3688,7 @@ local function drawcosmenu(v,p)
 			V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_GRAYMAP|V_RETURN8|V_ALLOWLOWERCASE|hinttrans,
 			"thin-fixed"
 		)
-			
+		
 	end
 	
 	if takis.HUD.showingletter
@@ -4901,8 +4973,9 @@ local function drawdebug(v,p)
 		drawflag(v,200,100,"Pain",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inPain))
 		drawflag(v,200,108,"FakePain",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inFakePain))
 		drawflag(v,200,116,"WaterSlide",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inwaterslide))
-		drawflag(v,200,124,"TicsForPain: "..takis.ticsforpain,V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsforpain > 0))
-		drawflag(v,200,132,"TicsInPain: "..takis.ticsinpain,V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsinpain > 0))
+		drawflag(v,200,124,"WasWaterSlide",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.wasinwaterslide))
+		drawflag(v,200,132,"TicsForPain: "..takis.ticsforpain,V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsforpain > 0))
+		drawflag(v,200,140,"TicsInPain: "..takis.ticsinpain,V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsinpain > 0))
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_ACH)
 		for k,va in ipairs(takis.HUD.steam)
@@ -5569,7 +5642,24 @@ customhud.SetupItem("takis_kart_meters",	modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_racelaps",		modname/*,	,	"game",	10*/)
 customhud.SetupItem("takis_viewmodel",		modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
+local istakisrn = false
 local wastakis = false
+addHook("PostThinkFrame",do
+	local player = displayplayer
+	if not (player and player.valid)
+		return
+	end
+	if not player.takistable
+		return
+	end
+	wastakis = istakisrn
+	if player.takistable.isTakis
+		istakisrn = true
+		wastakis = true
+	else
+		istakisrn = false
+	end
+end)
 addHook("HUD", function(v,p,cam)
 	if not p
 	or not p.valid
@@ -5616,7 +5706,7 @@ addHook("HUD", function(v,p,cam)
 		drawhappytime(v,p)
 		if takis.isTakis
 			
-			wastakis = true
+			--wastakis = true
 			local opmode = (me and me.valid and me.state == S_OBJPLACE_DUMMY) or false
 			
 			--customhud.SetupItem("takis_wareffect", 		modname)
@@ -5701,7 +5791,6 @@ addHook("HUD", function(v,p,cam)
 			drawnadocount(v,p,cam)
 			drawtransfotimer(v,p,cam)
 			drawdriftmeter(v,p,cam)
-			drawkartmeters(v,p)
 			
 			drawfallout(v,p)
 			--drawwareffect(v,p)
@@ -5710,6 +5799,7 @@ addHook("HUD", function(v,p,cam)
 				drawrings(v,p)
 				drawtimer(v,p)
 			end
+			drawkartmeters(v,p)
 			drawlivesarea(v,p)
 			drawracelaps(v,p)
 			if not opmode
@@ -5883,23 +5973,23 @@ addHook("HUD", function(v,p,cam)
 			if not takis.otherskin
 			or takis.otherskintime == 1
 			or wastakis
-				customhud.SetupItem("rings",altmodname)
+				customhud.SetupItem("rings",			altmodname)
 				if not (HAPPY_HOUR.othergt)
-					customhud.SetupItem("time",altmodname)
-					customhud.SetupItem("score",altmodname)
+					customhud.SetupItem("time",			altmodname)
+					customhud.SetupItem("score",		altmodname)
 				else
-					customhud.SetupItem("time","spicerunners")
-					customhud.SetupItem("score","spicerunners")			
+					customhud.SetupItem("time",			"spicerunners")
+					customhud.SetupItem("score",		"spicerunners")			
 				end
-				customhud.SetupItem("lives",altmodname)
-				customhud.SetupItem("PTSR_bar","spicerunners")
-				customhud.SetupItem("PTSR_tooltips","spicerunners")
-				customhud.SetupItem("PTSR_rank", "spicerunners")
-				customhud.SetupItem("PTSR_combo", "spicerunners")
-				customhud.SetupItem("textspectator",altmodname)
-				customhud.SetupItem("crosshair",altmodname)
+				customhud.SetupItem("lives",			altmodname)
+				customhud.SetupItem("PTSR_bar",			"spicerunners")
+				customhud.SetupItem("PTSR_tooltips",	"spicerunners")
+				customhud.SetupItem("PTSR_rank", 		"spicerunners")
+				customhud.SetupItem("PTSR_combo", 		"spicerunners")
+				customhud.SetupItem("textspectator",	altmodname)
+				customhud.SetupItem("crosshair",		altmodname)
 			end
-			wastakis = false
+			--wastakis = false
 			--customhud.SetupItem("rank", "pizzatime2.0")
 			
 			--elfilin stuff
@@ -6093,12 +6183,12 @@ addHook("HUD", function(v)
 	and consoleplayer.takistable
 		local p = consoleplayer
 		local takis = p.takistable
-		hud.enable("coopemeralds")
 		if takis.isTakis
-			if G_CoopGametype()
+			customhud.SetupItem("coopemeralds",modname)
 			
-				hud.disable("coopemeralds")
-				
+			if G_CoopGametype()
+			or (gametyperules & GTR_CAMPAIGN)
+			and customhud.CheckType("coopemeralds") == modname
 				if not multiplayer
 					local maxspirits = 6
 					local maxspace = 200
@@ -6139,14 +6229,22 @@ addHook("HUD", function(v)
 			local flash,timetic,extratext,extrafunc,type = howtotimer(p)
 			
 			if (type == "regular"
-			and (gametype == GT_COOP))
+			and (gametyperules & GTR_CAMPAIGN))
 			and not modeattacking
 			and (takis.io.minhud == 0)
+			and (customhud.CheckType("time") == modname)
 				drawtimer(v,p,true)
 			end
 			
 			drawfallout(v,p,true)
 			
+		else
+			--game hud doesnt run while this is in action so set this here
+			if not takis.otherskin
+			or takis.otherskintime == 1
+			or wastakis
+				customhud.SetupItem("coopemeralds",altmodname)
+			end
 		end
 		
 		drawjumpscarelol(v,p)
@@ -6156,24 +6254,30 @@ end,"scores")
 addHook("HUD", function(v,p,tic,endtic)
 	if tic >= endtic then return end
 	
-	if not (hud.enabled("stagetitle"))
-		hud.enable("stagetitle")
-	end
-	
-	if (skins[p.skin].name ~= TAKIS_SKIN) then return end	
 	if not (p.takistable) then return end
+	local takis = p.takistable
 	
-	if (mapheaderinfo[gamemap].bonustype == 1)
-		if p.takistable.HUD.bosscards.name == ''
-			return
+	if (skins[p.skin].name == TAKIS_SKIN)
+		if (mapheaderinfo[gamemap].bonustype == 1)
+			if p.takistable.HUD.bosscards.name == ''
+				customhud.SetupItem("stagetitle",	altmodname)
+				return
+			end
+		else
+			if (p.starpostnum ~= TAKIS_MISC.maxpostcount+32)
+				customhud.SetupItem("stagetitle",	altmodname)
+				return
+			end
 		end
+		
+		customhud.SetupItem("stagetitle", 		modname)
 	else
-		if (p.starpostnum ~= TAKIS_MISC.maxpostcount+32)
-			return
+		if not takis.otherskin
+		or takis.otherskintime == 1
+		or wastakis
+			customhud.SetupItem("stagetitle",	altmodname)
 		end
 	end
-	
-	hud.disable("stagetitle")
 end,"titlecard")
 
 addHook("HUD", function(v)
@@ -6182,13 +6286,11 @@ addHook("HUD", function(v)
 		local p = consoleplayer
 		local takis = p.takistable
 		
-		hud.enable("intermissiontitletext")
-		hud.enable("intermissionemeralds")
-		
 		if skins[consoleplayer.skin].name == TAKIS_SKIN
 			if takis.lastss
+				customhud.SetupItem("intermissiontitletext",altmodname)
 				if not TAKIS_MISC.stagefailed
-					hud.disable("intermissiontitletext")
+					customhud.SetupItem("intermissiontitletext",modname)
 					
 					local string2 = (All7Emeralds(emeralds)) and "Got them all!" or "Got a Spirit!"
 					if string.lower(G_BuildMapTitle(takis.lastmap)) == "black hole zone"
@@ -6200,7 +6302,7 @@ addHook("HUD", function(v)
 						0
 					)
 				end
-				hud.disable("intermissionemeralds")
+				customhud.SetupItem("intermissionemeralds",	modname)
 				local maxspirits = 6
 				local maxspace = 200
 				
@@ -6250,6 +6352,13 @@ addHook("HUD", function(v)
 					end
 				end
 				
+			end
+		else
+			if not takis.otherskin
+			or takis.otherskintime == 1
+			or wastakis
+				customhud.SetupItem("intermissionemeralds",	altmodname)
+				customhud.SetupItem("intermissiontitletext",altmodname)
 			end
 		end
 	end

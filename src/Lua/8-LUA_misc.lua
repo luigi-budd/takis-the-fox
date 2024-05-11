@@ -1478,10 +1478,10 @@ local function bossHurt(mo, inf, src)
 
 	if (src and src.valid) and (src.player and src.player.valid)
 		setBossMeter(src.player, mo);
-		for p in players.iterate
-			if p.takistable.HUD.bosscards.mo == mo
-				p.takistable.HUD.bosscards.cardshake = TAKIS_HEARTCARDS_SHAKETIME
-			end
+	end
+	for p in players.iterate
+		if p.takistable.HUD.bosscards.mo == mo
+			p.takistable.HUD.bosscards.cardshake = TAKIS_HEARTCARDS_SHAKETIME
 		end
 	end
 end
@@ -1533,6 +1533,21 @@ local function bossMeterThink(p)
 			bosscards.nocards = false
 			if nobosscards[bosscards.mo.type] ~= nil
 				bosscards.nocards = nobosscards[bosscards.mo.type]
+			end
+			
+			if bosscards.timealive == nil then bosscards.timealive = 0 end
+			
+			if (bosscards.mo.health > 0)
+				bosscards.timealive = $+1
+			else
+				if bosscards.timealive > 2*TR
+					bosscards.timealive = 2*TR
+				end
+				if bosscards.timealive > 0
+					bosscards.timealive = $-1
+				else
+					bosscards.mo = nil
+				end
 			end
 		else
 			local title = takis.HUD.bosstitle

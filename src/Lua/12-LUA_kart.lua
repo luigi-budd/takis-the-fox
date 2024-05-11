@@ -6,6 +6,9 @@
 	-[done]joystick support
 	-clean up code and make it easier to port (seperate taksi stuff)
 	-[done]make drift more accurate
+	-wind sectors affect karts
+	-dont use so many effects when drifting
+	-waterslide affect karts
 	
 */
 
@@ -265,6 +268,11 @@ local function animhandle(p,car)
 		end
 	end
 	
+	if FixedHypot(car.momx,car.momy)/car.scale ~= 0
+	and car.offroad
+		me.spriteyoffset = $+((rumble) and FU or 0)
+	end
+	
 	me.frame = ($ &~FF_FRAMEMASK)|frame
 	
 	
@@ -303,7 +311,7 @@ local function soundhandle(p,car)
 	end
 	
 	local cmdmove = (6*p.cmd.forwardmove)/25	
-	local speedthing = FixedMul(car.momx,car.momy)--/50
+	local speedthing = FixedHypot(car.momx,car.momy)/car.scale/20
 	targetsnd = (cmdmove+speedthing)/2
 	--clamp
 	targetsnd = max(0,min(12,targetsnd))
@@ -451,7 +459,9 @@ local function driftstuff(p,car)
 			--effects and whatnot
 			if not stop
 				car.drifttime = $+1
-				car.driftspark = $+FU
+				if not (car.offroad)
+					car.driftspark = $+FU
+				end
 				
 				local diff = car.oldangle-car.angle
 				local sign = 1
@@ -629,10 +639,123 @@ local function driftstuff(p,car)
 
 end
 
+local extrastuff = true
+addHook("ThinkFrame",do
+	if not circuitmap
+		extrastuff = mapheaderinfo[gamemap].forcekartextra ~= nil
+	else
+		extrastuff = true
+	end
+end)
+
+local function InSectorSpecial(mo, grounded, section, special)
+	local fofsector = P_ThingOnSpecial3DFloor(mo)
+	-- You can be inside a FoF without being grounded
+	if fofsector then
+		--print("fofsector "..(fofsector and "yes" or "no"))
+		if GetSecSpecial(fofsector.special,section) == special then
+			--print("has special "..section.." "..special)
+			return fofsector
+		end
+	end
+	if GetSecSpecial(mo.subsector.sector.special, section) == special then
+		if not grounded then
+			return mo.subsector.sector
+		elseif grounded and P_IsObjectOnGround(mo) then
+			local flipped = P_MobjFlip(mo) == -1
+			local slope = flipped and mo.subsector.sector.c_slope or mo.subsector.sector.f_slope -- no FoF
+			local savedz = mo.z
+			mo.z = mo.z -- update flooz/ceilingz, since they won't match properly for this tic yet
+			local savedplanez = flipped and mo.ceilingz or mo.floorz -- current position floorz/ceilingz
+			mo.flags = $|MF_NOCLIPHEIGHT -- we need to noclip it to make sure a bordering sector/fof doesnt mess with the floorz/ceilingz checking
+			mo.z = slope and P_GetZAt(slope, mo.x, mo.y) or flipped and mo.subsector.sector.ceilingheight or mo.subsector.sector.floorheight -- sets floorz and ceilingz using hardcode functions we can't access from here
+			local notonfof = savedplanez == (flipped and mo.ceilingz or mo.floorz) -- if our actual z is the same as the calculated floorz/ceilingz for this sector's slope, we aren't on a FoF
+			mo.flags = $ & ~MF_NOCLIPHEIGHT
+			mo.z = savedz
+			return notonfof and mo.subsector.sector or nil
+		end
+	end
+	return nil
+/*
+	if leveltime
+		return P_MobjTouchingSectorSpecial(mo,section,special)
+	end
+	
+	if sector then
+		print("sector "..(sector and "yes" or "no"))
+		print("has special "..section.." "..special)
+		if P_IsObjectOnGround(mo) then
+			print("grounded pass")
+			return sector
+		end
+	end
+	
+	return nil
+*/
+end
+
+local function offroadcollide(p,car)
+	local me = p.mo
+	local takis = p.takistable
+	
+	if not (me and me.valid)
+		return 0
+	end
+	local kartstuff = false
+	if (extrastuff)
+		kartstuff = true
+	end
+	if not kartstuff
+		return (P_InQuicksand(car) or P_InQuicksand(me) or (p.cmd.buttons & BT_CUSTOM1)) and 5 or 0
+	elseif kartstuff
+		local val = 0
+		--check weak offroad
+		if InSectorSpecial(me,true,1,2)
+			val = 3
+		--reg offroad
+		elseif InSectorSpecial(me,true,1,3)
+			val = 4
+		--strong offroad
+		elseif InSectorSpecial(me,true,1,4)
+			val = 5
+		end
+		return val
+	end
+end
+
+local function updateoffroad(p,car)
+	local me = p.mo
+	local takis = p.takistable
+	
+	local offroad = 0
+	local strength = offroadcollide(p,car)
+	
+	if strength
+		if car.offroad == 0
+			car.offroad = TR/2
+		end
+		if car.offroad > 0
+			offroad = (strength << FRACBITS) / (TR/2)
+			car.offroad = $+offroad
+		end
+		if car.offroad > (strength<<FRACBITS)
+			car.offroad = (strength<<FRACBITS)
+		end
+	else
+		car.offroad = 0
+	end
+	
+end
+
 addHook("MobjMoveCollide",function(car,mo)
 	if (mo.type == MT_PLAYER)-- and mo == car.target)
 	or (mo.flags & MF_SPRING)
 		return false
+	elseif (mo.type == MT_DUSTDEVIL)
+		L_ZLaunch(car,20*FU)
+	elseif (mo.type == MT_BIGGRABCHAIN)
+	or (mo.type == MT_SMALLGRABCHAIN)
+		L_ZLaunch(car,40*FU)
 	end
 end,MT_TAKIS_KART_HELPER)
 
@@ -644,7 +767,7 @@ addHook("MobjMoveBlocked",function(car,thing,line)
 		
 		local oldangle = car.angle
 		if thing and thing.valid
-			if thing.flags & MF_MONITOR
+			if thing.flags & (MF_MONITOR|MF_PUSHABLE)
 				return
 			end
 			
@@ -676,7 +799,8 @@ addHook("MobjMoveBlocked",function(car,thing,line)
 		end
 		
 		SpawnBam(car)
-		if not car.target.player.powers[pw_flashing]
+		if (car.target and car.target.player)
+		and not car.target.player.powers[pw_flashing]
 			car.fuel = $-(5*FU)
 			car.damagetic = TR
 			car.driftspark = 0
@@ -700,6 +824,7 @@ local function carinit(car)
 	car.damagetic = 0
 	car.oldangle = 0
 	car.maxspeed = 45*car.scale
+	car.offroad = 0
 	car.drift = 0
 	car.drifttime = 0
 	car.driftspark = 0
@@ -714,6 +839,7 @@ local function carinit(car)
 	car.enginesound = 0
 	car.sprung = false
 	car.jumped = false
+	car.boostpanel = 0
 end
 
 addHook("MobjThinker",function(car)
@@ -747,6 +873,7 @@ addHook("MobjThinker",function(car)
 		return
 	end
 	
+	car.flags = $|MF_NOBLOCKMAP
 	if not car.init
 		carinit(car)
 	end
@@ -757,15 +884,21 @@ addHook("MobjThinker",function(car)
 	p.pflags = $|PF_JUMPSTASIS
 	p.inkart = 2
 	p.powers[pw_carry] = CR_TAKISKART
+	p.powers[pw_ignorelatch] = 32768 
 	p.kartingtime = $+1 or 0
 	
-	if (me.eflags & MFE_VERTICALFLIP)
+	if me.eflags & MFE_VERTICALFLIP
 		car.eflags = $|MFE_VERTICALFLIP
-	end
-	if (me.flags2 & MF2_OBJECTFLIP)
-		car.flags2 = $|MF2_OBJECTFLIP
 	else
-		car.flags2 = $ &~MF2_OBJECTFLIP
+		car.eflags = $ &~MFE_VERTICALFLIP
+	end
+	
+	if p.pflags & PF_SLIDING
+		P_MoveOrigin(car,me.x,me.y,me.z)
+		car.momx,car.momy,car.momz = me.momx,me.momy,me.momz
+		p.pflags = $ &~PF_JUMPSTASIS
+		car.angle = me.angle
+		return
 	end
 	
 	local dist = 130
@@ -787,7 +920,7 @@ addHook("MobjThinker",function(car)
 	local grounded = P_IsObjectOnGround(car)
 	
 	car.radius,car.height = me.radius,me.height
-	me.momx,me.momy = car.momx,car.momy
+	me.momx,me.momy,me.momz = car.momx,car.momy,car.momz
 	
 	car.basemaxspeed = 45*me.scale
 	local basemaxspeed = car.basemaxspeed
@@ -850,14 +983,18 @@ addHook("MobjThinker",function(car)
 				--if we're drifting, then countersteer a bit
 				if turndir ~= driftdir
 					car.momt = FixedMul(-4*FU,sidemove)*driftdir
-					car.driftspark = $-FixedMul(FU/2,sidemove)
+					if not (car.offroad)
+						car.driftspark = $-FixedMul(FU/2,sidemove)
+					end
 				else
 					if turndir == driftdir
 					and car.maxspeed > 15*car.scale
 						car.maxspeed = $*198/201
 					end
 					car.momt = FixedMul(40*FU,sidemove)*turndir
-					car.driftspark = $+FixedMul(FU/2,sidemove)
+					if not (car.offroad)
+						car.driftspark = $+FixedMul(FU/2,sidemove)
+					end
 				end
 			else
 				car.momt = FixedMul(40*FU,sidemove)*turndir
@@ -881,6 +1018,8 @@ addHook("MobjThinker",function(car)
 	--
 	
 	--move
+	updateoffroad(p,car)
+	
 	if p.powers[pw_sneakers]
 		car.basemaxspeed = $*3/2
 		--accel = $*3/2
@@ -890,6 +1029,24 @@ addHook("MobjThinker",function(car)
 		--accel = $*2
 		TakisDoWindLines(me)
 		car.driftboost = $-1
+	end
+	if (car.boostpanel)
+		car.basemaxspeed = $*3/2
+		TakisDoWindLines(me)
+		car.boostpanel = $-1
+	end
+	
+	
+	if extrastuff
+		if InSectorSpecial(me,true,4,6)
+		and car.boostpanel < TR-2
+			car.boostpanel = TR
+			S_StartSound(car,sfx_cdfm01)
+		end
+	end
+	
+	if car.basemaxspeed > 45*me.scale
+		car.offroad = 0
 	end
 	
 	if car.drift == 0
@@ -944,16 +1101,13 @@ addHook("MobjThinker",function(car)
 	and grounded
 		thrustangle = car.angle-(FixedAngle((AngleFixed(ANGLE_45)/9)*car.drift))
 	end
-	
-	local offroad = false
-	if offroad
-	or P_InQuicksand(car)
-	or P_InQuicksand(me)
-	and grounded
-		if not (leveltime % 6)
-			S_StartSound(car,sfx_cdfm70)
+	if (car.boostpanel)
+		if car.boostpanel == TR
+			P_Thrust(car,thrustangle,4*car.scale)
 		end
-		car.accel = $*4/5
+		if FixedHypot(car.momx,car.momy) < car.basemaxspeed
+			P_Thrust(car,thrustangle,car.basemaxspeed-FixedHypot(car.momx,car.momy))
+		end
 	end
 	
 	local movethrust = FixedMul(car.friction, car.accel)
@@ -971,6 +1125,38 @@ addHook("MobjThinker",function(car)
 		else
 			movethrust = $*3
 		end
+	end
+	if car.offroad > 0
+	and grounded
+		if FixedHypot(car.momx,car.momy)/car.scale ~= 0
+			if not (leveltime % 6)
+				S_StartSound(car,sfx_cdfm70)
+			end
+			if not (leveltime % 2)
+				local dust = TakisSpawnDust(car,
+					car.angle+FixedAngle(P_RandomRange(-50,50)*FU+P_RandomFixed()),
+					0,
+					P_RandomRange(-1,2)*car.scale,
+					{
+						xspread = 0,
+						yspread = 0,
+						zspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+						
+						thrust = -P_RandomRange(3,7)*car.scale,
+						thrustspread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+						
+						momz = P_RandomRange(1,3)*me.scale,
+						momzspread = P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1),
+						
+						scale = me.scale/2,
+						scalespread = (P_RandomFixed()/2*((P_RandomChance(FU/2)) and 1 or -1)),
+						
+						fuse = 15+P_RandomRange(-2,3),
+					}
+				)
+			end
+		end
+		movethrust = FixedDiv($,car.offroad+FU)
 	end
 	P_Thrust(car, thrustangle, movethrust)
 	
@@ -999,7 +1185,6 @@ addHook("MobjThinker",function(car)
 			track.flags = $ &~(MF_NOSECTOR|MF_NOBLOCKMAP)
 		end
 	end
-	
 	--
 	
 	--jump
@@ -1010,7 +1195,7 @@ addHook("MobjThinker",function(car)
 	and car.drift == 0
 	and not car.inpain
 	and not car.jumped
-		P_SetObjectMomZ(car,15*car.scale)
+		L_ZLaunch(car,15*car.scale)
 		S_StartSound(car,sfx_ngjump)
 		car.jumped = true
 		jumped = true
@@ -1130,11 +1315,7 @@ addHook("MobjThinker",function(car)
 			return
 		end
 	end
-	P_MoveOrigin(me,
-		car.x+car.momx,
-		car.y+car.momy,
-		car.z+car.momz
-	)
+	
 	car.driftdiff = FixedAngle(AngleFixed($)*4/5)
 	if not car.inpain
 		if (car.drift ~= 0)
@@ -1161,11 +1342,12 @@ addHook("MobjThinker",function(car)
 	car.olddlevel = TakisKart_DriftLevel(car.driftspark)
 	car.oldmomz = car.momz
 	if car.standingslope
-		me.z = P_GetZAt(car.standingslope,me.x,me.y)
+		--me.z = P_GetZAt(car.standingslope,me.x,me.y)
 	end
 	if takis.firenormal == 1
 		takis.HUD.lives.nokarthud = not $
 	end
+	p.pflags = $|PF_JUMPED|PF_DRILLING
 	--
 	
 end,MT_TAKIS_KART_HELPER)
@@ -1179,5 +1361,53 @@ addHook("MobjDeath",function(car)
 		A_BossScream(sfx,1,MT_SONIC3KBOSSEXPLODE)
 	end
 end,MT_TAKIS_KART_HELPER)
+
+--misc stuff
+addHook("ShouldDamage",function(me,_,_,_,dmgt)
+	if not (me and me.valid) then return end
+	if not extrastuff then return end
+	if not (me.player.inkart) then return end
+	
+	if InSectorSpecial(me,true,1,2)
+	or InSectorSpecial(me,true,1,3)
+	or InSectorSpecial(me,true,1,4)
+		return false
+	end
+end,MT_PLAYER)
+
+addHook("MobjThinker",function(mo)
+	if not extrastuff then return end
+	if not (mo and mo.valid) then return end
+	P_SpawnMobjFromMobj(mo,0,0,24*mo.scale,MT_RING)
+	P_RemoveMobj(mo)
+	return true
+end,MT_SMASHINGSPIKEBALL)
+
+addHook("LinedefExecute",function(line,mo,sec)
+	if not mo.valid
+	or not mo.health
+	or not mo.player
+	or not mo.player.valid
+		return
+	end
+	
+	local p = mo.player
+	
+	if p.inkart
+		if (mo.tracer and mo.tracer.valid and mo.tracer.type == MT_TAKIS_KART_HELPER)
+			mo.tracer.fuel = 100*FU
+		end
+		return
+	end
+	if mo.skin ~= TAKIS_SKIN then return end
+	
+	local kart = P_SpawnMobjFromMobj(mo,0,0,0,MT_TAKIS_KART_HELPER)
+	kart.angle = mo.angle	
+	kart.target = mo
+	S_StartSound(kart,sfx_kartst)
+	kart.fuel = 100*FU
+	p.inkart = 2
+
+end,"TAK_KART")
 
 filesdone = $+1

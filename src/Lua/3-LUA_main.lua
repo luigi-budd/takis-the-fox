@@ -8,7 +8,7 @@
 	-[done]make sure stuff slike clutch works in nonfriendly w/o ff
 	-[done]hide hud in specialstages
 	-[done]alt yellow for combo meter
-	-do hud styles like modernsonic and toggling like mrce
+	-[scrapped]do hud styles like modernsonic and toggling like mrce
 	-[done]add sunstroke. already got the texasarea net
 	-[done]port hud stuff to customhud
 	-[done]give spikeballs a deathstate
@@ -19,7 +19,7 @@
 	-[done]also make speedpad sectors keep momentum
 	-[done]reuse soap code for ptje ranks
 	-[scrapped]wall bonk lol
-	-add bot stuff
+	-[done? what did this mean]add bot stuff
 	-[done]happy hour for other skins?
 	-[done]fc stuff?
 	-[done]custom arma to bbreak more stuff (like spikes)
@@ -43,10 +43,10 @@
 	-[done]save during exiting
 	-[done]finish death anims
 	-[done]cosmenu like soap's
-	-[scapped]homework varient of happy hour
+	-[scrapped]homework varient of happy hour
 	-[done]toggle for loud and dangerous taunts
-	-taunt_t info?
-	-rs neo stuff for taunt functions
+	-[scrapped]taunt_t info?
+	-[scrapped]rs neo stuff for taunt functions
 	-[done]fix io quicktaunts being broken
 	-dont let quick taunts spam "you cant do this"
 	-[done]MORE WIND LINES
@@ -95,7 +95,7 @@
 	-[done]remove disciplinary action
 	-[done]happy hour is weird when it is synched
 	-[done]replace hud items only when switching, like engi
-	-cosmenu scrolling if text goes past hints
+	-[done but better]cosmenu scrolling if text goes past hints
 	-[done?]sometimes the PTSR bar doesnt show with nohappyhour?
 	-[done]synch happy hour for joining players
 	-[done]transformations
@@ -370,6 +370,7 @@ addHook("PlayerThink", function(p)
 		if p.takistable.io.loadwait
 			p.takistable.io.loadwait = $-1
 		else
+			p.takistable.io.savestate = 1
 			TakisLoadStuff(p)
 		end
 	end
@@ -397,7 +398,7 @@ addHook("PlayerThink", function(p)
 			--shotgun monitor
 			if p.takis.shotgunnotif
 				if (takis.c3)
-					CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.shotgunnotif)
+					TakisTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.shotgunnotif)
 					p.takis.shotgunnotif = 1
 				end
 				p.takis.shotgunnotif = $-1
@@ -1031,7 +1032,7 @@ addHook("PlayerThink", function(p)
 										end
 									elseif skins[p2.skin].name == "inazuma"
 										--Holy MOLY!
-										CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.ultzuma)
+										TakisTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.ultzuma)
 										
 										menu.open = false
 									end
@@ -1166,7 +1167,7 @@ addHook("PlayerThink", function(p)
 					and (takis.isSinglePlayer)
 						G_ExitLevel()
 					end
-					if P_RandomChance(FU/70)
+					if P_RandomChance(FU/100)
 						TakisJumpscare(p)
 					end
 				end
@@ -1175,7 +1176,7 @@ addHook("PlayerThink", function(p)
 			--shotgun tutorial
 			if takis.tossflag == 17
 			and (takis.shotguntuttic)
-				CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.shotgun)
+				TakisTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.shotgun)
 				takis.shotguntuttic = 0
 			end
 			
@@ -1880,6 +1881,8 @@ addHook("PlayerThink", function(p)
 							dust.momx = FixedMul(FixedMul(sin(fa),radius),mz)/2
 							dust.momy = FixedMul(FixedMul(cos(fa),radius),mz)/2
 							
+							takis.inFakePain = false
+							takis.ticsinpain = 0
 							takis.dontlanddust = true
 						end
 					end
@@ -2529,15 +2532,22 @@ end)
 
 --this is really stupid
 addHook("ThinkFrame", function ()
-	PTSR.untilend = 0
     for p in players.iterate() do
         if not (p and p.valid) then continue end
 		
 		local takis = p.takistable
 		
+		takis.wasinwaterslide = takis.inwaterslide
 		if takis
 			takis.inwaterslide = p.pflags & PF_SLIDING
 		end
+		
+		if not takis.inwaterslide
+		and takis.wasinwaterslide
+			p.mo.state = S_PLAY_STND
+			P_MovePlayer(p)
+		end
+		
 	end
 end)
 
@@ -2831,7 +2841,7 @@ addHook("PostThinkFrame", function()
             me.frame = ($ & ~FF_FRAMEMASK) | (leveltime % 4) / 2
             p.drawangle = me.angle
 			continue
-        end
+		end
 		
 		takis.resettingtoslide = false
     end
@@ -2868,12 +2878,12 @@ addHook("PlayerSpawn", function(p)
 		end
 		
 		if (mapheaderinfo[gamemap].lvlttl == "Tutorial")
-			CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.tutexit)
+			TakisTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.tutexit)
 		elseif (mapheaderinfo[gamemap].lvlttl == "Red Room")
 			if p.takis_noabil ~= (NOABIL_ALL|NOABIL_THOK) &~NOABIL_SHOTGUN
 				p.takis_noabil = (NOABIL_ALL|NOABIL_THOK) &~NOABIL_SHOTGUN
 			end
-			CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"][1])
+			TakisTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"][1])
 		else
 			p.takis_noabil = nil
 		end
@@ -3182,7 +3192,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		if (p.takis_noabil ~= nil)
 			if (takis.heartcards ~= 1)
 				if (takis.timeshit == 0)
-					CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"].timeshit)
+					TakisTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"].timeshit)
 				end
 			else
 				S_StartSound(mo,sfx_cdfm46)
@@ -3190,7 +3200,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 				L_ZLaunch(mo,8*mo.scale)
 				mo.state = S_PLAY_ROLL
 				p.pflags = $ &~(PF_THOKKED|PF_JUMPED)
-				CFTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"].kys,true)
+				TakisTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES["gmap1000"].kys,true)
 				takis.fakeflashing = flashingtics*2
 				return true
 			end
@@ -3712,9 +3722,6 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		*/
 		
 	elseif dmgt == DMG_CRUSHED
-		if p.inkart
-			return false
-		end
 		p.crushresistance = 4*TR
 		if takis.timescrushed < TR
 			if not takis.beingcrushed
@@ -4132,7 +4139,7 @@ addHook("AbilitySpecial", function(p)
 	takis.thokked = true
 	takis.hammerblastjumped = 0
 	
-	P_SetObjectMomZ(p.mo,15*FU)
+	L_ZLaunch(p.mo,15*FU)
 	
 	p.mo.state = S_PLAY_ROLL
 	if ((takis.transfo & TRANSFO_FIREASS) and (takis.firethokked))

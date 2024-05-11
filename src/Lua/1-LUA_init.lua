@@ -27,6 +27,7 @@
 	-ChrispyChars - some code used for confetti, safefreeslot code
 	-MinHUD - some hud functions i used
 	-ffoxD's Momentum mod - momentum used in takis
+	-Checker Wrecker - offroad collision for kart
 	
 	SOME MORE STUFF I STOLE
 	-Antonblast - sound effects, music, sprites
@@ -527,6 +528,7 @@ rawset(_G, "TakisInitTable", function(p)
 		--the only "InX" variable thats all lowercase 
 		--(and not with the bools)
 		inwaterslide = false,
+		wasinwaterslide = false,
 		glowyeffects = 0,
 		sethappyend = false,
 		otherskin = false,
@@ -667,6 +669,14 @@ rawset(_G, "TakisInitTable", function(p)
 			loaded = false,
 			loadwait = 25,
 			loadedach = false,
+			/*
+				0 - idle
+				1 - starting to save
+				2 - save complete
+				3 - couldnt save
+			*/
+			savestate = 0,
+			savestatetime = 0,
 			
 			nostrafe = 0,
 			nohappyhour = 0,
@@ -994,6 +1004,7 @@ rawset(_G, "TakisInitTable", function(p)
 				cardshake = 0,
 				mo = 0,
 				name = '',
+				timealive = 0,
 				statusface = {
 					priority = 0,
 					state = "IDLE",

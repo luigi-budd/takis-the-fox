@@ -2074,7 +2074,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	
 	if takis.inSRBZ
-		takis.noability = NOABIL_SPIN|NOABIL_DIVE
+		takis.noability = NOABIL_ALL|NOABIL_AFTERIMAGE
 	end
 	if (takis.wavedashcapable)
 		takis.noability = $|NOABIL_HAMMER
@@ -2089,11 +2089,11 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	
 	TakisNoShield(p)
 	
-	if (p.powers[pw_shield]&SH_NOSTACK == SH_FIREFLOWER)
+	if (p.powers[pw_shield] == SH_FIREFLOWER)
 		if (me.color ~= SKINCOLOR_BONE)
 			me.color = SKINCOLOR_BONE
 		end
-		if not (leveltime % 3)
+		if not (leveltime % TR)
 			A_BossScream(me, 1, MT_FIREBALLTRAIL)
 		end
 	end
@@ -2411,6 +2411,13 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	if takis.ropeletgo
 		takis.noability = $|NOABIL_HAMMER
 		takis.ropeletgo = $-1
+	end
+	
+	if takis.io.savestatetime
+		takis.io.savestatetime = $-1
+		if takis.io.savestatetime == 0
+			takis.io.savestate = 0
+		end
 	end
 	
 	SpeckiStuff(p)
@@ -3414,8 +3421,8 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 			end
 			
 			me.frame = A
-			me.sprite2 = SPR2_PAIN
-			me.frame = E
+			me.sprite2 = SPR2_FLY_
+			me.frame = A
 			me.height = 0
 			me.flags = $ &~MF_NOCLIPHEIGHT
 			me.renderflags = RF_FLOORSPRITE|RF_NOSPLATBILLBOARD
