@@ -598,6 +598,7 @@ rawset(_G, "TakisInitTable", function(p)
 		afterimagecount = 0,
 		painoverlay = 0,
 		deathfunny = false,
+		floweranim = 0,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -855,6 +856,7 @@ rawset(_G, "TakisInitTable", function(p)
 		--hud
 		--useful if this gets in yalls modmakers' ways
 		HUD = {
+			timeshit = 0,
 			timeshake = 0,
 			showingletter = false,
 			hudname = '',
@@ -2134,6 +2136,22 @@ mobjinfo[MT_TAKIS_EXPLODE] = {
 	height = 6*FRACUNIT,
 	radius = 6*FRACUNIT,
 	flags = MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIPHEIGHT
+}
+
+SafeFreeslot("MT_TAKIS_WINDLINE")
+SafeFreeslot("S_TAKIS_WINDLINE")
+states[S_TAKIS_WINDLINE] = {
+	sprite = SPR_THND,
+	frame = G|FF_PAPERSPRITE,
+	tics = 12,
+}
+mobjinfo[MT_TAKIS_WINDLINE] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_WINDLINE,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
 }
 
 /*

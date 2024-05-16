@@ -1,5 +1,5 @@
 /*
-	the misc file, for object thinkers, netvars, and stuff not
+	the misc file, for object thinkers and stuff not
 	directly related to takis
 	
 */
@@ -33,23 +33,6 @@ local numtotrans = {
 	[1] = FF_TRANS10,
 	[0] = 0,
 }
-local emeraldframelist = {
-	[0] = A,
-	[1] = C,
-	[2] = E,
-	[3] = G,
-	[4] = A,
-	[5] = A,
-	[6] = A,
-}
-
-local function fetchspiritframe(index,gotit)
-	local frame = emeraldframelist[index]
-	if not (gotit)
-		frame = $+1
-	end
-	return frame
-end
 
 --after image
 addHook("MobjThinker", function(ai)
@@ -623,6 +606,8 @@ addHook("MobjDeath",function(t,i,s)
 			TakisGiveCombo(s.player,s.player.takistable,false,true)
 		end
 		
+		s.player.takistable.floweranim = TR
+		
 		if s.player.powers[pw_shield] & SH_FIREFLOWER
 			if s.player.takistable.heartcards ~= TAKIS_MAX_HEARTCARDS
 				TakisHealPlayer(s.player,s,s.player.takistable,1,1)
@@ -991,6 +976,13 @@ addHook("MobjThinker",function(gem)
 			spark.angle = FixedAngle(P_RandomRange(0,360)*FU)
 			P_Thrust(spark,spark.angle,P_RandomRange(1,5)*soda.scale)
 			P_SetObjectMomZ(spark,P_RandomRange(-5,5)*FU)
+			if (displayplayer
+			and displayplayer.valid
+			and skins[displayplayer.skin].name == TAKIS_SKIN)
+				spark.flags2 = $ &~MF2_DONTDRAW
+			else
+				spark.flags2 = $|MF2_DONTDRAW
+			end
 		else
 			soda.wait = $-1
 		end
@@ -1643,7 +1635,7 @@ addHook("MobjThinker",function(gem)
 					gem.timealive = me.player.takistable.spiritlist[gem.emeralddex-1].timealive--+((360/7)*gem.emeralddex)
 				end
 			end
-			gem.frame = fetchspiritframe(gem.emeralddex,true)
+			gem.frame = TakisFetchSpiritFrame(gem.emeralddex,true)
 			gem.color = gem.emeraldcolor
 			if gem.timealive == nil
 				gem.timealive = 0
@@ -1756,7 +1748,7 @@ local function emeraldcollectspirit(gem)
 			gem.flags2 = $ &~MF2_DONTDRAW
 		end
 		
-		gem.soda.frame = fetchspiritframe(gem.soda.emeralddex,true)
+		gem.soda.frame = TakisFetchSpiritFrame(gem.soda.emeralddex,true)
 		if not gem.health
 			gem.soda.tracer = nil
 		end
@@ -2109,6 +2101,19 @@ end,MT_TAKIS_EXPLODE)
 addHook("MobjMoveBlocked",function(poof)
 	P_RemoveMobj(poof)
 end,MT_TAKIS_EXPLODE)
+
+addHook("MobjThinker",function(wind)
+	if not (wind and wind.valid) then return end
+	
+	local halftics = states[wind.info.spawnstate].tics/2
+	if wind.tics <= halftics
+		wind.spriteyscale = $-FixedDiv(FU,halftics*FU)
+		wind.spriteyoffset = $+FixedDiv(10*FU,halftics*FU)
+		
+		wind.spritexscale = $+FixedDiv(FU,halftics*FU)
+		wind.spritexoffset = $+FixedDiv(FU,halftics*FU)
+	end
+end,MT_TAKIS_WINDLINE)
 
 filesdone = $+1
 

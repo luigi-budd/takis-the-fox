@@ -194,31 +194,32 @@ if (TAKIS_ISDEBUG)
 			"Clientside debug flags.",
 		}
 	}
+	local numtxt = #tm.entries[5].text
 	local dbgflags = {
 		"BUTTONS",
-		"PAIN",
+		"STATE",
 		"ACH",
 		"QUAKE",
 		"HAPPYHOUR",
 		"ALIGNER",
 		"PFLAGS",
 		"BLOCKMAP",
-		"DEATH",
 		"SPEEDOMETER",
 		"HURTMSG",
 		"BOSSCARD",
 		"NET",
+		"MUSIC",
 	}
 	for k,v in ipairs(dbgflags)
-		tm.entries[5].text[6+k] = v
+		tm.entries[5].text[numtxt+k] = v
 	end
 	for k,v in ipairs(dbgflags)
-		tm.entries[5].commands[6+k] = "setdebug "..v
+		tm.entries[5].commands[numtxt+k] = "setdebug "..v
 	end
 	addHook("ThinkFrame",do
 		for i = 1,#dbgflags
 			local bit = 1<<(i-1)
-			tm.entries[5].values[6+i] = (TAKIS_DEBUGFLAG&bit)==bit
+			tm.entries[5].values[numtxt+i] = (TAKIS_DEBUGFLAG&bit)==bit
 		end
 	end)
 	

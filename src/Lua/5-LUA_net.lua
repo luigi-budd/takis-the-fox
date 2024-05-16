@@ -331,9 +331,6 @@ addHook("ThinkFrame", do
 				table.insert(m.scoreboard,p)
 			end
 			
-			if (leveltime % (60*TR)) == 0
-				TakisSaveStuff(p,true)
-			end
 			playerCount = $+1
 		end
 	end

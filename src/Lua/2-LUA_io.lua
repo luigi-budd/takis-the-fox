@@ -35,8 +35,6 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 	a12 = tonumber($)
 	timeshit = tonumber($)
 
-	--insert to buffer or set vars directly?
-	--well i say set vars as to  not clutter up the player's console
 	local takis = p.takistable
 
 	if a1 == 1

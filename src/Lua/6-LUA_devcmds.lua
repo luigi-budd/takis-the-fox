@@ -461,6 +461,19 @@ COM_AddCommand("spheres", function(p, num)
 	p.spheres = num
 end,COM_ADMIN)
 
+COM_AddCommand("rings", function(p, num)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if tonumber(num) == nil then return end
+	
+	num = tonumber($)
+	
+	p.rings = num
+end,COM_ADMIN)
+
 COM_AddCommand("lives", function(p, num)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
@@ -554,13 +567,8 @@ COM_AddCommand("testmap", function(p,act)
 	elseif act > 2
 		act = 2
 	end
-	print(act)
 	
 	local map = 1002+act
-	
-	print(map)
-	print(G_BuildMapTitle(map))
-	print("Test Room "..act)
 	
 	if G_BuildMapTitle(map) ~= "Test Room "..act
 		prn(p,"Test map "..act.." has been replaced, cannot teleport.")

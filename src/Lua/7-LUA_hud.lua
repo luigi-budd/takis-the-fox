@@ -1718,23 +1718,46 @@ local function drawlivesarea(v,p)
 		local percent = FixedMul(100*FU,timetic)
 		
 		local pre = "TA_LIVESFILL_"
+		/*
 		local erm = FixedDiv(percent,100*FU)
 		local height = v.cachePatch(pre.."FILL").height*FU - FixedMul(erm,v.cachePatch(pre.."FILL").height*FU)
 		if height < 0 then
 			height = 0
 		end
+		*/
 		local scale = FU
 		
 		--back
-		v.drawCropped(x+80*FU+disp,y-10*FU,scale,scale,
+		v.drawScaled(x+80*FU+disp,y-10*FU,scale,
 			v.cachePatch(pre.."BACK"),
-			(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANSHALF), 
-			nil,
-			0,0,
-			v.cachePatch(pre.."FILL").width*FU,
-			height
+			(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANSHALF)
 		)		
 		
+		local maxsegs = 50
+		local fx,fy = x+80*FU+disp,y-10*FU
+		for i = 0,maxsegs,1
+			if timetic == 0 then break end
+			
+			local angmath = 
+			FixedMul(
+				FixedDiv(
+					FixedMul(360*FU,timetic),
+					maxsegs*FU
+				),
+				i*FU
+			)-90*FU
+			local angle = FixedAngle(angmath)
+			v.drawScaled(
+				fx+(9*cos(angle)),
+				fy+(9*sin(angle)),
+				FU/2,
+				v.cachePatch(pre.."BALL"),
+				(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANS),
+				v.getColormap(0,openingmenu and SKINCOLOR_GREEN or SKINCOLOR_WHITE)
+			)
+		end
+		
+		/*
 		v.drawCropped(x+80*FU+disp,y-10*FU+FixedMul(height,scale),scale,scale,
 			v.cachePatch(pre.."FILL"),
 			V_ADD|(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANSHALF), 
@@ -1743,6 +1766,7 @@ local function drawlivesarea(v,p)
 			v.cachePatch(pre.."FILL").width*FU,
 			v.cachePatch(pre.."FILL").height*FU
 		)
+		*/
 		
 		local string = L_FixedDecimal(percent,1).."%"
 		v.drawString(
@@ -3062,7 +3086,8 @@ local function drawpizzaranks(v,p)
 			--thanks jisk for the help lol
 			
 			if p.ptsr.rank == "S"
-			and (takis.combo.dropped)
+			and not (p.ptsr.combo_timesfailed == 0 
+			and p.ptsr.combo_times_started == 1)
 				return
 			end
 			
@@ -3347,6 +3372,23 @@ local function drawcosmenu(v,p)
 		V_SNAPTORIGHT|V_SNAPTOTOP|V_YELLOWMAP|V_ALLOWLOWERCASE,
 		"right"
 	)
+	if takis.io.savestate ~= 0
+		local state = "IDLE"
+		if takis.io.savestate == 2
+			state = "GOOD"
+		elseif takis.io.savestate == 3
+			state = "BAD"
+		end
+		
+		v.drawScaled(
+			(300-pos.x)*FU,
+			pos.y+35*FU+(v.cachePatch("TA_SAVE_IDLE").height*FU/2),
+			FU,
+			v.cachePatch("TA_SAVE_"..state),
+			V_SNAPTORIGHT|V_SNAPTOTOP|V_YELLOWMAP
+		)
+		
+	end
 	
 	--draw title
 	v.drawString(pos.x,pos.y,
@@ -4163,7 +4205,7 @@ local function drawtransfotimer(v,p,cam)
 			
 			local color = v.getColormap(nil,me.color)
 			local color2 = v.getColormap(nil,p.skincolor)
-			local invc  = v.getColormap(nil,ColorOpposite(p.skincolor))
+			local invc  = v.getColormap(nil,SKINCOLOR_SALMON)
 			
 			x = $-(bubble.width*scale/2)
 			y = $+25*scale
@@ -5644,6 +5686,7 @@ customhud.SetupItem("takis_viewmodel",		modname/*,	,	"game",	10*/)
 local altmodname = "vanilla"
 local istakisrn = false
 local wastakis = false
+local gamewastakis = false
 addHook("PostThinkFrame",do
 	local player = displayplayer
 	if not (player and player.valid)
@@ -5706,6 +5749,7 @@ addHook("HUD", function(v,p,cam)
 		drawhappytime(v,p)
 		if takis.isTakis
 			
+			gamewastakis = true
 			--wastakis = true
 			local opmode = (me and me.valid and me.state == S_OBJPLACE_DUMMY) or false
 			
@@ -5959,6 +6003,77 @@ addHook("HUD", function(v,p,cam)
 					"thin-center"
 				)
 			end
+			
+			--i fucking love this ....
+			local lowercase = {
+				["o"] = true,
+				["u"] = true,
+				["v"] = true,
+				["e"] = true,
+				["h"] = true,
+				["u"] = true,
+				["r"] = true,
+				["t"] = true,
+				["a"] = true,
+				["k"] = true,
+				["i"] = true,
+				["s"] = true,
+				["m"] = true,
+			}
+			
+			if takis.HUD.timeshit
+				local x,y = 160,170
+				local trans = 0
+				if takis.HUD.timeshit > (5*TR)
+					trans = (takis.HUD.timeshit-5*TR)<<V_ALPHASHIFT
+				elseif takis.HUD.timeshit < 10
+					trans = (10-takis.HUD.timeshit)<<V_ALPHASHIFT
+				end
+				
+				--buggie's tf2 engi code
+				local scorenum = "SCREFT"
+				local score = "You've hurt Takis "..takis.totalshit.." times..."
+				
+				local width = 0
+				for i = 1,string.len(score)
+					local n = string.sub(score,i,i)
+					if lowercase[n] ~= nil
+						n = $.."TH"
+					end
+					n = n:upper()
+					width = $+v.cachePatch(scorenum+n).width*4/10
+				end
+				width = $/2
+				
+				
+				local prevw
+				if not prevw then prevw = 0 end
+				
+				for i = 1,string.len(score)
+					local n = string.sub(score,i,i)
+					if n == " "
+						prevw = $+v.cachePatch(scorenum..n).width*4/10
+						continue
+					end
+					if lowercase[n] ~= nil
+						n = $.."TH"
+					end
+					n = n:upper()
+					
+					local xshake,yshake = happyshakelol(v)
+					xshake,yshake = $1/2,$2/2
+					v.drawScaled((x+prevw)*FU+xshake-(width*FU),
+						y*FU+yshake,
+						FU/2,
+						v.cachePatch(scorenum..n),
+						trans|V_SNAPTOBOTTOM
+					)
+						
+					prevw = $+v.cachePatch(scorenum+n).width*4/10
+				end
+	
+			end
+			
 		--not takis lol
 		else
 			if takis.io.morehappyhour == 0
@@ -5972,7 +6087,7 @@ addHook("HUD", function(v,p,cam)
 			
 			if not takis.otherskin
 			or takis.otherskintime == 1
-			or wastakis
+			or (wastakis or gamewastakis)
 				customhud.SetupItem("rings",			altmodname)
 				if not (HAPPY_HOUR.othergt)
 					customhud.SetupItem("time",			altmodname)
@@ -5989,6 +6104,7 @@ addHook("HUD", function(v,p,cam)
 				customhud.SetupItem("textspectator",	altmodname)
 				customhud.SetupItem("crosshair",		altmodname)
 			end
+			gamewastakis = false
 			--wastakis = false
 			--customhud.SetupItem("rank", "pizzatime2.0")
 			
@@ -6160,23 +6276,6 @@ local emeraldslist = {
 	[5] = SKINCOLOR_FLAME,
 	[6] = SKINCOLOR_SLATE,
 }
-local emeraldframelist = {
-	[0] = A,
-	[1] = C,
-	[2] = E,
-	[3] = G,
-	[4] = A,
-	[5] = A,
-	[6] = A,
-}
-
-local function fetchspiritframe(index,gotit)
-	local frame = emeraldframelist[index]
-	if not (gotit)
-		frame = $+1
-	end
-	return frame
-end
 
 addHook("HUD", function(v)
 	if consoleplayer
@@ -6194,7 +6293,7 @@ addHook("HUD", function(v)
 					local maxspace = 200
 					for i = 0,maxspirits
 						local patch,flip = v.getSpritePatch(SPR_TSPR,
-							fetchspiritframe(i,(emeralds & 1<<i ~= 0)),
+							TakisFetchSpiritFrame(i,(emeralds & 1<<i ~= 0)),
 							(((leveltime/4)+i)%8)+1
 						)
 						v.drawScaled(
@@ -6211,7 +6310,7 @@ addHook("HUD", function(v)
 					local maxspace = 66
 					for i = 0,maxspirits
 						local patch,flip = v.getSpritePatch(SPR_TSPR,
-							fetchspiritframe(i,(emeralds & 1<<i ~= 0)),
+							TakisFetchSpiritFrame(i,(emeralds & 1<<i ~= 0)),
 							(((leveltime/4)+i)%8)+1
 						)
 						v.drawScaled(
@@ -6236,7 +6335,7 @@ addHook("HUD", function(v)
 				drawtimer(v,p,true)
 			end
 			
-			drawfallout(v,p,true)
+			--drawfallout(v,p,true)
 			
 		else
 			--game hud doesnt run while this is in action so set this here
@@ -6287,8 +6386,8 @@ addHook("HUD", function(v)
 		local takis = p.takistable
 		
 		if skins[consoleplayer.skin].name == TAKIS_SKIN
+			customhud.SetupItem("intermissiontitletext",altmodname)
 			if takis.lastss
-				customhud.SetupItem("intermissiontitletext",altmodname)
 				if not TAKIS_MISC.stagefailed
 					customhud.SetupItem("intermissiontitletext",modname)
 					
@@ -6311,7 +6410,7 @@ addHook("HUD", function(v)
 				
 				for i = 0,maxspirits
 					local patch,flip = v.getSpritePatch(SPR_TSPR,
-						fetchspiritframe(i,(em & 1<<i ~= 0)),
+						TakisFetchSpiritFrame(i,(em & 1<<i ~= 0)),
 						(((TAKIS_MISC.inttic/4)+i)%8)+1
 					)
 					v.drawScaled(
@@ -6334,7 +6433,7 @@ addHook("HUD", function(v)
 						if (em & 1<<i) then continue end
 						
 						local patch,flip = v.getSpritePatch(SPR_TSPR,
-							fetchspiritframe(i,true),
+							TakisFetchSpiritFrame(i,true),
 							(((TAKIS_MISC.inttic/4)+i)%8)+1
 						)
 						

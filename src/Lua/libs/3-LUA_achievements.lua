@@ -240,6 +240,8 @@ COM_AddCommand("sonadow", function(p, check, num)
 		print("\x83TAKIS:\x80 Loaded achs for "..p.name.." ("..num..")")
 	end
 	
+	p.takistable.io.savestate = 2
+	p.takistable.io.savestatetime = 2*TR
 	p.takistable.achfile = tonumber(num)
 end)
 
@@ -248,11 +250,15 @@ local achinf = TAKIS_ACHIEVEMENTINFO
 rawset(_G, "TakisSaveAchievements", function(p)
 	if (p ~= consoleplayer) then return end
 	
+	p.takistable.io.savestate = 1
+	
 	--dont overwrite our existing achs if we havent loaded them yet
 	if not p.takistable.io.loadedach
 		if TAKIS_DEBUGFLAG & DEBUG_ACH
 			print("\x83TAKIS:\x80 "..p.name..": denied saving achs because not loaded")
 		end
+		p.takistable.io.savestate = 3
+		p.takistable.io.savestatetime = 2*TR
 		return
 	end
 	
@@ -261,6 +267,9 @@ rawset(_G, "TakisSaveAchievements", function(p)
 		
 		local file = io.openlocal(ACHIEVEMENT_PATH, "w+")
 		file:write(p.takistable.achfile)
+		
+		p.takistable.io.savestate = 2
+		p.takistable.io.savestatetime = 2*TR
 		
 		file:close()
 		
@@ -286,6 +295,9 @@ rawset(_G, "TakisLoadAchievements", function(p)
 			file:close()
 		
 		end
+		
+		p.takistable.io.savestate = 3
+		p.takistable.io.savestatetime = 2*TR
 		
 	end
 end)

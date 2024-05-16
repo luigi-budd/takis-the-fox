@@ -157,17 +157,19 @@ COM_AddCommand("takis_dojumpscare", function(p,node,wega)
 			TakisJumpscare(play,wega ~= nil)
 			prn(p,"Jumpscared "..play.name)
 		end
+		return
 	elseif node == "@nonadmins"
 		for play in players.iterate
 			if play.bot
 			or play.quittime
-			or (p == server)
-			or (IsPlayerAdmin(p))
+			or (play == server)
+			or (IsPlayerAdmin(play))
 				continue
 			end
 			TakisJumpscare(play,wega ~= nil)
 			prn(p,"Jumpscared "..play.name)
 		end
+		return
 	end
 	
 	local p2 = GetPlayer(p,node)

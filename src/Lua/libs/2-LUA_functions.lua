@@ -917,6 +917,10 @@ rawset(_G, "TakisHUDStuff", function(p)
 		end
 	end
 	
+	if hud.timeshit
+		hud.timeshit = $-1
+	end
+	
 --hud stuff end
 --hudstuff end
 
@@ -1038,6 +1042,8 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			end
 			takis.pancaketime = $-1
 			
+			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor*3/2
+			
 			local thok = P_SpawnMobjFromMobj(me,0,0,0,MT_THOK)
 			thok.radius = me.radius
 			thok.height = FixedDiv(me.height,FixedDiv(me.spriteyscale,FU))
@@ -1105,8 +1111,12 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			S_StopSoundByID(me,sfx_trnsfo)
 			S_StartSound(me,sfx_shgnk)
 			takis.transfo = $ &~TRANSFO_PANCAKE
+			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor
 		end
+	else
+		takis.pancaketime = 0
 	end
+	--LOST BITS!!
 	if (takis.transfo & TRANSFO_TORNADO)
 		local sfx_nado = sfx_tknado
 		local sfx_nado2 = sfx_tkfndo
@@ -1468,6 +1478,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 	end
 	if (takis.transfo & TRANSFO_SHOTGUN)
 		local gun = takis.shotgun
+		/*
 		if not (gun and gun.valid)
 		and not (takis.c3)
 			local x = cos(p.drawangle-ANGLE_90)
@@ -1477,6 +1488,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			gun.target = me
 			gun.angle = p.drawangle
 		end
+		*/
 		if not takis.shotgunned
 			takis.transfo = $ &~TRANSFO_SHOTGUN
 		end
@@ -2420,6 +2432,24 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 	end
 	
+	if (leveltime % (60*TR)) == 0
+	and leveltime
+		TakisSaveStuff(p,true)
+	end
+	
+	if takis.floweranim
+		local bg = P_SpawnMobjFromMobj(me,0,0,0,MT_THOK)
+		bg.dispoffset = -3
+		
+		p.skidtime = 0
+		me.flags = $|MF_NOTHINK
+		takis.floweranim = $-1
+		if takis.floweranim == 0
+			me.flags = $ &~MF_NOTHINK
+			P_MovePlayer(p)
+		end
+	end
+	
 	SpeckiStuff(p)
 	
 	p.alreadyhascombometer = 2
@@ -3268,37 +3298,42 @@ rawset(_G, "TakisGiveCombo",function(p,takis,add,max,remove,shared)
 end)
 
 --delf!!
-rawset(_G, "TakisDoWindLines", function(me)
+rawset(_G, "TakisDoWindLines", function(me,rmomz,color,forceang)
 	if not me.health then return end
 	
 	local p = me.player
 	
-    local r = me.radius / FRACUNIT
-	local ang = me.angle
-	if p then ang = p.drawangle end
 	local wind = P_SpawnMobj(
-        (me.x+(50*cos(ang))) + (P_RandomRange(r, -r) * FRACUNIT),
-        (me.y+(50*sin(ang))) + (P_RandomRange(r, -r) * FRACUNIT),
-        me.z + (P_RandomKey(me.height / FRACUNIT) * FRACUNIT) - me.height/2,
-        MT_THOK)
+		me.x + P_RandomRange(-36,36)*me.scale,
+		me.y + P_RandomRange(-36,36)*me.scale,
+		me.z + (me.height/2) + P_RandomRange(-20,20)*me.scale,
+		MT_TAKIS_WINDLINE
+	)
     wind.scale = me.scale
-	wind.fuse = wind.tics
-	wind.sprite = SPR_RAIN
-    wind.renderflags = $|RF_PAPERSPRITE
-    wind.angle = R_PointToAngle2(0, 0, me.momx, me.momy)
-	wind.spritexscale,wind.spriteyscale = me.scale,me.scale
+	if forceang == nil
+		wind.angle = R_PointToAngle2(0, 0, me.momx, me.momy)
+	else
+		wind.angle = forceang
+	end
+	wind.momx = me.momx*3/4
+	wind.momy = me.momy*3/4
+	wind.momz = me.momz*3/4
 	
-	--remove the "-" beforfe the "me.momz" or else the wind will point down
-	--when you go up
-	--and vice versa
-	local momz = me.momz
-	if p then momz = p.takistable.rmomz end
-    wind.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0, 0, me.momx, me.momy), momz) + ANGLE_90
+	local momz = rmomz
+	if momz == nil
+		momz = me.momz
+		if p then momz = p.takistable.rmomz end
+    end
 	
+	local mocolor = color
+	if mocolor == nil
+		mocolor = SKINCOLOR_SAPPHIRE
+	end
+	wind.color = mocolor
+	wind.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0, 0, me.momx, me.momy), momz)
+    
 	wind.source = me
-    wind.blendmode = AST_ADD
 	
-	--P_Thrust(wind,wind.angle,-(FixedMul(p.takistable.accspeed,me.scale)))
 end)
 
 rawset(_G, "TakisSpawnDeadBody", function(p, me, soap)
@@ -3529,6 +3564,47 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 		or takis.onGround)
 		and p.deadtimer > 3
 		and (not takis.deathfloored)
+			if takis.saveddmgt ~= DMG_DEATHPIT
+			and P_CheckDeathPitCollide(me)
+				takis.saveddmgt = DMG_DEATHPIT
+				local ghs = P_SpawnGhostMobj(me)
+				ghs.tics = -1
+				ghs.frame = me.frame
+				ghs.colorized = true
+				ghs.angle = p.drawangle
+				ghs.fuse = 23
+				ghs.color = SKINCOLOR_WHITE
+				
+				for i = 10,P_RandomRange(15,20)
+					TakisSpawnDust(me,
+						p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT )),
+						10,
+						P_RandomRange(0,me.height/FU)*FRACUNIT,
+						{
+							xspread = 0,
+							yspread = 0,
+							zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+							
+							thrust = 0,
+							thrustspread = 0,
+							
+							momz = 0,
+							momzspread = 0,
+							
+							scale = me.scale,
+							scalespread = P_RandomFixed(),
+							
+							fuse = 20+P_RandomRange(-3,3),
+						}
+					)
+				end
+				S_StartSound(me,sfx_s3k51)
+				me.flags = $|(MF_NOCLIPTHING|MF_NOCLIP|MF_NOCLIPHEIGHT)
+				me.momz = -30*me.scale*takis.gravflip --takis.lastmomz
+				p.deadtimer = 1
+				takis.deathfloored = true
+				return
+			end
 			me.tics = -1
 			if (me.rollangle == 0)
 				me.state = S_PLAY_DEAD
@@ -4536,70 +4612,131 @@ rawset(_G,"MetalOrRegularGibs",function(mo)
 end)
 
 --t is the thing causing, tm is the thing gibbing
+local oldgibs = false
 rawset(_G,"SpawnEnemyGibs",function(t,tm,ang,fromdoor)
 	if (tm.flags & MF_MONITOR) then return end
 	
-	local speed
-	if (t and t.valid)
-		speed = t.player and t.player.takistable.accspeed or FixedHypot(t.momx,t.momy)
-		if ang == nil
-			ang = R_PointToAngle2(t.x,t.y, tm.x,tm.y)
-		end
-	else
-		ang = FixedAngle( AngleFixed(R_PointToAngle2(tm.x,tm.y, tm.momx,tm.momy)) + 180*FU)
-		speed = FixedHypot(tm.momx,tm.momy)
-	end
-	
-	
-	local x,y,z = tm.x,tm.y,tm.z
-	
-	--midpoint
-	if (t and t.valid)
-		x = ((t.x + tm.x)/2)+P_RandomRange(-1,1)+P_RandomFixed()
-		y = ((t.y + tm.y)/2)+P_RandomRange(-1,1)+P_RandomFixed()
-		z = ((t.z + tm.z)/2)+P_RandomRange(-1,1)+P_RandomFixed()
-	end
-	
-	local mo = tm or t
-	if not (mo.flags2 & MF2_TWOD)
-		ang = $+ANGLE_90
-	else
-		ang = $+ANGLE_180
-	end
-	for i = 0,P_RandomRange(5,16)
-		local gib = P_SpawnMobj(x,y,z,MT_TAKIS_GIB)
-		gib.flags2 = $ &~MF2_TWOD
-		gib.scale = mo.scale
-		gib.iwillbouncetwice = P_RandomChance(FU/2)
-		
-		gib.frame = P_RandomRange(A,I)
-		if (mo and mo.valid)
-			if not fromdoor
-				if not MetalOrRegularGibs(mo)
-					gib.frame = choosething(A,B,E,G,H,I)
-				end
-			else
-				gib.frame = A
-				gib.sprite = states[S_WOODDEBRIS].sprite
-				gib.radius = 10*gib.scale
-				gib.height = 10*gib.scale
-			end
-		end
-		gib.flags2 = $|(mo.flags2 & MF2_OBJECTFLIP)
-		
-		local angrng = P_RandomRange(0,1)
-		gib.angle = angrng and ang or ang-ANGLE_180
-		gib.rollangle = FixedAngle(P_RandomRange(0,359)*FU+P_RandomFixed())
-		gib.angleroll = FixedAngle(P_RandomRange(1,15)*FU+P_RandomFixed())*(angrng or -1)
-		gib.fuse = 3*TR
-		L_ZLaunch(gib,P_RandomRange(6,20)*FU+P_RandomFixed())
+	if oldgibs
+		local speed
 		if (t and t.valid)
-			P_Thrust(gib,
-				R_PointToAngle2(t.x,t.y, tm.x,tm.y),
-				speed/6
-			)
+			speed = t.player and t.player.takistable.accspeed or FixedHypot(t.momx,t.momy)
+			if ang == nil
+				ang = R_PointToAngle2(t.x,t.y, tm.x,tm.y)
+			end
+		else
+			ang = FixedAngle( AngleFixed(R_PointToAngle2(tm.x,tm.y, tm.momx,tm.momy)) + 180*FU)
+			speed = FixedHypot(tm.momx,tm.momy)
 		end
-		P_Thrust(gib,gib.angle,P_RandomRange(1,10)*gib.scale+P_RandomFixed())
+		
+		
+		local x,y,z = tm.x,tm.y,tm.z
+		
+		--midpoint
+		if (t and t.valid)
+			x = ((t.x + tm.x)/2)+P_RandomRange(-1,1)+P_RandomFixed()
+			y = ((t.y + tm.y)/2)+P_RandomRange(-1,1)+P_RandomFixed()
+			z = ((t.z + tm.z)/2)+P_RandomRange(-1,1)+P_RandomFixed()
+		end
+		
+		local mo = tm or t
+		if not (mo.flags2 & MF2_TWOD)
+			ang = $+ANGLE_90
+		else
+			ang = $+ANGLE_180
+		end
+		for i = 0,P_RandomRange(5,16)
+			local gib = P_SpawnMobj(x,y,z,MT_TAKIS_GIB)
+			gib.flags2 = $ &~MF2_TWOD
+			gib.scale = mo.scale
+			gib.iwillbouncetwice = P_RandomChance(FU/2)
+			
+			gib.frame = P_RandomRange(A,I)
+			if (mo and mo.valid)
+				if not fromdoor
+					if not MetalOrRegularGibs(mo)
+						gib.frame = choosething(A,B,E,G,H,I)
+					end
+				else
+					gib.frame = A
+					gib.sprite = states[S_WOODDEBRIS].sprite
+					gib.radius = 10*gib.scale
+					gib.height = 10*gib.scale
+				end
+			end
+			gib.flags2 = $|(mo.flags2 & MF2_OBJECTFLIP)
+			
+			local angrng = P_RandomRange(0,1)
+			gib.angle = angrng and ang or ang-ANGLE_180
+			gib.rollangle = FixedAngle(P_RandomRange(0,359)*FU+P_RandomFixed())
+			gib.angleroll = FixedAngle(P_RandomRange(1,15)*FU+P_RandomFixed())*(angrng or -1)
+			gib.fuse = 3*TR
+			L_ZLaunch(gib,P_RandomRange(6,20)*FU+P_RandomFixed())
+			if (t and t.valid)
+				P_Thrust(gib,
+					R_PointToAngle2(t.x,t.y, tm.x,tm.y),
+					speed/6
+				)
+			end
+			P_Thrust(gib,gib.angle,P_RandomRange(1,10)*gib.scale+P_RandomFixed())
+		end
+	--try new gibs
+	else
+		local count = P_RandomRange(9,19)
+		
+		local mo = tm or t
+		for i = 0,count
+			
+			local fa = FixedAngle(i*FixedDiv(360*FU,count*FU))
+			local radius = 15*mo.scale
+			local v = {}
+			v[0] = FixedMul(cos(fa),radius)
+			v[1] = FixedMul(sin(fa),radius)
+			v[2] = 0
+			v[3] = FU
+			
+			local final = {
+				x = mo.x+v[0],
+				y = mo.y+v[1],
+				z = mo.z+v[2]+(mo.height/2),
+			}
+			local x,y,z = final.x,final.y,final.z
+		
+			local gib = P_SpawnMobj(x,y,z,MT_TAKIS_GIB)
+			gib.flags2 = $ &~MF2_TWOD
+			gib.scale = mo.scale
+			gib.iwillbouncetwice = P_RandomChance(FU/2)
+			
+			gib.frame = P_RandomRange(A,I)
+			if (mo and mo.valid)
+				if not fromdoor
+					if not MetalOrRegularGibs(mo)
+						gib.frame = choosething(A,B,E,G,H,I)
+					end
+				else
+					gib.frame = A
+					gib.sprite = states[S_WOODDEBRIS].sprite
+					gib.radius = 10*gib.scale
+					gib.height = 10*gib.scale
+				end
+			end
+			gib.flags2 = $|(mo.flags2 & MF2_OBJECTFLIP)
+			
+			local angrng = P_RandomRange(0,1)
+			gib.angle = fa
+			gib.rollangle = FixedAngle(P_RandomRange(0,359)*FU+P_RandomFixed())
+			gib.angleroll = FixedAngle(P_RandomRange(1,15)*FU+P_RandomFixed())*(angrng or -1)
+			gib.fuse = 3*TR
+			L_ZLaunch(gib,P_RandomRange(4,15)*FU+P_RandomFixed())
+			/*
+			if (t and t.valid)
+				P_Thrust(gib,
+					R_PointToAngle2(t.x,t.y, tm.x,tm.y),
+					speed/6
+				)
+			end
+			*/
+			P_Thrust(gib,gib.angle,P_RandomRange(1,10)*gib.scale+P_RandomFixed())
+		end
 	end
 end)
 
@@ -5021,12 +5158,19 @@ rawset(_G,"TakisSpawnDust",function(me,angle,dist,z,options)
 		}
 	end
 	
+	local type = MT_TAKIS_STEAM
+	local inwater = me.eflags & (MFE_UNDERWATER|MFE_TOUCHLAVA) == MFE_UNDERWATER
+	if inwater
+		type = choosething(MT_SMALLBUBBLE,MT_MEDIUMBUBBLE)
+		options.scale = $*2
+	end
+	
 	local x,y = ReturnTrigAngles(angle)
 	local steam = P_SpawnMobjFromMobj(me,
 		dist*x+options.xspread,
 		dist*y+options.yspread,
 		z+options.zspread,
-		MT_TAKIS_STEAM
+		type
 	)
 	steam.angle = angle
 	P_Thrust(steam,steam.angle,options.thrust+options.thrustspread)
@@ -5040,7 +5184,9 @@ rawset(_G,"TakisSpawnDust",function(me,angle,dist,z,options)
 	steam.destscale = 1
 	steam.fuse = options.fuse
 	steam.startfuse = steam.fuse
-	steam.rollangle = $+(ANGLE_180*(P_RandomChance(FU/2) and 1 or 0))
+	if not inwater
+		steam.rollangle = $+(ANGLE_180*(P_RandomChance(FU/2) and 1 or 0))
+	end
 	return steam
 end)
 
@@ -5666,6 +5812,24 @@ rawset(_G,"TakisHammerBlastHitbox",function(p)
 		forcehambounce(p)
 	end
 	return didit
+end)
+
+local emeraldframelist = {
+	[0] = A,
+	[1] = C,
+	[2] = E,
+	[3] = G,
+	[4] = A,
+	[5] = A,
+	[6] = A,
+}
+
+rawset(_G,"TakisFetchSpiritFrame",function(index,gotit)
+	local frame = emeraldframelist[index]
+	if not (gotit)
+		frame = $+1
+	end
+	return frame
 end)
 
 filesdone = $+1

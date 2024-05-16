@@ -155,13 +155,13 @@
 	
 	--ANIM TODO
 	-[done]redo smug sprites
-	-reuse spng for jump
+	-[scrapped]reuse spng for jump
 	-the tail on roll frames doesnt point the right way
 	-redo walk 4th angle
 	-[done]retro faces for the new faces
 	-[done]redo tailees dead
 	-BOSS TITLE SHIT!!!
-	-stun anim
+	-[done]stun anim
 	-[done]specki BLOX anims
 	
 	--PLANNED MAPHEADERS
@@ -178,7 +178,7 @@
 	-[done]Takis_HH_Trig_[x,y,z] - trigger pos
 	
 	--OTHER SHIT
-	-update map for new transfos and fix stuff
+	-update tut map for new transfos and fix stuff
 	
 */
 
@@ -370,7 +370,7 @@ addHook("PlayerThink", function(p)
 		if p.takistable.io.loadwait
 			p.takistable.io.loadwait = $-1
 		else
-			p.takistable.io.savestate = 1
+			--p.takistable.io.savestate = 1
 			TakisLoadStuff(p)
 		end
 	end
@@ -1723,6 +1723,7 @@ addHook("PlayerThink", function(p)
 							chance = false
 						end
 						
+						--kick up dust
 						if chance
 							TakisSpawnDust(me,
 								p.drawangle+FixedAngle(P_RandomRange(-45,45)*FU+(P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1))),
@@ -1745,7 +1746,9 @@ addHook("PlayerThink", function(p)
 									fuse = 15+P_RandomRange(-5,5),
 								}
 							)
-							S_StartSound(me,sfx_s3k7e)
+							if not (me.eflags & (MFE_UNDERWATER|MFE_TOUCHLAVA) == MFE_UNDERWATER)
+								S_StartSound(me,sfx_s3k7e)
+							end
 						end
 						
 						P_ButteredSlope(me)
@@ -2088,7 +2091,7 @@ addHook("PlayerThink", function(p)
 				or (p.powers[pw_nocontrol])
 				or (takis.nocontrol)
 				or (me.pizza_in or me.pizza_out)
-				or (takis.inWaterSlide)
+				or (takis.inwaterslide)
 				or (p.ptsr and p.ptsr.outofgame)
 				or (HAPPY_HOUR.othergt and HAPPY_HOUR.overtime)
 					if not p.ptsr
@@ -2517,7 +2520,7 @@ addHook("PlayerThink", function(p)
 		takis.combo.lastcount = takis.combo.count
 		takis.lastmap = gamemap
 		takis.lastgt = gametype
-		takis.lastss = G_IsSpecialStage(takis.lastmap)
+		takis.lastss = G_IsSpecialStage(gamemap)
 		takis.lastplacement = takis.placement
 		takis.lastcarry = p.powers[pw_carry]
 		takis.lastrings = p.rings
@@ -2542,31 +2545,25 @@ addHook("ThinkFrame", function ()
 			takis.inwaterslide = p.pflags & PF_SLIDING
 		end
 		
+		if takis.inwaterslide
+		and not takis.wasinwaterslide
+			S_StartSound(p.realmo,sfx_eeugh)
+		end
+		
 		if not takis.inwaterslide
 		and takis.wasinwaterslide
-			p.mo.state = S_PLAY_STND
+			p.mo.state = S_PLAY_ROLL
+			p.pflags = $|PF_SPINNING
+			takis.transfo = $|TRANSFO_BALL
 			P_MovePlayer(p)
+			S_StartAntonOw(p.mo)
 		end
 		
 	end
 end)
 
-local function otherwind(me)
-	local r = me.radius/FU
-	local wind = P_SpawnMobj(
-		me.x + (P_RandomRange(r, -r) * FRACUNIT),
-		me.y + (P_RandomRange(r, -r) * FRACUNIT),
-		me.z + (P_RandomKey(me.height / FRACUNIT) * FRACUNIT) - me.height/2,
-		MT_THOK)
-	wind.scale = me.scale
-	wind.fuse = wind.tics
-	wind.sprite = SPR_RAIN
-	wind.renderflags = $|RF_PAPERSPRITE
-	wind.angle = me.angle
-	wind.spritexscale,wind.spriteyscale = me.scale,me.scale
-	wind.rollangle = ANGLE_90
-	wind.source = me
-	wind.blendmode = AST_ADD
+local function otherwind(p,me,ang)
+	TakisDoWindLines(me,0,nil,ang)
 end
 
 --thanks to Unmatched Bracket for this code!!!
@@ -2756,6 +2753,31 @@ addHook("PostThinkFrame", function()
 					takis.timeshit = $+1
 					takis.totalshit = $+1
 					
+					--poof!
+					for i = 0,5
+						TakisSpawnDust(me,
+							FixedAngle( P_RandomRange(-337,337)*FRACUNIT ),
+							10,
+							P_RandomRange(0,(me.height/me.scale)/2)*me.scale,
+							{
+								xspread = 0,
+								yspread = 0,
+								zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+								
+								thrust = 0,
+								thrustspread = 0,
+								
+								momz = P_RandomRange(10,-5)*me.scale,
+								momzspread = 0,
+								
+								scale = me.scale/2,
+								scalespread = P_RandomFixed(),
+								
+								fuse = 20,
+							}
+						)
+						
+					end
 				end
 				
 			elseif takis.pitanim > 2*TR
@@ -2831,18 +2853,44 @@ addHook("PostThinkFrame", function()
 			thok.tics = 3
 			thok.flags2 = $|MF2_DONTDRAW
 			
-			otherwind(thok)
+			otherwind(p,thok,thok.angle)
 		end
 		
 		if takis.inwaterslide
+		and not (p.pflags & PF_JUMPED)
             takis.resettingtoslide = true
+			
+			local rotspeed = takis.accspeed+15*FU
+			takis.waterangle = $+FixedAngle(rotspeed)
+			
+			local spd = 20*FU
+			local nadodist = 30
+			
+			local thok = P_SpawnMobjFromMobj(me,
+				nadodist*cos(me.angle+takis.waterangle),
+				nadodist*sin(me.angle+takis.waterangle),
+				2*me.scale,
+				MT_THOK
+			)
+			thok.angle = me.angle+takis.waterangle+ANGLE_90
+			thok.renderflags = $|RF_PAPERSPRITE
+			thok.height,thok.radius = me.height,me.radius
+			thok.tics = 3
+			thok.flags2 = $|MF2_DONTDRAW
+			
+			if rotspeed >= spd
+				otherwind(p,thok,thok.angle)
+			end
+			
 			me.state = S_PLAY_DEAD
-			me.sprite2 = SPR2_SLID
-            me.frame = ($ & ~FF_FRAMEMASK) | (leveltime % 4) / 2
-            p.drawangle = me.angle
+			me.sprite2 = SPR2_STUN
+            me.frame = ($ & ~FF_FRAMEMASK)
+            p.drawangle = me.angle+takis.waterangle
+			
 			continue
 		end
 		
+		takis.waterangle = 0
 		takis.resettingtoslide = false
     end
 end)
@@ -3250,6 +3298,10 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		takis.timeshit = $+1
 		takis.totalshit = $+1
 		
+		if takis.totalshit % 5 == 0
+			takis.HUD.timeshit = 5*TR+9
+		end
+		
 		if takis.totalshit >= 100 then TakisAwardAchievement(p,ACHIEVEMENT_OFFICER) end
 		
 		if p.inkart
@@ -3504,7 +3556,7 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 	
 	local p = mo.player
 	local takis = p.takistable
-
+	
 	if p.deadtimer > 10
 		return
 	end
@@ -3518,7 +3570,8 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 	and ((inf and inf.valid) and inf.type == MT_TAKIS_GUNSHOT)
 		return false
 	end
-
+	
+	--freeroam damage
 	if p.nightsfreeroam
 	and p.powers[pw_carry] != CR_NIGHTSMODE
 	and not p.powers[pw_flashing]
@@ -3852,7 +3905,7 @@ local function givecardpieces(mo, _, source)
 		
 		if source.player.powers[pw_carry] == CR_TAKISKART
 		and mo.takis_givecombotime
-		and (source.tracer and source.tracer.valid)
+		and (source.tracer and source.tracer.valid and source.tracer.takiscar)
 			source.tracer.fuel = $+3*FU
 			if source.tracer.fuel > 100*FU
 				source.tracer.fuel = 100*FU
@@ -4518,7 +4571,53 @@ addHook("MobjMoveCollide",function(tm,t)
 end,MT_PLAYER)
 
 -- collision stuff for 'nado
-addHook("MobjMoveBlocked", function(mo, thing, line)
+--bumpcode
+addHook("MobjMoveBlocked", function(me, thing, line)
+	local p = me.player
+	local takis = p.takistable
+	local allowbump = false
+	
+	if takis.inwaterslide
+		allowbump = true
+	end
+	
+	if not allowbump
+		return
+	end
+	
+	if ((thing) and (thing.valid)) or ((line) and (line.valid))
+		
+		local oldangle = me.angle
+		if thing and thing.valid
+			if thing.flags & (MF_MONITOR|MF_PUSHABLE)
+				return
+			end
+			
+			me.angle = FixedAngle(AngleFixed(R_PointToAngle2(me.x,me.y,thing.x,thing.y))+(180*FU))
+			P_InstaThrust(me,me.angle,20*me.scale)
+			me.angle = oldangle
+			
+		elseif line and line.valid
+			if FixedHypot(me.momx,me.momy) < 7*me.scale then return end
+			--THANKS MARILYN FOR LETTIN ME STEAL THIS!!
+			if abs(line.dx) > 0
+                local myang = R_PointToAngle2(0, 0, me.momx, me.momy)
+                local vertang = R_PointToAngle2(0, 0, 0, me.momz)
+                local lineang = R_PointToAngle2(line.v1.x, line.v1.y, line.v2.x, line.v2.y)
+                P_InstaThrust(me, myang + 2*(lineang - myang), FixedHypot(me.momx, me.momy)- me.friction)
+            else
+                me.momx = $*-1
+            end			
+		end
+		
+		local bam1,bam2 = SpawnBam(me)
+		bam1.scale,bam2.scale = $1/2,$2/2
+		S_StartSound(me,sfx_s3k49)
+		
+		return true
+	end
+	
+	/*
 	if not mo
 	or not mo.valid
 		return
@@ -4573,6 +4672,7 @@ addHook("MobjMoveBlocked", function(mo, thing, line)
 			end
 		end
 	end
+	*/
 end, MT_PLAYER)
 
 addHook("MobjDeath", function(mobj, inflictor, source)

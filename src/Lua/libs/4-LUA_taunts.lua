@@ -204,7 +204,7 @@ local function think_bat(p)
 						end
 						TakisAwardAchievement(p,ACHIEVEMENT_HOMERUN)
 						SpawnBam(ref)
-						SpawnEnemyGibs(thok,found)
+						SpawnEnemyGibs(found,found)
 						S_StartSound(found,sfx_smack)
 						S_StartSound(me,sfx_sdmkil)
 						local ang = p.drawangle

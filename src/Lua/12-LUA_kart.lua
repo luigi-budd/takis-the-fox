@@ -760,9 +760,9 @@ addHook("MobjMoveCollide",function(car,mo)
 end,MT_TAKIS_KART_HELPER)
 
 --bonk
+--bumpcode
 addHook("MobjMoveBlocked",function(car,thing,line)
 	if ((thing) and (thing.valid)) or ((line) and (line.valid))
-		if FixedHypot(car.momx,car.momy) < 7*car.scale then return end
 		if (car.sprung) and car.momz*P_MobjFlip(car) > 0 then return end
 		
 		local oldangle = car.angle
@@ -776,7 +776,7 @@ addHook("MobjMoveBlocked",function(car,thing,line)
 			car.angle = oldangle
 			car.accel = $/5
 			
-			if thing.type == MT_TAKIS_KART_HELPER
+			if thing.iskart
 				oldangle = thing.angle
 				thing.angle = FixedAngle(AngleFixed(R_PointToAngle2(thing.x,thing.y,car.x,car.y))+(180*FU))
 				P_InstaThrust(thing,thing.angle,20*thing.scale)
@@ -786,6 +786,7 @@ addHook("MobjMoveBlocked",function(car,thing,line)
 				end
 			end
 		elseif line and line.valid
+			if FixedHypot(car.momx,car.momy) < 7*car.scale then return end
 			--THANKS MARILYN FOR LETTIN ME STEAL THIS!!
 			if abs(line.dx) > 0
                 local myang = R_PointToAngle2(0, 0, car.momx, car.momy)
@@ -801,6 +802,7 @@ addHook("MobjMoveBlocked",function(car,thing,line)
 		SpawnBam(car)
 		if (car.target and car.target.player)
 		and not car.target.player.powers[pw_flashing]
+		and car.takiscar
 			car.fuel = $-(5*FU)
 			car.damagetic = TR
 			car.driftspark = 0
@@ -814,6 +816,7 @@ end,MT_TAKIS_KART_HELPER)
 
 local function carinit(car)
 	--toggles takis specific stuff (like fuel)
+	car.iskart = true
 	car.takiscar = true
 	car.fuel = 100*FU
 	car.init = true
@@ -842,6 +845,7 @@ local function carinit(car)
 	car.boostpanel = 0
 end
 
+local basenormalspeed = 45
 addHook("MobjThinker",function(car)
 	if not (car and car.valid) then return end
 	
@@ -873,7 +877,10 @@ addHook("MobjThinker",function(car)
 		return
 	end
 	
-	car.flags = $|MF_NOBLOCKMAP
+	if (me.flags & MF_NOTHINK)
+		return true
+	end
+	
 	if not car.init
 		carinit(car)
 	end
@@ -922,7 +929,7 @@ addHook("MobjThinker",function(car)
 	car.radius,car.height = me.radius,me.height
 	me.momx,me.momy,me.momz = car.momx,car.momy,car.momz
 	
-	car.basemaxspeed = 45*me.scale
+	car.basemaxspeed = basenormalspeed*me.scale
 	local basemaxspeed = car.basemaxspeed
 	local maxspeed = car.maxspeed
 	local accel = p.accelstart + (FixedDiv(FixedHypot(car.momx,car.momy),car.scale)>>FRACBITS)*p.acceleration
@@ -1045,7 +1052,7 @@ addHook("MobjThinker",function(car)
 		end
 	end
 	
-	if car.basemaxspeed > 45*me.scale
+	if car.basemaxspeed > basenormalspeed*me.scale
 		car.offroad = 0
 	end
 	
@@ -1075,9 +1082,17 @@ addHook("MobjThinker",function(car)
 			end
 		--back up terry
 		else
+			--braking
 			if car.accel > 0
-				car.accel = $*4/5
+				if not S_SoundPlaying(car,sfx_skid)
+				and grounded
+					S_StartSound(car,sfx_skid)
+				end
+				car.accel = $*9/10
+			else
+				S_StopSoundByID(car,sfx_skid)
 			end
+			
 			if car.accel-accel > -cmaxspeed/16
 				car.accel = $-accel
 			end
@@ -1085,7 +1100,7 @@ addHook("MobjThinker",function(car)
 	else
 		if grounded
 			local ab = (car.accel > 0) and 1 or -1
-			car.accel = (abs($)*4/5)*ab
+			car.accel = (FixedMul(abs($),me.friction))*ab
 		end
 	end
 	if car.accel > car.maxspeed/8
