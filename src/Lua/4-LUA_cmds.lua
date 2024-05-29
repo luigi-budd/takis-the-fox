@@ -474,4 +474,27 @@ COM_AddCommand("takis_laggymodel", function(p)
 	TakisSaveStuff(p)
 end)
 
+COM_AddCommand("takis_letautosave", function(p)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if not (p.takistable)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	if p.takistable.io.autosave
+		p.takistable.io.autosave = 0
+		prn(p,skins[TAKIS_SKIN].realname.." will no longer autosave every minute.")
+	else
+		p.takistable.io.autosave = 1
+		prn(p,skins[TAKIS_SKIN].realname.." will now autosave every minute.")
+	end
+	
+	TakisSaveStuff(p)
+end)
+
+
 filesdone = $+1

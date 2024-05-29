@@ -637,6 +637,84 @@ COM_AddCommand("prhappyhour", function(p)
 	print("candoshit: "..tostring( HH_CanDoHappyStuff(p) ))
 end,COM_ADMIN)
 
+COM_AddCommand("spb", function(p,node)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	local targetmo = TAKIS_MISC.scoreboard[1].realmo
+	
+	local spb = P_SpawnMobjFromMobj(p.realmo,
+		-140*cos(p.realmo.angle),
+		-140*sin(p.realmo.angle),
+		0,MT_TAKIS_BOMBLMAO)
+	spb.parent = p
+	spb.tracer = p.realmo
+	--P_SetOrigin(spb,0,0,0)
+	
+	if node ~= nil
+		local p2 = GetPlayer(p,node)
+		if p2
+			
+			if not (p2.mo.health)
+				prn(p,"This person is already dead, sending to 1st place...")
+			else
+				targetmo = p2.realmo
+			end
+			
+		end
+	end
+	
+	spb.target = targetmo
+	spb.movedir = R_PointToAngle2(spb.x,spb.y, targetmo.x,targetmo.y)
+	for p in players.iterate
+		if p.realmo ~= targetmo
+			S_StartSound(spb,sfx_kc57,p)
+		else
+			S_StartSound(nil,sfx_kc57,p)
+		end
+	end
+	
+	prn(p,"Sent out SPB to "..targetmo.player.name)
+end,COM_ADMIN)
+
+COM_AddCommand("freeze", function(p,node)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if TAKIS_FREEZEDBG
+		print("Mobjs have been thawed")
+		TAKIS_FREEZEDBG = false
+	else
+		print("Mobjs have been frozen")
+		TAKIS_FREEZEDBG = true
+	end
+end,COM_ADMIN)
+
+addHook("ThinkFrame",do
+	for mo in mobjs.iterate()
+		if (mo.player and mo.player.valid) then continue end
+		
+		if TAKIS_FREEZEDBG
+			if (mo.prevthink ~= nil) then continue end
+			if mo.prevthink == nil
+				mo.prevthink = (mo.flags & MF_NOTHINK)
+			end
+			mo.flags = $|MF_NOTHINK
+		else
+			if (mo.prevthink == nil) then continue end
+			if mo.prevthink == 0
+				mo.flags = $ &~MF_NOTHINK
+			end
+			mo.prevthink = nil
+		end
+	end
+	
+end)
+
 /*
 COM_AddCommand("_gmodify", function(p,gdex,value,vty)
 	local dex = _G[gdex]

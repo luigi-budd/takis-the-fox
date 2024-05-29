@@ -70,7 +70,11 @@ addHook("MobjThinker",function(th)
 		else
 			th.timealive = $+1
 		end
-		
+		th.sprite = SPR_THND
+		th.spritexscale,th.spriteyscale = FU,FU
+		th.angle = TakisMomAngle(th)
+		th.rollangle = R_PointToAngle2(0, 0, TakisMomAngle(th), th.momz)
+
 		if P_IsObjectOnGround(th)
 			if P_RandomChance(FU/2)
 			and (th.prevmomz*P_MobjFlip(th)) <= -5*th.scale
@@ -87,7 +91,7 @@ addHook("MobjThinker",function(th)
 				return
 			end
 		end
-		th.frame = $|FF_FULLBRIGHT
+		th.frame = G|FF_FULLBRIGHT|FF_PAPERSPRITE
 		local maxiter = 2
 		local momx = th.momx/(maxiter*2)
 		local momy = th.momy/(maxiter*2)
@@ -113,7 +117,8 @@ addHook("MobjThinker",function(th)
 			spark.color = th.color
 			spark.destscale = 0
 			spark.scalespeed = $*2
-			spark.frame = $|FF_FULLBRIGHT
+			spark.sprite = th.sprite
+			spark.frame = th.frame
 			if th.isrealspark
 				spark.camefromspark = true
 			end

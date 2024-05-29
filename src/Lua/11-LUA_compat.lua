@@ -88,10 +88,10 @@ addHook("ThinkFrame",do
 		compat.peptext = true
 		printf("Added NTOPP textboxes.")
 	end
-	if (mrce and mrce.CharacterPhysics)
+	if (mrceCharacterPhysics)
 	and not compat.mrcemom
 		--forces thrustfactor,,, stinky....
-		mrce.CharacterPhysics(TAKIS_SKIN,false,false,1)
+		mrceCharacterPhysics(TAKIS_SKIN,false,false,1)
 		compat.mrcemom = true
 		printf("Disabled MRCE momentum.")
 	end
@@ -127,6 +127,10 @@ addHook("ThinkFrame",do
 			local p = lapper.player
 			local takis = p.takistable
 			TakisGiveCombo(p,takis,false,true)
+			local hud = takis.HUD
+			hud.lapanim.lapnum = p.ptsr.laps+1
+			hud.lapanim.tics = 80
+			hud.lapanim.time = p.ptsr.laptime
 		end)
 		
 		compat.ptsrhook = true

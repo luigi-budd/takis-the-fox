@@ -85,6 +85,7 @@ addHook("MobjThinker", function(ai)
 	end
 	
 	if (displayplayer and displayplayer.valid)
+	and (displayplayer.realmo and displayplayer.realmo.valid)
 		if not (camera.chase)
 			--only dontdraw afterimages that are too close to the player
 			local dist = TAKIS_TAUNT_DIST*3
@@ -315,6 +316,7 @@ addHook("MobjThinker", function(rag)
 			dead.frame = A
 			dead.sprite2 = SPR2_DEAD
 			dead.isFUCKINGdead = true
+			dead.colorized = f.colorized
 			P_SetObjectMomZ(dead,14*FU)
 
 		end
@@ -1110,7 +1112,7 @@ addHook("MobjThinker",function(effect)
 	
 	P_MoveOrigin(effect,me.x+17*x,me.y+17*y,me.z)
 	effect.angle = p.drawangle
-	effect.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0, 0, me.momx, me.momy), me.momz)
+	effect.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0,0,me.momx,me.momy), me.momz)
 	effect.scale = me.scale
 	
 	if (effect.tics % 2)
@@ -1367,6 +1369,7 @@ addHook("MobjThinker",function(gib)
 	gib.momz = $+(grav*P_MobjFlip(gib))
 	gib.rollangle = $+(gib.angleroll or 0)
 	gib.speed = FixedHypot(gib.momx,gib.momy)
+	gib.angle = $+gib.angleadd
 	if (P_IsObjectOnGround(gib)
 	and not gib.bounced)
 		if not gib.iwillbouncetwice
@@ -1874,6 +1877,30 @@ for _,type in ipairs(gibbinglist)
 	addHook("MobjSpawn",regulargib,type)
 end
 
+local forcepsprites = {
+	MT_ROSY,
+}
+local forcepspritesskins = {
+	[MT_ROSY] = {"amy",SKINCOLOR_ROSY},
+}
+local function playerragsprites(mo)
+	if not (mo and mo.valid) then return end
+	mo.takis_playerragsprites = true
+	if forcepspritesskins[mo.type] ~= nil
+		mo.takis_playerragskin = forcepspritesskins[mo.type][1]
+		if mo.color == SKINCOLOR_NONE
+			mo.takis_playerragcolor = forcepspritesskins[mo.type][2]
+		else
+			mo.takis_playerragcolor = mo.color		
+		end
+		mo.takis_playerragcolorized = mo.colorized
+	end
+end
+
+for _,type in ipairs(forcepsprites)
+	addHook("MobjSpawn",playerragsprites,type)
+end
+
 addHook("MobjThinker",function(mo)
 	if not mo
 	or not mo.valid
@@ -1995,7 +2022,7 @@ addHook("MobjThinker",function(drone)
 			drone.exitrow2.flags2 = $ &~MF2_DONTDRAW
 		end
 	end
-	
+	TAKIS_MISC.dronepos = {drone.x,drone.y,drone.z}
 end,MT_NIGHTSDRONE)
 
 --SUMMIT!
@@ -2079,13 +2106,16 @@ addHook("MobjThinker",function(poof)
 	--poof.color = choose(SKINCOLOR_PEPPER,SKINCOLOR_RED,SKINCOLOR_CRIMSON)
 	--poof.colorized = true
 	
-	if not (leveltime % 2 == 0) then return end
 	if (poof.spawnedfrom) then return end
+	poof.momz = $+(P_GetMobjGravity(poof)*P_MobjFlip(poof))
+	
+	if not (leveltime % 2 == 0) then return end
 	poof.flags2 = $|MF2_DONTDRAW
 	
 	local ghost = P_SpawnMobjFromMobj(poof,0,0,0,MT_TAKIS_EXPLODE)
 	ghost.spawnedfrom = true
 	ghost.flags = $|MF_NOGRAVITY
+	ghost.momz = 0
 	/*
 	ghost.frame = poof.frame
 	ghost.fuse = TR/2
@@ -2114,6 +2144,248 @@ addHook("MobjThinker",function(wind)
 		wind.spritexoffset = $+FixedDiv(FU,halftics*FU)
 	end
 end,MT_TAKIS_WINDLINE)
+
+addHook("MobjThinker",function(th)
+	if not (th and th.valid) then return end
+	
+	if th.coolscalespeed == nil
+		th.coolscalespeed = th.scalespeed
+		th.scalespeed = 0
+	end
+	
+	
+	th.prevmomz = $ or 0
+	if th.timealive == nil
+		th.timealive = 0
+	else
+		th.timealive = $+1
+	end
+	th.angle = TakisMomAngle(th)
+	th.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0,0,th.momx,th.momy), th.momz)
+	--th.momz = $+(P_GetMobjGravity(th)*2*P_MobjFlip(th))
+	th.spritexscale,th.spriteyscale = FU*3/2,FU*3/2
+	
+	if P_IsObjectOnGround(th)
+		if P_RandomChance(FU/2)
+		and (th.prevmomz*P_MobjFlip(th)) <= -5*th.scale
+		and (not th.bouncedup)
+			P_SetObjectMomZ(th,-
+				FixedDiv(
+					FixedDiv(th.prevmomz,th.scale),
+					2*FU+(P_RandomFixed()*(P_RandomChance(FU/2) and 1 or -1))
+				)
+			)
+			th.bouncedup = true
+		end
+	end
+	
+	if th.isrealspark
+		th.color = SKINCOLOR_ORANGE
+		local tics = max(8-(th.timealive/4),0)
+		if tics > 4
+		and tics <= 6
+			th.color = SKINCOLOR_APRICOT
+		elseif tics > 2
+		and tics <= 4
+			th.color = SKINCOLOR_LEMON
+		elseif tics <= 2
+			th.color = SKINCOLOR_WHITE
+		end
+	end
+	
+	th.frame = ($ &~FF_FRAMEMASK)|H+P_RandomRange(0,2)
+	if th.tics <= 9
+		th.scalespeed = th.coolscalespeed
+		--th.frame = $|numtotrans[10-th.tics]
+	end
+	
+	th.prevmomz = th.momz
+	
+end,MT_TAKIS_SPARK)
+
+-- https://github.com/STJr/Kart-Public/blob/44b4a6852858eebba5f9f50da2ac9f4b2889ad1a/src/p_enemy.c#L193
+--rubberbanding on this one is a bit harsh but thats the whole point
+addHook("MobjThinker",function(spb)
+	if not (spb and spb.valid) then return end
+	
+	spb.skin = TAKIS_SKIN
+	spb.sprite2 = SPR2_KART
+	spb.frame = ($ &~FF_FRAMEMASK)|(leveltime % 2)
+	spb.color = P_RandomRange(SKINCOLOR_SALMON,SKINCOLOR_KETCHUP)
+	local desiredspeed = FixedMul(
+		(148+36)<<14
+		,spb.scale
+	)
+	local wspeed = desiredspeed
+	local xyspeed = desiredspeed
+	local zspeed = desiredspeed
+	local hang,vang,dist
+	local cx,cy = 0,0
+	local targ = spb.target
+	if targ == nil
+	or not (targ and targ.valid and targ.health)
+		if #TAKIS_MISC.scoreboard == 0
+			P_KillMobj(spb)
+			return
+		end
+		for k,v in ipairs(TAKIS_MISC.scoreboard)
+			if v and v.realmo and v.realmo.valid and v.realmo.health
+				spb.target = v.realmo
+				break
+			end
+		end
+		targ = spb.target
+	end
+	local p = targ.player
+	targ.spbtarg = spb
+	
+	if (targ and targ.health and not (p and p.spectator))
+		local defspeed = wspeed
+		local range = 100*targ.scale
+		local spark = ((10-9)+4)/2
+		local easiness = ((9+(10-spark)) << FRACBITS)/2
+		
+		spb.flags = $ &~MF_NOCLIPTHING
+		
+		if p
+			local fracmax = 32
+			
+			defspeed = FixedMul(((fracmax+1)<<FRACBITS) - easiness, (148+36)<<14)/fracmax
+			
+			cx,cy = p.cmomx,p.cmomy
+		end
+		
+		dist = P_AproxDistance(P_AproxDistance(spb.x - targ.x, spb.y - targ.y), spb.z - targ.z)
+		
+		wspeed = FixedMul(defspeed, FU + FixedDiv(dist-range, range))
+		if (wspeed < defspeed)
+			wspeed = defspeed;
+		end
+		if (wspeed > 3*defspeed)
+			wspeed = 3*defspeed;
+		end
+		if (wspeed < 30*targ.scale)
+			wspeed = 30*targ.scale;
+		end
+		if (p.pflags & PF_SLIDING)
+			wspeed = p.speed/2;		
+		end
+		
+		hang = R_PointToAngle2(spb.x,spb.y, targ.x,targ.y)
+		vang = R_PointToAngle2(0,spb.z, dist, targ.z)
+		
+		if wspeed > spb.cvmem
+			spb.cvmem = $+(wspeed - spb.cvmem)/TR
+		else
+			spb.cvmem = wspeed
+		end
+		
+		local input = hang - spb.angle
+		local invert = (AngleFixed(input) > 180*FU)
+		if invert
+			input = InvAngle($)
+		end
+		
+		xyspeed = FixedMul(spb.cvmem, max(0, (((195<<FRACBITS) - AngleFixed(input))/90)-FU))
+		
+		input = FixedAngle(AngleFixed(input)/4)
+		if invert
+			input = InvAngle($)
+		end
+		
+		spb.angle = $+input
+		
+		input = vang - spb.movedir
+		invert = (AngleFixed(input) > 180*FU)
+		if invert
+			input = InvAngle($)
+		end
+		
+		zspeed = FixedMul(spb.cvmem, max(0, (((195<<FRACBITS) - AngleFixed(input))/90)-FU))
+		input = FixedAngle(AngleFixed(input)/4)
+		if invert
+			input = InvAngle($)
+		end
+		
+		spb.movedir = $+input
+	end
+	spb.momx = cx+FixedMul(FixedMul(xyspeed,cos(spb.angle)),cos(spb.movedir))
+	spb.momy = cy+FixedMul(FixedMul(xyspeed,sin(spb.angle)),cos(spb.movedir))
+	spb.momz = FixedMul(zspeed,sin(spb.movedir))
+	
+	if spb.viewaway == nil
+	or not (spb.viewaway and spb.viewaway.valid)
+		spb.viewaway = P_SpawnMobjFromMobj(spb,-100*cos(spb.angle),-100*sin(spb.angle),80*spb.scale,MT_THOK)
+	else
+		spb.viewaway.angle = spb.angle
+		spb.viewaway.flags2 = MF2_DONTDRAW
+		spb.viewaway.fuse,spb.viewaway.tics = -1,-1
+		P_MoveOrigin(spb.viewaway,
+			spb.x-150*cos(spb.angle)+spb.momx,
+			spb.y-150*sin(spb.angle)+spb.momy,
+			spb.z+70*spb.scale+spb.momz
+		)
+		if spb.tracer.player.spectator
+			spb.tracer.player.awayviewmobj = spb.viewaway
+			spb.tracer.player.awayviewtics = 1
+		end
+	end
+	
+	if not S_SoundPlaying(spb,sfx_kc64)
+		S_StartSound(spb,sfx_kc64)
+	end
+	
+	local gh = P_SpawnGhostMobj(spb)
+	gh.colorized = true
+	gh.blendmode = AST_ADD
+	
+	local waveforce = FixedDiv(FixedHypot(FixedHypot(spb.momx,spb.momy),spb.momz),spb.scale)/FU+5
+	spb.spriteyoffset = FixedMul(4*FU,sin(FixedAngle(leveltime*waveforce*FU)))
+	spb.shadowscale = FU-(FixedDiv(spb.spriteyoffset,16*FU))
+	TakisDoWindLines(spb,spb.momz,spb.color)
+end,MT_TAKIS_BOMBLMAO)
+
+addHook("TouchSpecial",function(spb,th)
+	if not (spb and spb.valid) then return end
+	if not (th and th.valid) then return true end
+	
+	if (th.health)
+	and CanFlingThing(th,MF_ENEMY|MF_BOSS)
+		P_KillMobj(th,spb,spb.tracer)
+		return true
+	elseif (th.player)
+		if (spb.target == th)
+			--i'll destroy you to death
+			P_DamageMobj(th,spb,spb.tracer,DMG_INSTAKILL)
+			P_KillMobj(th,spb,spb.tracer)
+			P_RemoveMobj(spb.viewaway)
+		else
+			P_DamageMobj(th,spb,spb.tracer)
+			return true
+		end
+	end
+	
+end,MT_TAKIS_BOMBLMAO)
+
+addHook("ShouldDamage",function(spb,_,_,_,dmgt)
+	if not (spb and spb.valid) then return end
+	
+	if dmgt == DMG_DEATHPIT
+		return false
+	end
+end,MT_TAKIS_BOMBLMAO)
+addHook("MobjDeath",function(spb,_,_,_,dmgt)
+	if not (spb and spb.valid) then return end
+	
+	if dmgt == DMG_DEATHPIT
+		return true
+	end
+end,MT_TAKIS_BOMBLMAO)
+addHook("MobjRemoved",function(spb)
+	if not (spb and spb.valid) then return end
+	
+	return true
+end,MT_TAKIS_BOMBLMAO)
 
 filesdone = $+1
 

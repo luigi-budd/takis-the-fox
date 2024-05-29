@@ -45,6 +45,7 @@ tm.entries = {
 			"Don't Show Ach. Messages",
 			"MinHud",
 			"Laggy Model",
+			"Autosaving",
 		},
 		table = "takis.io",
 		values = {
@@ -59,6 +60,7 @@ tm.entries = {
 			"dontshowach",
 			"minhud",
 			"laggymodel",
+			"autosave",
 		},
 		commands = {
 			"nostrafe",
@@ -72,6 +74,7 @@ tm.entries = {
 			"dontshowach",
 			"minhud",
 			"laggymodel",
+			"letautosave",
 		},
 		hints = {
 			"Toggles forced strafing.",
@@ -85,6 +88,7 @@ tm.entries = {
 			"Don't show other Takis' achievements.",
 			"Toggles Minimal HUD elements for Takis.",
 			"Toggles Afterimage color shifting for models",
+			"Toggles Autosaving every minute.",
 		}
 	},
 	[3] = {

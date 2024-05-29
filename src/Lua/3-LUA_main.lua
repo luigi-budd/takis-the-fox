@@ -316,6 +316,7 @@ addHook("PreThinkFrame",function()
 			if P_IsObjectOnGround(me)
 			and not P_CheckDeathPitCollide(me)
 			and not takis.pitanim
+			and not P_InQuicksand(me)
 				if not ((me.eflags & MFE_TOUCHWATER) and not ((me.eflags & MFE_UNDERWATER) or (P_IsObjectInGoop(me))))
 					takis.lastgroundedpos = {me.x,me.y,me.z}
 					takis.lastgroundedangle = me.angle
@@ -422,6 +423,16 @@ addHook("PlayerThink", function(p)
 			takis.HUD.happyhour.hour.patch = "TAHY_HOUR"
 			*/
 			
+			--forced strafe
+			if takis.io.nostrafe == 0
+			and (takis.notCarried)
+			and not ((p.pflags & (PF_SPINNING|PF_STASIS))
+			or (p.powers[pw_nocontrol] or takis.nocontrol))
+			and (takis.notCarried)
+			and not (takis.dived and me.state == S_PLAY_GLIDE)
+				p.drawangle = me.angle
+			end
+			
 			local shouldntcontinueslide = false
 			--if something youre looking for isnt here, theres a good
 			--chance that its in shorts!
@@ -459,18 +470,8 @@ addHook("PlayerThink", function(p)
 				p.charflags = $ &~SF_SUPER
 			end
 			
-			--forced strafe
-			if takis.io.nostrafe == 0
-			and (takis.notCarried)
-			and not ((p.pflags & (PF_SPINNING|PF_STASIS))
-			or (p.powers[pw_nocontrol] or takis.nocontrol))
-			and (takis.notCarried)
-			and not (takis.dived and me.state == S_PLAY_GLIDE)
-				p.drawangle = me.angle
-			end
-			
 		 	if (takis.dived and me.state == S_PLAY_GLIDE)
-				p.drawangle = R_PointToAngle2(0,0,me.momx,me.momy)
+				p.drawangle = TakisMomAngle(me)
 			end
 			
 			if (takis.bashtime)
@@ -676,10 +677,14 @@ addHook("PlayerThink", function(p)
 					and takis.wavedashcapable
 					and not (takis.noability & NOABIL_WAVEDASH)
 						p.pflags = $ &~(PF_JUMPED)
-						P_SetObjectMomZ(me,-8*FRACUNIT)
+						P_SetObjectMomZ(me,-8*FU)
 						local ang = GetControlAngle(p)
 						S_StartSoundAtVolume(me,sfx_takdiv,255/4)
-						P_Thrust(me,ang,14*me.scale)
+						P_InstaThrust(me,ang,FixedMul(takis.accspeed,me.scale)+14*me.scale)
+						takis.ropeletgo = 5
+						for i = 5, P_RandomRange(10,15)
+							TakisDoWindLines(me,-8*me.scale*takis.gravflip)
+						end
 					end
 				else
 					
@@ -1683,13 +1688,16 @@ addHook("PlayerThink", function(p)
 					end
 				end
 				
+				/*
 				if (p.pflags & PF_SHIELDABILITY)
 				and (p.powers[pw_shield] == SH_BUBBLEWRAP)
 					P_DoBubbleBounce(p)
-					p.pflags = $ &~PF_THOKKED
+					p.pflags = $ &~(PF_THOKKED|PF_SHIELDABILITY)
 					takis.thokked = false
+					takis.dived = false
 					me.state = S_PLAY_ROLL
 				end
+				*/
 				
 				if takis.inFakePain
 					takis.fakeflashing = flashingtics
@@ -2069,13 +2077,15 @@ addHook("PlayerThink", function(p)
 				
 			elseif (p.playerstate == PST_REBORN
 			or p.playerstate == PST_LIVE)
+				takis.deadtimer = 0
+				takis.freezedeath = false
 				takis.deathanim = 0
 				takis.altdisfx = 0
 				takis.saveddmgt = 0
 				takis.stoprolling = false
 				takis.deathfloored = false
 				if p.bot == BOT_2PAI
-				and p.playerstate == PST_REBORN
+				--and p.playerstate == PST_REBORN
 					takis.heartcards = TAKIS_MAX_HEARTCARDS
 				end
 			end
@@ -2094,7 +2104,8 @@ addHook("PlayerThink", function(p)
 				or (takis.inwaterslide)
 				or (p.ptsr and p.ptsr.outofgame)
 				or (HAPPY_HOUR.othergt and HAPPY_HOUR.overtime)
-					if not p.ptsr
+					if not (p.ptsr
+					and HAPPY_HOUR.othergt)
 						takis.combo.frozen = true
 					end
 					if ((p.exiting) and not (p.pflags & PF_FINISHED))
@@ -2103,19 +2114,23 @@ addHook("PlayerThink", function(p)
 					end
 				else
 					takis.combo.time = $-1
-					if not p.ptsr
+					if not (p.ptsr
+					and HAPPY_HOUR.othergt)
 						takis.combo.frozen = false
 					end
 					takis.combo.cashable = false
 				end
 				if p.ptsr
+				and HAPPY_HOUR.othergt
 					takis.combo.frozen = not PTSR.CanComboTimeDecrease(p)
 					takis.combo.cashable = false
+					takis.combo.dropped = p.ptsr.combo_timesfailed ~= 0
 				end
 				
 				--weird hybrid with ptsr's and takis' combo meters
 				local maxtime = TAKIS_MAX_COMBOTIME
 				if (p.ptsr)
+				and HAPPY_HOUR.othergt
 					maxtime = p.ptsr.combo_maxtime
 					takis.combo.time = p.ptsr.combo_timeleft
 				end
@@ -2171,7 +2186,8 @@ addHook("PlayerThink", function(p)
 					takis.HUD.combo.momy = 3*FU
 					takis.HUD.combo.momx = 3*FU
 					
-					if not p.ptsr
+					if not (p.ptsr
+					and HAPPY_HOUR.othergt)
 						S_StartSound(nil,sfx_chchng,p)
 						if takis.combo.score ~= "dontdraw"
 							P_AddPlayerScore(p,takis.combo.score)
@@ -2519,12 +2535,14 @@ addHook("PlayerThink", function(p)
 		
 		takis.combo.lastcount = takis.combo.count
 		takis.lastmap = gamemap
+		takis.lastweapon = takis.currentweapon
 		takis.lastgt = gametype
 		takis.lastss = G_IsSpecialStage(gamemap)
 		takis.lastplacement = takis.placement
 		takis.lastcarry = p.powers[pw_carry]
 		takis.lastrings = p.rings
 		takis.lastlives = p.lives
+		takis.lastlaps = p.laps
 		if CV_FindVar("cooplives").value == 3
 		and (netgame or multiplayer)
 			takis.lastlives = TAKIS_MISC.livescount
@@ -2675,7 +2693,7 @@ addHook("PostThinkFrame", function()
 		
 		if (p.skidtime)
 		and (me.state == S_PLAY_SKID)
-			p.drawangle = R_PointToAngle2(0,0, me.momx,me.momy)
+			p.drawangle = TakisMomAngle(me)
 		end
 		
 		if (takis.transfo & TRANSFO_TORNADO)
@@ -2860,6 +2878,15 @@ addHook("PostThinkFrame", function()
 		and not (p.pflags & PF_JUMPED)
             takis.resettingtoslide = true
 			
+			me.state = S_PLAY_DEAD
+			me.sprite2 = SPR2_STUN
+            me.frame = ($ & ~FF_FRAMEMASK)
+			
+		else
+			takis.resettingtoslide = false
+		end
+		
+		if me.sprite2 == SPR2_STUN
 			local rotspeed = takis.accspeed+15*FU
 			takis.waterangle = $+FixedAngle(rotspeed)
 			
@@ -2881,17 +2908,10 @@ addHook("PostThinkFrame", function()
 			if rotspeed >= spd
 				otherwind(p,thok,thok.angle)
 			end
-			
-			me.state = S_PLAY_DEAD
-			me.sprite2 = SPR2_STUN
-            me.frame = ($ & ~FF_FRAMEMASK)
             p.drawangle = me.angle+takis.waterangle
-			
-			continue
+		else
+			takis.waterangle = 0
 		end
-		
-		takis.waterangle = 0
-		takis.resettingtoslide = false
     end
 end)
 
@@ -3910,6 +3930,7 @@ local function givecardpieces(mo, _, source)
 			if source.tracer.fuel > 100*FU
 				source.tracer.fuel = 100*FU
 			end
+			source.tracer.ringboost = $+5
 		end
 	end
 	
@@ -3989,6 +4010,12 @@ local function hurtbytakis(mo,inf,sor,_,dmgt)
 	end
 	
 	if mo.ragdoll
+		return
+	end
+	
+	--wait dont give combo if we killed ourself
+	if (sor == mo)
+	and (sor.player and mo.player)
 		return
 	end
 	
@@ -4294,9 +4321,9 @@ addHook("JumpSpecial", function(p)
 		wind.renderflags = $|RF_PAPERSPRITE
 		wind.startingtrans = 0
 		
-		wind.angle = R_PointToAngle2(0, 0, me.momx, me.momy)
+		wind.angle = TakisMomAngle(me)
 		wind.spritexscale,wind.spriteyscale = me.scale,me.scale
-		wind.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0, 0, me.momx, me.momy),FixedMul(9*FU,p.jumpfactor)) + ANGLE_90
+		wind.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0,0,me.momx,me.momy),FixedMul(9*FU,p.jumpfactor)) + ANGLE_90
 	end
 end)
 
@@ -4578,6 +4605,7 @@ addHook("MobjMoveBlocked", function(me, thing, line)
 	local allowbump = false
 	
 	if takis.inwaterslide
+	or (takis.transfo & TRANSFO_BALL)
 		allowbump = true
 	end
 	
@@ -4601,7 +4629,7 @@ addHook("MobjMoveBlocked", function(me, thing, line)
 			if FixedHypot(me.momx,me.momy) < 7*me.scale then return end
 			--THANKS MARILYN FOR LETTIN ME STEAL THIS!!
 			if abs(line.dx) > 0
-                local myang = R_PointToAngle2(0, 0, me.momx, me.momy)
+                local myang = TakisMomAngle(me)
                 local vertang = R_PointToAngle2(0, 0, 0, me.momz)
                 local lineang = R_PointToAngle2(line.v1.x, line.v1.y, line.v2.x, line.v2.y)
                 P_InstaThrust(me, myang + 2*(lineang - myang), FixedHypot(me.momx, me.momy)- me.friction)

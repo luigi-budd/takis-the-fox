@@ -9,7 +9,7 @@
 --Y7GDSUYFHIDJPK AAAAAAAAAAAHHHHHHHHH!!!!!!!!
 
 --if you use this manually and mess something up, its not my fault!
-COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a11,a12,timeshit)
+COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a9,a10,a11,a12,timeshit)
 	
 	if sig ~= TAKIS_ACHIEVEMENTINFO.luasig
 		CONS_Printf(p,"\x85"+"Do not use this command manually!")
@@ -30,12 +30,14 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 	a6 = tonumber($)
 	a7 = tonumber($)
 	a8 = tonumber($)
+	a9 = tonumber($)
 	a10 = tonumber($)
 	a11 = tonumber($)
 	a12 = tonumber($)
 	timeshit = tonumber($)
 
 	local takis = p.takistable
+	local errored = false
 
 	if a1 == 1
 		takis.io.nostrafe = 1
@@ -43,6 +45,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.nostrafe = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading No-Strafe! Defaulting to 0...")
+		errored = true
 	end
 
 	if a2 == 1
@@ -51,6 +54,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.nohappyhour = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading No Happy Hour! Defaulting to 0...")
+		errored = true
 	end
 	
 	if a3 == 1
@@ -59,6 +63,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.minhud = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading MinHud! Defaulting to 0...")
+		errored = true
 	end
 	
 	if a4 == 1
@@ -67,6 +72,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.morehappyhour = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading More Happy Hour! Defaulting to 0...")
+		errored = true
 	end
 
 	--1-7 pls
@@ -75,6 +81,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.tauntquick1 = t1
 	else
 		CONS_Printf(p,"\x85"+"Error loading Quick Taunt slot 1! Defaulting to 0...")
+		errored = true
 	end
 
 	--1-7 pls
@@ -83,6 +90,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.tauntquick2 = t2
 	else
 		CONS_Printf(p,"\x85"+"Error loading Quick Taunt slot 2! Defaulting to 0...")
+		errored = true
 	end
 
 	if a5 == 1
@@ -91,6 +99,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.tmcursorstyle = 2
 	else
 		CONS_Printf(p,"\x85"+"Error loading Cursor Style! Defaulting to 1...")
+		errored = true
 	end
 
 	if a5 == 1
@@ -99,6 +108,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.quakes = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading Quakes! Defaulting to 1...")
+		errored = true
 	end
 
 	if a7 == 1
@@ -107,6 +117,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.flashes = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading Flashes! Defaulting to 1...")
+		errored = true
 	end
 
 	if a10 == 1
@@ -115,6 +126,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.clutchstyle = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading Clutch Style! Defaulting to 1..")
+		errored = true
 	end
 
 	if a11 == 1
@@ -123,6 +135,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.sharecombos = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading Share Combos! Defaulting to 1...")
+		errored = true
 	end
 
 	if a12 == 1
@@ -131,6 +144,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.dontshowach = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading Don't show Achs.! Defaulting to 1...")
+		errored = true
 	end
 	
 	if a8 == 1
@@ -139,6 +153,16 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 		takis.io.laggymodel = 0
 	else
 		CONS_Printf(p,"\x85"+"Error loading Laggy Model! Defaulting to 0...")
+		errored = true
+	end
+	
+	if a9 == 1
+		takis.io.autosave = 1
+	elseif a9 == 0
+		takis.io.autosave = 0
+	else
+		CONS_Printf(p,"\x85"+"Error loading Autosave! Defaulting to 1...")
+		errored = true
 	end
 	
 	if (timeshit ~= nil)
@@ -147,7 +171,7 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a10,a
 	end
 
 	CONS_Printf(p, "\x82Loaded "..skins[TAKIS_SKIN].realname.."' Settings!")
-	p.takistable.io.savestate = 2
+	p.takistable.io.savestate = (errored and 4 or 2)
 	p.takistable.io.savestatetime = 2*TR
 end)
 
@@ -188,11 +212,13 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 	a6 = t.quakes
 	a7 = t.flashes
 	a8 = t.laggymodel
+	a9 = t.autosave
 	a10 = t.clutchstyle
 	a11 = t.sharecombos
 	a12 = t.dontshowach
 	timeshit = tay.totalshit
 	
+	--TODO: version numbers to prevent messed up saves
 	if io
 		DEBUG_print(p,IO_CONFIG|IO_SAVE)
 		
@@ -200,7 +226,7 @@ rawset(_G, "TakisSaveStuff", function(p, silent)
 		
 		local file = io.openlocal("client/takisthefox/config.dat", "w+")
 		file:write(" "..a1.." "..a2.." "..a3.." "..a4.." "..t1.." "
-			..t2.." "..a5.." "..a6.." "..a7.." "..a8.." "
+			..t2.." "..a5.." "..a6.." "..a7.." "..a8.." "..a9.." "
 			..a10.." "..a11.." "..a12.." "..timeshit
 		)
 		

@@ -216,7 +216,7 @@ local function drawbosscards(v,p)
 	local tween = 0
 	if not (TAKIS_MISC.inbossmap and bosscards.mo.health)
 	and (bosscards.mo)
-		local tics = min(bosscards.timealive,et+1)
+		local tics = min(bosscards.timealive or 0,et+1)
 		tween = ease.outback((FU/et)*tics,-300*FU,0,FU*3/2)
 	end
 	xoff = $+tween
@@ -816,34 +816,54 @@ local function howtotimer(player)
 	if (gametyperules & GTR_STARTCOUNTDOWN)
 	and (pt <= hlimit)
 		tics = hlimit - pt
+		--match race nums
+		tics = $+(TR-1)
+		
 		flash = true
 		extrafunc = "countinghide"
 		timertype = "counting"
 	else
+		
 		-- Time limit?
 		if (gametyperules & GTR_TIMELIMIT) 
 		and (puretlimit) then -- Gotta thank CobaltBW for spotting this oversight.
 			if (tlimit > pt)
-				tics = tlimit - pt
+				tics = (tlimit+(TR-1)) - pt
+				--match race nums
+				--tics = $+(TR-1)
 			else -- Overtime!
 				tics = 0
 			end
+			if ((gametyperules & (GTR_STARTCOUNTDOWN|GTR_TAG)) == (GTR_STARTCOUNTDOWN|GTR_TAG))
+				if (tlimit+hlimit > pt)
+					tics = (tlimit+hlimit+(TR-1)) - pt
+					--tics = $+(TR-1)
+				else -- Overtime!
+					tics = 0
+				end
+			end
+			
 			flash = true
 			timertype = "counting"
 		-- Post-hidetime normal.
         elseif (gametyperules & GTR_STARTCOUNTDOWN)
 		and (gametyperules & GTR_TIMELIMIT) -- Thanking 'im again.
-			if puretlimit
-				tics = tlimit - pt
-				timertype = "countdown"
-			else
-				tics = pt-hlimit
-			end
+			tics = pt-hlimit
         elseif (gametyperules & GTR_STARTCOUNTDOWN)
-            tics = pt - hlimit
+            tics = pt
+			tics = $+hlimit
 			extrafunc = "hiding"
 			timertype = "counting"
-        else
+		--level timelimit
+		elseif (mapheaderinfo[gamemap].countdown)
+			local tlimit = (mapheaderinfo[gamemap].countdown*TR)
+			if tlimti > rt
+				tics = tlimit-rt
+			else
+				tics = 0
+			end
+			flash = true
+		else
             tics = pt
         end
 	end
@@ -867,6 +887,7 @@ local function drawtimer(v,p,altpos)
 	end
 	
 	local takis = p.takistable
+	local cd = takis.HUD.countdown
 	
 	--time
 	--this is so minhud
@@ -967,7 +988,7 @@ local function drawtimer(v,p,altpos)
 			
 	end
 	
-	v.drawString(timex, timey, hours..extrac..minutes..":"..spad..seconds.."."..tictrn..tpad,flag,((takis.inBattle) and "thin-center" or "thin-right"))
+	v.drawString(timex, timey, hours..extrac..minutes..":"..spad..seconds.."."..tpad..tictrn,flag,((takis.inBattle) and "thin-center" or "thin-right"))
 	if not takis.inBattle
 	and (takis.io.minhud == 0)
 		v.drawString(timetx, timey, "Time"..extra,flag,"thin")
@@ -976,6 +997,45 @@ local function drawtimer(v,p,altpos)
 	and (takis.io.minhud == 0)
 		v.drawString(timetx, timey+8, extratext,flag,"thin")			
 	end
+	
+	--countdown
+	if cd.tics
+		if cd.tics == 1 then return end
+		local trans = 0
+		if cd.tics <= 9
+			trans = (10-cd.tics)<<V_ALPHASHIFT
+		end
+		
+		local scorenum = "CMBCF"
+		local score = cd.number
+		local prevw
+		if not prevw then prevw = 0 end
+		local scale = 2*FU+cd.scale+cd.scale2
+		
+		local textwidth = 0
+		for i = 1,string.len(score)
+			local n = string.sub(score,i,i)
+			local patch = v.cachePatch(scorenum+n)
+			textwidth = $+(patch.width*scale*4/10)		
+		end
+		
+		for i = 1,string.len(score)
+			local sc = FixedDiv(scale,2*FU)
+			local n = string.sub(score,i,i)
+			local patch = v.cachePatch(scorenum+n)
+			--local textwidth = (patch.width*scale*4/10)
+			v.drawScaled(160*FU+prevw-(textwidth/2),
+				145*FU-(patch.height/2*sc)+6*FU-(FU/2),
+				sc,
+				patch,
+				trans
+			)
+				
+			prevw = $+(patch.width*scale*4/10)
+		end
+	
+	end
+
 end
 
 --      ----------
@@ -1187,8 +1247,8 @@ local function drawlivesbutton(v,p,x,y,flags)
 	end
 	
 	if ((takis.firenormal)
-	and not takis.HUD.lives.tweentic)
-	or (takis.HUD.rthh.sptic)
+	or (takis.HUD.rthh.sptic or takis.io.savestate ~= 0))
+	and not takis.HUD.lives.tweentic
 		disp = $-35*FU
 	end
 	
@@ -1307,9 +1367,9 @@ local placetext2 = {
 
 local placestring = {
 	[0] = '',
-	[1] = "P",
-	[2] = "S",
-	[3] = "B",
+	[1] = "P",	--gold font
+	[2] = "S",	--silver font
+	[3] = "B",	--bronze font
 }
 
 local function isplayerlosing(p)
@@ -1561,7 +1621,9 @@ local function drawlivesarea(v,p)
 	
 	local disp = 0
 	
-	if (G_RingSlingerGametype())
+	--powerstones
+	if (gametyperules & GTR_POWERSTONES)
+	and (CV_FindVar("powerstones").value)
 		disp = 15*FU
 		
 		local emeraldpics = {
@@ -1682,6 +1744,8 @@ local function drawlivesarea(v,p)
 			state = "GOOD"
 		elseif takis.io.savestate == 3
 			state = "BAD"
+		elseif takis.io.savestate == 4
+			state = "WARN"
 		end
 		
 		v.drawScaled(
@@ -1758,7 +1822,7 @@ local function drawlivesarea(v,p)
 		end
 		
 		/*
-		v.drawCropped(x+80*FU+disp,y-10*FU+FixedMul(height,scale),scale,scale,
+		v.drawCropped(x+80*FU+disp,y-10*FU+FixedMul(height,SKINCOLOR_WHITEscale),scale,scale,
 			v.cachePatch(pre.."FILL"),
 			V_ADD|(flags &~(V_HUDTRANS|V_HUDTRANSHALF)|V_HUDTRANSHALF), 
 			v.getColormap(0,openingmenu and SKINCOLOR_GREEN or SKINCOLOR_WHITE),
@@ -2790,10 +2854,12 @@ local function getlaptext(p)
 	if CV_PTSR.default_maxlaps.value
 		text = lapsperplayertext
 		num = p.ptsr.laps.." / "..PTSR.maxlaps
+		p.takistable.HUD.lapanim.maxlaps = PTSR.maxlaps
 		return text,num
 	else
 		text = inflaps
 		num = p.ptsr.laps
+		p.takistable.HUD.lapanim.maxlaps = -1
 		return text,num
 	end
 
@@ -3378,6 +3444,8 @@ local function drawcosmenu(v,p)
 			state = "GOOD"
 		elseif takis.io.savestate == 3
 			state = "BAD"
+		elseif takis.io.savestate == 4
+			state = "WARN"
 		end
 		
 		v.drawScaled(
@@ -4433,7 +4501,7 @@ local function drawdriftmeter(v,p,cam)
 			
 			if car.driftspark >= value*4
 				erm = 400*FU
-				tmap = V_PURPLEMAP
+				tmap = skincolors[TakisKart_DriftColor(driftstage)].chatcolor
 			elseif car.driftspark >= value*2
 				erm2 = car.driftspark-(value*2)
 				erm = 200*FU+FixedMul(200*FU,FixedDiv(erm2,value*2))
@@ -4526,6 +4594,33 @@ local function kartspeedometer(v,p,takis,car,minus)
 		v.cachePatch("TA_KFUEL_BCRC"),
 		flags
 	)
+		
+	local maxsegs = 50
+	local meterfill = FixedDiv(abs(car.accel),car.basemaxspeed/8)
+	local fx,fy = x,y-FU
+	for i = 0,maxsegs,1
+		if meterfill == 0 then break end
+		
+		local angmath = 
+		FixedMul(
+			FixedDiv(
+				FixedMul(120*FU,meterfill),
+				maxsegs*FU
+			),
+			i*FU
+		)
+		angmath = $+FixedAngle(33*FU)
+		
+		local angle = FixedAngle(angmath)
+		v.drawScaled(
+			fx+(15*cos(angle)),
+			fy+(15*sin(angle)),
+			FU/3,
+			v.cachePatch("TA_LIVESFILL_BALL"),
+			flags,
+			v.getColormap(0,SKINCOLOR_WHITE)
+		)
+	end
 	
 	v.drawScaled(x,
 		y-(AngleFixed(sroll) == 0 and 4*FU or 0),
@@ -4533,7 +4628,6 @@ local function kartspeedometer(v,p,takis,car,minus)
 		v.getSpritePatch(SPR_THND,F,0,sroll),
 		flags
 	)
-	
 	
 	local scorenum = "CMBCF"
 	local score = FixedInt(takis.accspeed)
@@ -4653,6 +4747,99 @@ local function drawkartmeters(v,p)
 		
 end
 
+
+local function drawlapanim(v,p)
+	local takis = p.takistable
+	local me = p.realmo	
+	local lapanim = takis.HUD.lapanim
+	local x = 160*FU
+	local y = 60*FU
+	local tween = 0
+	local et = 20
+	local maxlaps = lapanim.maxlaps
+	
+	if lapanim.tics == 0 then return end
+	
+	if lapanim.tics >= 80-(et/2)
+		et = $/2
+		tween = ease.outquad((FU/et)*(et-(lapanim.tics-(80-et))), 300*FU, 0)	
+	elseif lapanim.tics <= et
+		tween = ease.inback((FU/et)*(et-lapanim.tics),
+			0,
+			-300*FU,
+			FU*2
+		)
+	end
+	x = $+tween
+	
+	local lastlap = lapanim.lapnum == maxlaps
+	
+	v.drawScaled(x,
+		y,
+		FU,
+		lastlap and v.cachePatch("TA_LAPANIM_TXT2") or v.cachePatch("TA_LAPANIM_TXT1"),
+		V_SNAPTOTOP|V_HUDTRANS,
+		v.getColormap(nil,p.skincolor)
+	)
+	
+	local waveforce = FU*2
+	local thumbsine = FixedMul(waveforce,sin(leveltime*ANG15))
+	v.drawScaled(x,
+		y+thumbsine,
+		FU,
+		(isplayerlosing(p) and v.cachePatch("TA_LAPANIM_BAD") or v.cachePatch("TA_LAPANIM_GOOD")),
+		V_SNAPTOTOP|V_HUDTRANS,
+		v.getColormap(nil,p.skincolor)
+	)
+	
+	local time = lapanim.time
+	local min = G_TicsToMinutes(time,true)
+	local sec = G_TicsToSeconds(time)
+	local cen = G_TicsToCentiseconds(time)
+	local timestr = tostring(min)..":"..(sec < 10 and "0" or '')..tostring(sec).."."..(cen < 10 and "0" or '')..tostring(cen)
+	
+	v.drawString(x,y+15*FU,
+		timestr,
+		V_SNAPTOTOP|V_HUDTRANS|((lapanim.tics/2 % 2) and V_YELLOWMAP or V_ORANGEMAP),
+		"fixed-center"
+	)
+	
+	if not lastlap
+		local scorenum = "CMBCF"
+		local score = lapanim.lapnum
+		if score < 10
+			score = "0"..$
+		end
+		local scale = FU*2
+		
+		local prevw
+		if not prevw then prevw = 0 end
+		
+		local textwidth = 0
+		for i = 1,string.len(score)
+			local n = string.sub(score,i,i)
+			local patch = v.cachePatch(scorenum+n)
+			textwidth = $+(patch.width*scale*4/10)		
+		end
+		
+		for i = 1,string.len(score)
+			local sc = FixedDiv(scale,2*FU)
+			local n = string.sub(score,i,i)
+			local patch = v.cachePatch(scorenum+n)
+			--local textwidth = (patch.width*scale*4/10)
+			v.drawScaled(x+prevw-textwidth+60*FU,
+				y-(patch.height*sc)+16*FU,
+				sc,
+				patch,
+				V_SNAPTOTOP|V_HUDTRANS
+			)
+				
+			prevw = $+(patch.width*scale*4/10)
+		end
+	end
+	
+end
+
 local function drawracelaps(v,p)
 	if (customhud.CheckType("takis_racelaps") != modname) return end	
 	
@@ -4663,7 +4850,7 @@ local function drawracelaps(v,p)
 	local takis = p.takistable
 	local me = p.realmo	
 	
-	if gametype ~= GT_RACE then return end
+	if not (gametyperules & GTR_RACE) then return end
 	if not circuitmap then return end
 	
 	local lapflag = v.cachePatch("TA_LAPFLAG")
@@ -4703,6 +4890,7 @@ local function drawracelaps(v,p)
 			"fixed-center"
 		)	
 	end
+	
 end
 
 --rsneo
@@ -4722,25 +4910,101 @@ local function drawviewmodel(v,p,cam)
 		return
 	end
 	
-	if not (takis.transfo & TRANSFO_SHOTGUN) then return end
+	if p.spectator then return end
 	
-	local framenum = (takis.HUD.viewmodel.frameinc/4)+1
-	local patch = v.cachePatch("TA_VIEW_"..framenum)
-	local col = v.getColormap((me.colorized and TC_RAINBOW or TC_DEFAULT), me.color)
-	local scale = FU*3/2
-	local x, y
-	
-	x = 151*FU + takis.HUD.viewmodel.bobx
-	y = 220*FU + takis.HUD.viewmodel.boby
-	
-	if not splitscreen
-		v.drawScaled(x,
-			y,
-			scale,
-			patch,
-			V_SNAPTOBOTTOM|V_PERPLAYER,
-			col
+	/*
+	if (p.inkart)
+		local car = me.tracer
+		local turningang = FixedAngle(car.rmomt/9)
+		if AngleFixed(turningang) > 180*FU
+			turningang = InvAngle($)
+		end
+		local patch = v.getSpritePatch(SPR_THND,A,0,
+			FixedAngle((car.rmomt/9)+(90*FU))
 		)
+		local scale = FU*3/2
+		local x, y
+		x = 160*FU
+		y = 100*FU --220*FU
+		
+		if not splitscreen
+			v.drawScaled(x,
+				y,
+				scale,
+				patch,
+				V_SNAPTOBOTTOM|V_PERPLAYER
+			)
+		end
+		return
+	end
+	*/
+	
+	local col = v.getColormap((me.colorized and TC_RAINBOW or TC_DEFAULT), me.color)
+	local x, y
+	if (takis.transfo & TRANSFO_SHOTGUN)
+	
+		local framenum = (takis.HUD.viewmodel.frameinc/4)+1
+		local patch = v.cachePatch("TA_VIEW_"..framenum)
+		local scale = FU
+		
+		x = 32*FU + takis.HUD.viewmodel.bobx
+		y = 48*FU + takis.HUD.viewmodel.boby
+		
+		if not splitscreen
+			v.drawScaled(x,
+				y,
+				scale,
+				patch,
+				V_SNAPTOBOTTOM|V_PERPLAYER,
+				col
+			)
+		end
+	
+	else
+		if not G_RingSlingerGametype() then return end
+		--rsneo has its own
+		if RingSlinger then return end
+		
+		local currentweapon = takis.currentweapon
+		if takis.weapondelaytics
+			currentweapon = "FIRE"
+		end
+		local patch = v.cachePatch("TA_VIEWR_"..currentweapon)
+		local scale = FU
+		
+		x = 208*FU + takis.HUD.viewmodel.bobx
+		y = 80*FU + takis.HUD.viewmodel.boby
+		
+		if not splitscreen
+			v.drawScaled(x,
+				y,
+				scale,
+				patch,
+				V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_PERPLAYER,
+				col
+			)
+			
+			if (takis.currentweapon == 0
+			or takis.currentweapon == 1
+			or takis.currentweapon == 4)
+			and not takis.weapondelaytics
+				col = nil
+				if takis.currentweapon == 0
+					col = v.getColormap(nil,G_GametypeHasTeams() and (p.ctfteam == 1 and skincolor_redring or skincolor_bluering) or SKINCOLOR_RED)
+				end
+				v.drawScaled(x,
+					y,
+					scale,
+					v.cachePatch("TA_VIEWR_"..takis.currentweapon.."R"),
+					V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_PERPLAYER,
+					col
+				)
+			
+			end
+			
+		end
+		
+		
 	end
 	
 end
@@ -5011,6 +5275,7 @@ local function drawdebug(v,p)
 		v.drawString(100,116,"PState: "..pstate,V_ALLOWLOWERCASE,"thin")
 		v.drawString(100,124,"Deadtimer: "..p.deadtimer,V_ALLOWLOWERCASE,"thin")
 		v.drawString(100,132,"DMG: "..dmg ,V_ALLOWLOWERCASE,"thin")
+		drawflag(v,100,140,"TDeadtimer: "..takis.deadtimer,V_ALLOWLOWERCASE,V_GREENMAP,0,"thin",(takis.freezedeath))
 		
 		drawflag(v,200,100,"Pain",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inPain))
 		drawflag(v,200,108,"FakePain",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.inFakePain))
@@ -5241,17 +5506,85 @@ local function drawdebug(v,p)
 			"small",
 			(p.pflags & PF_THOKKED)
 		)
+		--
+		drawflag(v,160,74,"th",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			takis.thokked
+		)
+		drawflag(v,160,78,"di",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			takis.dived
+		)
+		--
 		drawflag(v,170,70,"sa",
 			V_HUDTRANS|V_PERPLAYER,
 			V_GREENMAP,V_REDMAP,
 			"small",
 			(p.pflags & PF_SHIELDABILITY)
 		)
-		drawflag(v,100,70,"AA",
+		drawflag(v,180,70,"gl",
 			V_HUDTRANS|V_PERPLAYER,
 			V_GREENMAP,V_REDMAP,
 			"small",
-			(p.pflags & PF_APPLYAUTOBRAKE)
+			(p.pflags & PF_GLIDING)
+		)
+		drawflag(v,190,70,"bc",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			(p.pflags & PF_BOUNCING)
+		)
+		drawflag(v,200,70,"sl",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			takis.inwaterslide
+		)
+		drawflag(v,210,70,"tc",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			(p.pflags & PF_TRANSFERTOCLOSEST)
+		)
+		drawflag(v,220,70,"nd",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			(p.pflags & PF_DRILLING)
+		)
+		drawflag(v,230,70,"go",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			(p.pflags & PF_GAMETYPEOVER)
+		)
+		drawflag(v,240,70,"it",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			(p.pflags & PF_TAGIT)
+		)
+		drawflag(v,250,70,"fs",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			(p.pflags & PF_FORCESTRAFE)
+		)
+		drawflag(v,260,70,"cc",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			(p.pflags & PF_CANCARRY)
+		)
+		drawflag(v,270,70,"fin",
+			V_HUDTRANS|V_PERPLAYER,
+			V_GREENMAP,V_REDMAP,
+			"small",
+			(p.pflags & PF_FINISHED)
 		)
 		
 	end
@@ -5372,6 +5705,13 @@ local function drawdebug(v,p)
 		v.drawString(hudinfo[HUD_LIVES].x*FU,
 			(ypos-76)*FU,
 			p.accelstart..", "..p.acceleration.." accelstart, accel",
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
+			"thin-fixed"
+		)
+		
+		v.drawString(hudinfo[HUD_LIVES].x*FU,
+			(ypos-84)*FU,
+			L_FixedDecimal(me.movefactor,3).." movefactor",
 			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
 			"thin-fixed"
 		)
@@ -5800,8 +6140,8 @@ addHook("HUD", function(v,p,cam)
 				customhud.SetupItem("PTSR_tooltips","spicerunners")
 			end
 			customhud.SetupItem("PTSR_rank", modname)
-			--UGH YOU STUPID BITCH JISK
 			customhud.SetupItem("PTSR_combo", modname)
+			customhud.SetupItem("PTSR_lap", modname)
 			--customhud.SetupItem("rank", modname)
 			
 			if p.takis
@@ -5846,6 +6186,7 @@ addHook("HUD", function(v,p,cam)
 			drawkartmeters(v,p)
 			drawlivesarea(v,p)
 			drawracelaps(v,p)
+			drawlapanim(v,p)
 			if not opmode
 				drawcombostuff(v,p,cam)
 			end
@@ -6101,6 +6442,7 @@ addHook("HUD", function(v,p,cam)
 				customhud.SetupItem("PTSR_tooltips",	"spicerunners")
 				customhud.SetupItem("PTSR_rank", 		"spicerunners")
 				customhud.SetupItem("PTSR_combo", 		"spicerunners")
+				customhud.SetupItem("PTSR_lap", 		"spicerunners")
 				customhud.SetupItem("textspectator",	altmodname)
 				customhud.SetupItem("crosshair",		altmodname)
 			end
@@ -6224,6 +6566,28 @@ addHook("HUD", function(v,p,cam)
 		end
 	
 		drawdebug(v,p)
+		
+		if (me and me.valid)
+		and (me.spbtarg and me.spbtarg.valid)
+			local spb = me.spbtarg
+			local patch,flip = v.getSprite2Patch(TAKIS_SKIN,
+				spb.sprite2,
+				false,
+				spb.frame,
+				1,
+				0
+			)
+			
+			v.drawScaled(290*FU,
+				170*FU+(spb.spriteyoffset/2),
+				FU/2,
+				patch,
+				V_SNAPTORIGHT|V_SNAPTOBOTTOM,
+				v.getColormap(nil,spb.color)
+			)
+			
+		end
+		
 	end
 end)
 
@@ -6305,6 +6669,7 @@ addHook("HUD", function(v)
 							v.getColormap(nil,emeraldslist[i])
 						)
 					end
+				--mp display
 				else
 					local maxspirits = 6
 					local maxspace = 66
@@ -6315,7 +6680,7 @@ addHook("HUD", function(v)
 						)
 						v.drawScaled(
 							20*FU+FixedDiv(maxspace*FU,maxspirits*FU)*i,
-							11*FU+(patch.height*FU/4/2),
+							18*FU,
 							FU/4,
 							patch,
 							((flip) and V_FLIP or 0)|((emeralds & 1<<i == 0) and V_50TRANS or 0),

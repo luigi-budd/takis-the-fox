@@ -8,7 +8,6 @@
 
 /*
 	SPECIAL THANKS/CONTRIBUTORS
-	
 	-dashdahog - takis' sprites inspiration. I LOVE TAILEELS!!!
 	-Jisk - jelped jith jome jode
 	-Unmatched Bracket - waterslide pain -> sliding code, compiling code
@@ -24,10 +23,11 @@
 									  banjo kazooie (also linedef
 									  triggers)
 	-NiGHTS Freeroam - ok this isnt reusable but buggie asked me to put it in
-	-ChrispyChars - some code used for confetti, safefreeslot code
+	-ChrispyChars - some code used for confetti, safefreeslot code, world2hud code
 	-MinHUD - some hud functions i used
 	-ffoxD's Momentum mod - momentum used in takis
 	-Checker Wrecker - offroad collision for kart
+	-Team New - shield ability code
 	
 	SOME MORE STUFF I STOLE
 	-Antonblast - sound effects, music, sprites
@@ -52,6 +52,8 @@ table.insert(constlist,{"TR",TICRATE})
 
 rawset(_G, "TAKIS_ISDEBUG", true)
 table.insert(constlist,{"TAKIS_ISDEBUG",true})
+
+rawset(_G, "TAKIS_FREEZEDBG", false)
 
 rawset(_G, "TAKIS_DEBUGFLAG", 0)
 local dbgflags = {
@@ -105,6 +107,7 @@ rawset(_G, "DEBUG_print",function(p,enum)
 end)
 
 rawset(_G, "TAKIS_SKIN", "takisthefox")
+table.insert(constlist,{"TAKIS_SKIN","takisthefox"})
 
 rawset(_G, "TAKIS_MAX_HEARTCARDS", 6)
 
@@ -269,6 +272,7 @@ rawset(_G,"TAKIS_MISC",{
 	partdestroy = 0,
 	
 	ideyadrones = {},
+	dronepos = {0,0,0},
 	
 	inttic = 0,
 	stagefailed = true,
@@ -599,6 +603,16 @@ rawset(_G, "TakisInitTable", function(p)
 		painoverlay = 0,
 		deathfunny = false,
 		floweranim = 0,
+		lastlaps = 0,
+		laptime = 0,
+		skidangle = 0,
+		skidforcetime = 0,
+		nfreeroamarrow = nil,
+		deadtimer = 0,
+		freezedeath = false,
+		lastweapon = 0,
+		currentweapon = 0,
+		weapondelaytics = 0,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -627,7 +641,6 @@ rawset(_G, "TakisInitTable", function(p)
 		
 		hammerblastdown = 0,
 		hammerblastwentdown = false,
-		hammerblasthitbox = nil,
 		hammerblastjumped = 0,
 		hammerblastgroundtime = 0,
 		hammerblastangle = 0,
@@ -675,6 +688,7 @@ rawset(_G, "TakisInitTable", function(p)
 				1 - starting to save
 				2 - save complete
 				3 - couldnt save
+				4 - loaded w/ errors
 			*/
 			savestate = 0,
 			savestatetime = 0,
@@ -691,6 +705,7 @@ rawset(_G, "TakisInitTable", function(p)
 			dontshowach = 0, --1 to not show ach messages
 			minhud = 0, --guess what this one does, you wont believe it
 			laggymodel = 0,	--dont colorshift if laggy model
+			autosave = 1,
 		},
 		--tf2 taunt menu lol
 		--up to 7 taunts, detected with BT_WEAPONMASK
@@ -854,7 +869,6 @@ rawset(_G, "TakisInitTable", function(p)
 		},
 		
 		--hud
-		--useful if this gets in yalls modmakers' ways
 		HUD = {
 			timeshit = 0,
 			timeshake = 0,
@@ -862,6 +876,21 @@ rawset(_G, "TakisInitTable", function(p)
 			hudname = '',
 			cfgnotifstuff = 0,
 			useplacements = false,
+			--so minhud!
+			countdown = {
+				scale = 0,
+				scale2 = 0,
+				sound = sfx_none,
+				number = 0,
+				tics = 0,
+				lock = false,
+			},
+			lapanim = {
+				lapnum = 0,
+				tics = 0,
+				time = 0,
+				maxlaps = -1,
+			},
 			--record attack happy hour stuff
 			rthh = {
 				time = 0,
@@ -1262,6 +1291,8 @@ sfxinfo[sfx_hrtcdt] = {
 }
 SafeFreeslot("sfx_taklfh")
 sfxinfo[sfx_taklfh].caption = "Land"
+SafeFreeslot("sfx_takceh")
+sfxinfo[sfx_takceh].caption = "/"
 
 --tb = textbox
 --open
@@ -1681,7 +1712,6 @@ mobjinfo[MT_TAKIS_AFTERIMAGE] = {
 SafeFreeslot("MT_WINDRINGLOL")
 SafeFreeslot("S_SOAPYWINDRINGLOL")
 
---Wallbounce ring effect object
 mobjinfo[MT_WINDRINGLOL] = {
 	doomednum = -1,
 	spawnstate = S_SOAPYWINDRINGLOL,
@@ -2154,6 +2184,42 @@ mobjinfo[MT_TAKIS_WINDLINE] = {
 	flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY
 }
 
+SafeFreeslot("MT_TAKIS_SPARK")
+SafeFreeslot("S_TAKIS_SPARK")
+states[S_TAKIS_SPARK] = {
+	sprite = SPR_THND,
+	frame = H|FF_PAPERSPRITE|FF_FULLBRIGHT,
+	tics = -1,
+	var1 = 12,
+	var2 = TR
+}
+mobjinfo[MT_TAKIS_SPARK] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_SPARK,
+	spawnhealth = 1,
+	height = 6*FRACUNIT,
+	radius = 6*FRACUNIT,
+	flags = MF_NOCLIPTHING
+}
+
+SafeFreeslot("MT_TAKIS_BOMBLMAO")
+SafeFreeslot("S_TAKIS_BOMBLMAO")
+states[S_TAKIS_BOMBLMAO] = {
+	sprite = SPR_PLAY,
+	frame = A|FF_FULLBRIGHT,
+	tics = -1,
+}
+mobjinfo[MT_TAKIS_BOMBLMAO] = {
+	doomednum = -1,
+	spawnstate = S_TAKIS_BOMBLMAO,
+	spawnhealth = 1,
+	height = 48*FRACUNIT,
+	radius = 24*FRACUNIT,
+	speed = 80*FRACUNIT,
+	flags = MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_SPECIAL,
+	mass = 100,
+}
+
 /*
 SafeFreeslot("MT_TAKIS_SPAWNER")
 SafeFreeslot("S_TAKIS_SPAWNER_IDLE")
@@ -2208,6 +2274,7 @@ addHook("NetVars",function(n)
 		HAPPY_HOUR[v] = n($)
 	end
 	TAKIS_ACHIEVEMENTINFO = n($)
+	TAKIS_FREEZEDBG = n($)
 end)
 
 addHook("ThinkFrame",do

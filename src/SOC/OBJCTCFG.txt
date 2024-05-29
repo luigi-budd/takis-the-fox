@@ -1,6 +1,6 @@
 Character
 SkinName = takisthefox
-DisplayName = Takis
+NameTag = TA_CHARTAG
 TagTextColor = SKINCOLOR_FOREST
 TagOutlineColor = SKINCOLOR_RED
 OppositeColor = SKINCOLOR_SALMON
