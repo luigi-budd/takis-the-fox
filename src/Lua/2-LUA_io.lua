@@ -173,71 +173,112 @@ COM_AddCommand("takis_load", function(p,sig, a1,a2,a3,a4,t1,t2,a5,a6,a7,a8,a9,a1
 	CONS_Printf(p, "\x82Loaded "..skins[TAKIS_SKIN].realname.."' Settings!")
 	p.takistable.io.savestate = (errored and 4 or 2)
 	p.takistable.io.savestatetime = 2*TR
+	p.takistable.io.loaded = true
 end)
 
-rawset(_G, "TakisSaveStuff", function(p, silent)
-	if (p ~= consoleplayer) then return end
+rawset(_G, "TakisConstructSaveCode", function(p, default)
+	local a1 = 0	--nostrafe
+	local a2 = 0	--nohappyhour
+	local a3 = 0	--minhud
+	local a4 = 0	--morehappyhour
+	local t1 = 0	--quicktaunt1
+	local t2 = 0	--quicktaunt2
+	local a5 = 1	--cursorstyle
+	local a6 = 1	--quakes
+	local a7 = 1	--flashes
+	local a8 = 0	--laggymodel
+	local a9 = 1	--autosave
+	local a10 = 1	--clutchstyle
+	local a11 = 1	--sharecombos
+	local a12 = 0	--dontshowach
+	local timeshit = 0	--idk what this one does lmao
 	
+	if not default
+		local t = p.takistable.io
+		local tay = p.takistable
+		
+		a1 = t.nostrafe
+		a2 = t.nohappyhour
+		a3 = t.minhud
+		a4 = t.morehappyhour
+		t1 = tay.tauntquick1
+		t2 = tay.tauntquick2
+		a5 = t.tmcursorstyle
+		a6 = t.quakes
+		a7 = t.flashes
+		a8 = t.laggymodel
+		a9 = t.autosave
+		a10 = t.clutchstyle
+		a11 = t.sharecombos
+		a12 = t.dontshowach
+		timeshit = tay.totalshit
+	end
+	
+	return	" "..a1.." "..a2.." "..a3.." "..a4.." "..t1.." "
+			..t2.." "..a5.." "..a6.." "..a7.." "..a8.." "..a9.." "
+			..a10.." "..a11.." "..a12.." "..timeshit
+end)
+
+rawset(_G, "TakisSaveStuff", function(p, silent, forcebackup)
+	if not (p and p.valid) then return end
+	if (p ~= consoleplayer) then return end
+	if forcebackup == nil then forcebackup = false end
+	
+	local t = p.takistable.io
+	local tay = p.takistable
 	--well i dont see why not
 	TakisSaveAchievements(p)
 	p.takistable.io.savestate = 1
 	
 	--write
-	local a1 = 0 
-	local a2 = 0 
-	local a3 = 0
-	local a4 = 0
-	local t1 = 0
-	local t2 = 0
-	local a5 = 0
-	local a6 = 0
-	local a7 = 0
-	local a8 = 0
-	local a9 = 0
-	local a10 = 0
-	local a11 = 0
-	local a12 = 0
-	local timeshit = 0
-	
-	local t = p.takistable.io
-	local tay = p.takistable
-	
-	a1 = t.nostrafe
-	a2 = t.nohappyhour
-	a3 = t.minhud
-	a4 = t.morehappyhour
-	t1 = tay.tauntquick1
-	t2 = tay.tauntquick2
-	a5 = t.tmcursorstyle
-	a6 = t.quakes
-	a7 = t.flashes
-	a8 = t.laggymodel
-	a9 = t.autosave
-	a10 = t.clutchstyle
-	a11 = t.sharecombos
-	a12 = t.dontshowach
-	timeshit = tay.totalshit
-	
 	--TODO: version numbers to prevent messed up saves
 	if io
 		DEBUG_print(p,IO_CONFIG|IO_SAVE)
 		
 		t.hasfile = true
 		
-		local file = io.openlocal("client/takisthefox/config.dat", "w+")
-		file:write(" "..a1.." "..a2.." "..a3.." "..a4.." "..t1.." "
-			..t2.." "..a5.." "..a6.." "..a7.." "..a8.." "..a9.." "
-			..a10.." "..a11.." "..a12.." "..timeshit
-		)
-		
-		if not silent
-			CONS_Printf(p, "\x82Saved "..skins[TAKIS_SKIN].realname.."' settings!")
-		end
+		local file = io.openlocal("client/takisthefox/config.dat", "r")
+		local backup = io.openlocal("client/takisthefox/backupconfig.dat","r")
+		if file
+			if file
+			and not p.takistable.io.loaded
+				CONS_Printf(p, "\x85".."Couldn't save "..skins[TAKIS_SKIN].realname.."' settings! (Save not loaded yet!)")
+				file:close()
+				p.takistable.io.savestate = 3
+				p.takistable.io.savestatetime = 2*TR
+				return
+			end
 			
-		file:close()
-		p.takistable.io.savestate = 2
-		p.takistable.io.savestatetime = 2*TR
-		return
+			local lastcode = file:read("*a")
+			local savestring = TakisConstructSaveCode(p)
+			
+			if backup
+				if (lastcode ~= savestring) or forcebackup
+					backup = io.openlocal("client/takisthefox/backupconfig.dat", "w+")
+					backup:write(lastcode)
+				end
+			else
+				backup = io.openlocal("client/takisthefox/backupconfig.dat", "w+")
+				backup:write(savestring)
+			end
+			
+			if not forcebackup
+				file = io.openlocal("client/takisthefox/config.dat", "w+")
+				file:write(savestring)
+			end
+			
+			if not silent
+				CONS_Printf(p, "\x82Saved "..skins[TAKIS_SKIN].realname.."' settings!")
+			end
+				
+			file:close()
+			if backup
+				backup:close()
+			end
+			p.takistable.io.savestate = 2
+			p.takistable.io.savestatetime = 2*TR
+			return
+		end
 	end
 	p.takistable.io.savestate = 3
 	p.takistable.io.savestatetime = 2*TR
@@ -254,24 +295,33 @@ rawset(_G, "TakisLoadStuff", function(p)
 		
 		local file = io.openlocal("client/takisthefox/config.dat")
 		
-		
 		--load file
 		if file 
-		
+			
 			p.takistable.io.hasfile = true
-
+			
 			local code = file:read("*a")
+			local defaultsave = TakisConstructSaveCode(p,true)
+			if code == defaultsave
+				file = io.openlocal("client/takisthefox/backupconfig.dat")
+				code = file:read("*a")
+			end
 			
 			if code ~= nil and not (string.find(code, ";"))
-				p.takistable.io.savestate = 1
-				COM_BufInsertText(p, "takis_load "..TAKIS_ACHIEVEMENTINFO.luasig..code)
-				p.takistable.io.loaded = true
+				if p.takistable.io.loadtries < 3
+					p.takistable.io.savestate = 1
+					COM_BufInsertText(p, "takis_load "..TAKIS_ACHIEVEMENTINFO.luasig..code)
+				else
+					p.takistable.io.savestate = 3
+					p.takistable.io.savestatetime = 2*TR
+					p.takistable.io.loaded = true
+				end
 			end
-		
+			
 			file:close()
-		
+			
 		else
-		
+			
 			p.takistable.HUD.cfgnotifstuff = 6*TR+18
 			--whatever...
 			p.takistable.io.loaded = true

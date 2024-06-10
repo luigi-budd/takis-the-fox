@@ -73,7 +73,13 @@ rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 		hh.gameovertics = 0
 		
 		for p in players.iterate
+			local domusic = true
+			if (p.takistable.transfo & TRANSFO_SHOTGUN)
+			and ultimatemode
+				domusic = false
+			end
 			if (hh.nosong == false)
+			and domusic
 				S_ChangeMusic(hh.song,p)
 				mapmusname = hh.song
 			end
@@ -92,6 +98,7 @@ rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 				starpoststuff = false
 			end
 			if starpoststuff
+				--takis vars?
 				p.starpostx = actor.x/FU
 				p.starposty = actor.y/FU
 				p.starpostz = (GetActorZ(actor,actor,2)/FU)
@@ -134,6 +141,17 @@ rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 				if mobj.type == MT_HHEXIT
 					mobj.state = S_HHEXIT_OPEN
 					hh.exit = mobj
+				end
+				
+			end
+		end
+		
+		if ultimatemode
+			for mobj in mobjs.iterate()
+				if ultimatemode
+				and mobj.type == MT_SHOTGUN_BOX
+				and mobj.health
+					P_KillMobj(mobj)
 				end
 			end
 		end

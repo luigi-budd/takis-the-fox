@@ -53,7 +53,7 @@ table.insert(constlist,{"TR",TICRATE})
 rawset(_G, "TAKIS_ISDEBUG", true)
 table.insert(constlist,{"TAKIS_ISDEBUG",true})
 
-rawset(_G, "TAKIS_FREEZEDBG", false)
+rawset(_G, "TAKIS_FREEZEDBG", 0)
 
 rawset(_G, "TAKIS_DEBUGFLAG", 0)
 local dbgflags = {
@@ -242,34 +242,36 @@ rawset(_G, "TAKIS_NET", {
 	
 	nerfarma = false,
 	tauntkillsenabled = true,
-	noachs = false, --dont let players get achs in netgames
-	collaterals = true, --let ragdolls kill other ragdolls
-	cards = true, --only spawn heartcards if this is true
+	noachs = false,		--dont let players get achs in netgames
+	collaterals = true,	--let ragdolls kill other ragdolls
+	cards = true,		--only spawn heartcards if this is true
 	hammerquakes = true,
 	chaingun = false,
 	noeffects = false,
 	forcekart = false,
 	--happytime = false,
 	
+	achtime = 0,
 	usedcheats = false,
+
+	inspecialstage = false,
+	inbossmap = false,
+	inbrakmap = false,
+	isretro = 0,
+	numdestroyables = 0,
+	partdestroy = 0,
 	
 })
 
 --everything else that was in TAKIS_NET is now in here
 rawset(_G,"TAKIS_MISC",{
-	inspecialstage = false,
-	inbossmap = false,
-	inbrakmap = false,
-	isretro = 0,
-	
+
 	exitingcount = 0,
 	playercount = 0,
 	takiscount = 0,
 	livescount = 0,
 	maxpostcount = 0,
-	
-	numdestroyables = 0,
-	partdestroy = 0,
+	allowfallout = true,
 	
 	ideyadrones = {},
 	dronepos = {0,0,0},
@@ -283,6 +285,7 @@ rawset(_G,"TAKIS_MISC",{
 	
 	--DONT change to happy hour if the song is any one of these
 	specsongs = {
+		--srb2
 		["_1up"] = true,
 		["_shoes"] = true,
 		["_minv"] = true,
@@ -290,6 +293,7 @@ rawset(_G,"TAKIS_MISC",{
 		["_drown"] = true,
 		["_inter"] = true,
 		["_clear"] = true,
+		--takis
 		["_abclr"] = true,
 		["hpyhre"] = true,
 		["hapyhr"] = true,
@@ -299,7 +303,7 @@ rawset(_G,"TAKIS_MISC",{
 		["_gover"] = true,
 		["blstcl"] = true,
 		["brdwrd"] = true,
-		["_timbl"] = true,
+		["war"] = true,
 		--spice runers
 		["ovrtme"] = true,
 		["ovrtm2"] = true,
@@ -310,6 +314,7 @@ rawset(_G,"TAKIS_MISC",{
 		["rnk_s"] = true,
 		["p_int"] = true,
 		["ot_ph"] = true,
+		["_timbl"] = true,
 	},
 	
 	inescapable = {
@@ -554,7 +559,11 @@ rawset(_G, "TakisInitTable", function(p)
 		lastss = 0,
 		lastpos = {x=p.realmo.x,y=p.realmo.y,z=p.realmo.z},
 		lastrings = 0,
+		--would make more sense to have these 2 in the io table
 		achfile = 0,
+		--if non-zero, wait until TAKIS_NET.achtime is 0
+		--before giving out each ACHIEVEMENT_* bit
+		achbits = 0,
 		drilleffect = 0,
 		issuperman = false,
 		attracttarg = nil,
@@ -596,6 +605,7 @@ rawset(_G, "TakisInitTable", function(p)
 		pitanim = 0,
 		pitfunny = false,
 		pitcount = 0,
+		--tics down while grounded
 		pittime = 0,
 		pitbackup = {p.realmo.x,p.realmo.y,p.realmo.z,p.realmo.angle},
 		lastcarry = 0,
@@ -613,6 +623,18 @@ rawset(_G, "TakisInitTable", function(p)
 		lastweapon = 0,
 		currentweapon = 0,
 		weapondelaytics = 0,
+		
+		prevstate = S_PLAY_STND,
+		prevfreeze = false,
+		
+		tiltroll = 0,
+		tiltdo = false,
+		tiltvalue = 0,
+		tiltfreeze = false,
+		tiltangle = 0,
+		
+		spritexscale = FU,
+		spriteyscale = FU,
 		
 		nadocount = 0,
 		nadotic = 0,
@@ -682,6 +704,7 @@ rawset(_G, "TakisInitTable", function(p)
 			hasfile = false,
 			loaded = false,
 			loadwait = 25,
+			loadtries = 0,
 			loadedach = false,
 			/*
 				0 - idle
@@ -848,6 +871,7 @@ rawset(_G, "TakisInitTable", function(p)
 		isSuper = false,
 		isAngry = false,
 		inBattle = false,
+		in2D = false,
 		
 		--fake powers
 		fakeflashing = 0,
@@ -940,6 +964,7 @@ rawset(_G, "TakisInitTable", function(p)
 				sprite = "RING",
 				type = MT_RING,
 				ringframe = 1,
+				drawrings = 0,
 			},
 			--timer has 2 different sets for spectator and when finished
 			--you can tell this was way before i knew how to align
@@ -1186,6 +1211,8 @@ SafeFreeslot("sfx_takst4")
 sfxinfo[sfx_takst4].caption = "Land"
 SafeFreeslot("sfx_takst0")
 sfxinfo[sfx_takst0].caption = "Step"
+SafeFreeslot("sfx_takst5")
+sfxinfo[sfx_takst5].caption = "/"
 
 SafeFreeslot("sfx_tkapow")
 sfxinfo[sfx_tkapow] = {
@@ -1207,7 +1234,7 @@ sfxinfo[sfx_wega].caption = "\x85".."AAAAAHHHHH!!!!\x80"
 SafeFreeslot("sfx_mclang")
 sfxinfo[sfx_mclang] = {
 	caption = "\x8DMysterious clanging\x80",
-	flags = SF_X2AWAYSOUND|SF_NOMULTIPLESOUND|SF_TOTALLYSINGLE,
+	flags = SF_X2AWAYSOUND|SF_TOTALLYSINGLE,
 }
 SafeFreeslot("sfx_rakupc")
 sfxinfo[sfx_rakupc].caption = "/"
@@ -1352,6 +1379,14 @@ for i = 1,16
 	SafeFreeslot("sfx_pass"..text)
 	sfxinfo[sfx_pass01+(i-1)].caption = "/"
 end
+SafeFreeslot("sfx_takskd")
+sfxinfo[sfx_takskd].caption = "Skid"
+for i = 1,3
+	SafeFreeslot("sfx_takbn"..i)
+	sfxinfo[sfx_takbn1+(i-1)].caption = "Bounce"
+end
+SafeFreeslot("sfx_takcbk")
+sfxinfo[sfx_takcbk].caption = "Break"
 
 --spr_ freeslot
 
@@ -1381,6 +1416,7 @@ SafeFreeslot("SPR_MDST")
 SafeFreeslot("SPR_PGLR") --polar and other pongler sprites
 SafeFreeslot("SPR_KART")
 SafeFreeslot("SPR_TKEX")
+SafeFreeslot("SPR_TKIM") --impact
 
 --
 
@@ -1676,18 +1712,132 @@ states[S_TAKIS_HEARTCARD_SPIN] = {
 --server sustainability comes first!
 SafeFreeslot("MT_TAKIS_HEARTCARD")
 mobjinfo[MT_TAKIS_HEARTCARD] = {
-	--$Name Heartcard
-	--$Sprite HTCDALAR
-	--$Category Takis Stuff
-	--$Flags4Text Respawn in SP
-	--$Flags8Text No Gravity
-	--$ParameterText Respawn
-	doomednum = 3003,
+	doomednum = -1,
 	spawnstate = S_TAKIS_HEARTCARD_SPIN,
 	spawnhealth = 1000,
 	height = 50*FRACUNIT,
 	radius = 25*FRACUNIT,
 	flags = MF_SLIDEME|MF_SPECIAL
+}
+
+SafeFreeslot("S_TAKIS_HEARTCRATE")
+states[S_TAKIS_HEARTCRATE] = {
+    sprite = SPR_HTCD,
+	action = function(crate)
+		crate.spawnpos = {crate.x,crate.y,crate.z}
+	end,
+    frame = C,
+	tics = -1,
+}
+SafeFreeslot("S_TAKIS_HEARTCRATE_BREAK")
+states[S_TAKIS_HEARTCRATE_BREAK] = {
+    sprite = SPR_HTCD,
+    frame = C,
+	action = function(mo)
+		SpawnEnemyGibs(mo,mo,nil,true)
+		SpawnEnemyGibs(mo,mo,nil,true)
+		--SpawnBam(mo,true)
+		
+		local sfx = P_SpawnGhostMobj(mo)
+		sfx.flags2 = $|MF2_DONTDRAW
+		sfx.fuse = TR
+		S_StartSound(sfx,mo.info.deathsound)
+		
+		if (CV_FindVar("respawnitem").value
+		and (splitscreen or multiplayer))
+			local new = P_SpawnMobjFromMobj(mo,0,0,0,MT_THOK)
+			new.camefromcrate = true
+			new.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
+			new.angle = mo.angle
+			new.spawnpos = mo.spawnpos
+			P_SetOrigin(new,mo.spawnpos[1],mo.spawnpos[2],mo.spawnpos[3])
+		end
+	end,
+	tics = 1,
+}
+SafeFreeslot("MT_TAKIS_HEARTCRATE")
+mobjinfo[MT_TAKIS_HEARTCRATE] = {
+	--$Name Heart Crate
+	--$Sprite HTCDCR
+	--$Category Takis Stuff
+	doomednum = 3003,
+	spawnstate = S_TAKIS_HEARTCRATE,
+	deathstate = S_TAKIS_HEARTCRATE_BREAK,
+	deathsound = sfx_takcbk,
+	spawnhealth = 1,
+	height = 64*FRACUNIT,
+	radius = 32*FRACUNIT,
+	flags = MF_MONITOR|MF_SOLID|MF_SHOOTABLE|MF_RUNSPAWNFUNC
+}
+
+SafeFreeslot("S_TAKIS_CRATE")
+states[S_TAKIS_CRATE] = {
+    sprite = SPR_HTCD,
+    frame = I,
+	tics = -1,
+}
+SafeFreeslot("S_TAKIS_CRATE_BREAK")
+states[S_TAKIS_CRATE_BREAK] = {
+    sprite = SPR_HTCD,
+    frame = C,
+	action = function(mo)
+		SpawnEnemyGibs(mo,mo,nil,true)
+		if mo.type ~= MT_TAKIS_CRATE
+			SpawnEnemyGibs(mo,mo,nil,true)
+		end
+		/*
+		local bam1,bam2,bam3,bam4 = SpawnBam(mo,true)
+		if mo.type == MT_TAKIS_CRATE
+			local bams = {bam1,bam2,bam3,bam4}
+			for k,bam in ipairs(bams)
+				if not (bam and bam.valid) then continue end
+				bam.scale = $/2
+				bam.destscale = bam.scale*6/5
+			end
+		end
+		*/
+		local sfx = P_SpawnGhostMobj(mo)
+		sfx.flags2 = $|MF2_DONTDRAW
+		sfx.fuse = TR
+		S_StartSound(sfx,mo.info.deathsound)
+		
+	end,
+	tics = 1,
+}
+SafeFreeslot("MT_TAKIS_CRATE")
+mobjinfo[MT_TAKIS_CRATE] = {
+	--$Name Crate
+	--$Sprite HTCDIR
+	--$Category Takis Stuff
+	doomednum = 3005,
+	spawnstate = S_TAKIS_CRATE,
+	deathstate = S_TAKIS_CRATE_BREAK,
+	deathsound = sfx_takcbk,
+	spawnhealth = 1,
+	height = 32*FRACUNIT,
+	radius = 16*FRACUNIT,
+	flags = MF_MONITOR|MF_SOLID|MF_SHOOTABLE|MF_NOGRAVITY
+}
+
+SafeFreeslot("S_TAKIS_BIGCRATE")
+states[S_TAKIS_BIGCRATE] = {
+    sprite = SPR_HTCD,
+    frame = F,
+	tics = -1,
+}
+SafeFreeslot("MT_TAKIS_BIGCRATE")
+mobjinfo[MT_TAKIS_BIGCRATE] = {
+	--$Name Big Crate
+	--$Sprite HTCDFR
+	--$Category Takis Stuff
+	doomednum = 3006,
+	spawnstate = S_TAKIS_BIGCRATE,
+	deathstate = S_TAKIS_CRATE_BREAK,
+	deathsound = sfx_takcbk,
+	spawnhealth = 1,
+	height = 64*FRACUNIT,
+	radius = 32*FRACUNIT,
+	flags = MF_MONITOR|MF_SOLID|MF_SHOOTABLE|MF_NOGRAVITY
 }
 
 SafeFreeslot("MT_TAKIS_DRILLEFFECT")
@@ -2152,7 +2302,7 @@ SafeFreeslot("MT_TAKIS_EXPLODE")
 SafeFreeslot("S_TAKIS_EXPLODE")
 states[S_TAKIS_EXPLODE] = {
 	sprite = SPR_TKEX,
-	frame = A|FF_ANIMATE,
+	frame = A|FF_ANIMATE|FF_FULLBRIGHT,
 	var1 = 14,
 	var2 = 2,
 	tics = 2*14,
@@ -2220,6 +2370,27 @@ mobjinfo[MT_TAKIS_BOMBLMAO] = {
 	mass = 100,
 }
 
+SafeFreeslot("S_TAKIS_IMPACT")
+states[S_TAKIS_IMPACT] = {
+    sprite = SPR_TKIM,
+    frame = A|FF_ANIMATE|FF_PAPERSPRITE|FF_FULLBRIGHT,
+	action = function(mo)
+		mo.fuse = ((6*2)+2)
+		mo.destscale = mo.scale*2
+		mo.dispoffset = 5
+		mo.spriteyoffset = 5*FU
+	end,
+	var1 = 6,
+	var2 = 2,
+	tics = (6*2)+2,
+	--nextstate = S_TAKIS_IMPACT2
+}
+
+--this is cheating lololol
+SPIKE_LIST[MT_TAKIS_HEARTCRATE] = true
+SPIKE_LIST[MT_TAKIS_CRATE] = true
+SPIKE_LIST[MT_TAKIS_BIGCRATE] = true
+
 /*
 SafeFreeslot("MT_TAKIS_SPAWNER")
 SafeFreeslot("S_TAKIS_SPAWNER_IDLE")
@@ -2248,6 +2419,28 @@ mobjinfo[MT_TAKIS_SPAWNER] = {
 
 addHook("NetVars",function(n)
 	--TAKIS_NET = n($)
+	local netsync = {
+		"nerfarma",
+		"tauntkillsenabled",
+		"noachs",
+		"collaterals",
+		"cards",
+		"hammerquakes",
+		"chaingun",
+		"noeffects",
+		"forcekart",
+		"achtime",
+		"usedcheats",
+		"inspecialstage",
+		"inbossmap",
+		"inbrakmap",
+		"isretro",
+		"numdestroyables",
+		"partdestroy",
+	}
+	for _,v in ipairs(netsync)
+		TAKIS_NET[v] = n($)
+	end
 	
 	TAKIS_MAX_HEARTCARDS = n($)
 	--TAKIS_DEBUGFLAG = n($)

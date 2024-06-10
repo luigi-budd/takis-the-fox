@@ -84,25 +84,31 @@ addHook("MobjThinker", function(ai)
 		end
 	end
 	
-	if (displayplayer and displayplayer.valid)
-	and (displayplayer.realmo and displayplayer.realmo.valid)
-		if not (camera.chase)
-			--only dontdraw afterimages that are too close to the player
-			local dist = TAKIS_TAUNT_DIST*3
-			
-			local dx = (displayplayer.realmo.x)-ai.x
-			local dy = (displayplayer.realmo.y)-ai.y
-			local dz = (displayplayer.realmo.z)-ai.z
-			if FixedHypot(FixedHypot(dx,dy),dz) < dist
-				ai.flags2 = $|MF2_DONTDRAW
-			else
-				ai.flags2 = $ &~MF2_DONTDRAW
-			end
+	ai.takis_vfx = true
+	if TakisShouldIHideInFP(ai,p)
+		ai.flags2 = $|MF2_DONTDRAW
+	else
+		ai.flags2 = $ &~MF2_DONTDRAW
+	end
+	
+	/*
+	if not (camera.chase)
+		local cam = TakisGetCameraMobj()
+		--only dontdraw afterimages that are too close to the player
+		local dist = TAKIS_TAUNT_DIST*3
+		
+		local dx = (cam.x)-ai.x
+		local dy = (cam.y)-ai.y
+		local dz = (cam.z)-ai.z
+		if FixedHypot(FixedHypot(dx,dy),dz) < dist
+			ai.flags2 = $|MF2_DONTDRAW
 		else
 			ai.flags2 = $ &~MF2_DONTDRAW
 		end
+	else
+		ai.flags2 = $ &~MF2_DONTDRAW
 	end
-	
+	*/
 	
 	local fuselimit = 5
 	
@@ -171,7 +177,7 @@ addHook("MobjThinker", function(rag)
 			and (R_PointToDist2(found.x, found.y, rag.x, rag.y) <= range) 
 				if CanFlingThing(found,MF_ENEMY|MF_BOSS)
 					SpawnEnemyGibs(rag,found)
-					SpawnBam(found)
+					SpawnBam(found,true)
 					local sfx = P_SpawnGhostMobj(found)
 					sfx.flags2 = $|MF2_DONTDRAW
 					S_StartSound(sfx,sfx_smack)
@@ -194,10 +200,13 @@ addHook("MobjThinker", function(rag)
 		if P_IsObjectOnGround(rag)
 		and P_RandomChance(FU/2)
 			P_SetObjectMomZ(rag,10*FU)
+			local bam1,bam2 = SpawnBam(rag)
+			bam1.renderflags,bam2.renderflags = $1|RF_FLOORSPRITE,$2|RF_FLOORSPRITE
 			return
 		end
+		SpawnBam(rag,true)
 		
-		TakisFancyExplode(
+		TakisFancyExplode(rag.parent2,
 			rag.x, rag.y, rag.z,
 			P_RandomRange(60,64)*rag.scale,
 			32,
@@ -696,7 +705,7 @@ addHook("MobjDeath",function(mo,i,s)
 	S_StartSound(gst,mobjinfo[MT_SPIKE].deathsound)
 	
 	for i = 0,5
-		TakisSpawnDust(mo,
+		local dust = TakisSpawnDust(mo,
 			FixedAngle( P_RandomRange(-337,337)*FRACUNIT ),
 			10,
 			P_RandomRange(0,(mo.height/mo.scale)/2)*mo.scale,
@@ -717,6 +726,7 @@ addHook("MobjDeath",function(mo,i,s)
 				fuse = 20,
 			}
 		)
+		dust.tracer = s
 		
 		/*
 		local debris = P_SpawnMobjFromMobj(mo,
@@ -737,6 +747,11 @@ addHook("MobjDeath",function(mo,i,s)
 	end
 	
 end,MT_SPIKEBALL)
+
+local happysongs = {
+	["hpyhre"] = true,
+	["hapyhr"] = true
+}
 
 local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 	if splitscreen
@@ -765,11 +780,14 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 	end
 	
 	local dohhmus = HH_CanDoHappyStuff(consoleplayer)
+	if consoleplayer.takistable.shotgunned
+	and ultimatemode
+		dohhmus = false
+	end
 	
 	--print(" s "..tostring(HAPPY_HOUR.happyhour))
-	if (HAPPY_HOUR.happyhour and not HAPPY_HOUR.gameover)
-	and dohhmus
-	
+	if ((HAPPY_HOUR.happyhour and not HAPPY_HOUR.gameover)
+	and dohhmus)
 		local hh = HAPPY_HOUR
 		
 		local nomus,noendmus,song,songend = GetHappyHourMusic()
@@ -851,7 +869,8 @@ local function happyhourmus(oldname, newname, mflags,looping,pos,prefade,fade)
 		
 		local newname = string.lower(newname)
 		
-		if (TAKIS_MISC.specsongs[newname] ~= true)
+		if (TAKIS_MISC.specsongs[newname] ~= true
+		and happysongs[newname] ~= true)
 			return "war",mflags,looping,pos,prefade,fade
 		end
 	end
@@ -1075,7 +1094,7 @@ addHook("BossThinker", function(mo)
 		end
 		
 		if mo.isFUCKINGdeadtimer < 5
-			TakisFancyExplode(
+			TakisFancyExplode(mo.takisThatFUCKINGkilledMe,
 				mo.x, mo.y, mo.z,
 				P_RandomRange(60,64)*mo.scale,
 				16,
@@ -1083,6 +1102,11 @@ addHook("BossThinker", function(mo)
 				15,20
 			)
 			S_StartSound(mo,sfx_tkapow)
+		end
+		
+		if mo.isFUCKINGdeadtimer <= TR*3/2
+		and (mo.isFUCKINGdeadtimer % 2)
+			SpawnBam(mo,true)
 		end
 	end
 	
@@ -1813,7 +1837,7 @@ end,MT_ROLLOUTROCK)
 */
 --this is way better
 mobjinfo[MT_ROLLOUTROCK].speed = 60*FU
-states[S_ROLLOUTROCK].var1 = FU
+--states[S_ROLLOUTROCK].var1 = FU
 
 addHook("MobjThinker",function(trophy)
 	if not (trophy and trophy.valid) then return end
@@ -1918,7 +1942,8 @@ addHook("MobjThinker",function(mo)
 		mo.scalespeed = 0
 	end
 	
-	if not (camera.chase)
+	mo.takis_vfx = true
+	if TakisShouldIHideInFP(mo,mo.tracer.player)
 		mo.flags2 = $|MF2_DONTDRAW
 	else
 		mo.flags2 = $ &~MF2_DONTDRAW
@@ -2027,6 +2052,7 @@ end,MT_NIGHTSDRONE)
 
 --SUMMIT!
 addHook("GameQuit",function(quit)
+	TakisSaveStuff(consoleplayer,true)
 	if not quit then return end
 	
 	S_StopMusic(consoleplayer)
@@ -2106,6 +2132,14 @@ addHook("MobjThinker",function(poof)
 	--poof.color = choose(SKINCOLOR_PEPPER,SKINCOLOR_RED,SKINCOLOR_CRIMSON)
 	--poof.colorized = true
 	
+	/*
+	if TakisShouldIHideInFP(poof,poof.tracer.player)
+		poof.flags2 = $|MF2_DONTDRAW
+	else
+		poof.flags2 = $ &~MF2_DONTDRAW
+	end
+	*/
+	
 	if (poof.spawnedfrom) then return end
 	poof.momz = $+(P_GetMobjGravity(poof)*P_MobjFlip(poof))
 	
@@ -2116,6 +2150,8 @@ addHook("MobjThinker",function(poof)
 	ghost.spawnedfrom = true
 	ghost.flags = $|MF_NOGRAVITY
 	ghost.momz = 0
+	ghost.tracer = poof.tracer
+	
 	/*
 	ghost.frame = poof.frame
 	ghost.fuse = TR/2
@@ -2199,6 +2235,11 @@ addHook("MobjThinker",function(th)
 		--th.frame = $|numtotrans[10-th.tics]
 	end
 	
+	if FixedHypot(th.momx,th.momy) == 0
+		P_BounceMove(th)
+		th.angle = $+ANGLE_180
+		P_Thrust(th,th.angle,2*th.scale)
+	end
 	th.prevmomz = th.momz
 	
 end,MT_TAKIS_SPARK)

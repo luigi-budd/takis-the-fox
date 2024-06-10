@@ -679,26 +679,66 @@ COM_AddCommand("spb", function(p,node)
 	prn(p,"Sent out SPB to "..targetmo.player.name)
 end,COM_ADMIN)
 
-COM_AddCommand("freeze", function(p,node)
+local DBG_FREEZEMO = (1<<0)
+local DBG_FREEZEPMO = (1<<1)
+
+COM_AddCommand("freeze", function(p,player)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
 		return
 	end
 	
-	if TAKIS_FREEZEDBG
+	if TAKIS_FREEZEDBG and not player
 		print("Mobjs have been thawed")
-		TAKIS_FREEZEDBG = false
+		TAKIS_FREEZEDBG = 0
 	else
-		print("Mobjs have been frozen")
-		TAKIS_FREEZEDBG = true
+		if not (TAKIS_FREEZEDBG & DBG_FREEZEMO)
+			print("Mobjs have been frozen")
+			TAKIS_FREEZEDBG = DBG_FREEZEMO
+		end
+		if player
+		and not (TAKIS_FREEZEDBG & DBG_FREEZEPMO)
+			print("Player mobjs have been frozen")
+			TAKIS_FREEZEDBG = $|DBG_FREEZEPMO
+		
+		end
+	end
+end,COM_ADMIN)
+
+COM_AddCommand("dobonus", function(p,bonust)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+
+	if not (p.takistable)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	if bonust == nil
+		return	
+	end
+	bonust = string.lower($)
+	
+	local takis = p.takistable
+	local bonus = takis.bonuses
+	if bonust == "shotgun"
+		bonus["shotgun"].tics = 3*TR+18
+		
+	elseif bonust == "ultimatecombo"
+		bonus["ultimatecombo"].tics = 3*TR+18
+		
+	elseif bonust == "heartcard"
+		table.insert(bonus.cards,{tics = TR+18,score = 100,text = "\x8EHeart Card\x80"})
 	end
 end,COM_ADMIN)
 
 addHook("ThinkFrame",do
 	for mo in mobjs.iterate()
-		if (mo.player and mo.player.valid) then continue end
 		
 		if TAKIS_FREEZEDBG
+			if (mo.player and mo.player.valid) and not (TAKIS_FREEZEDBG & DBG_FREEZEPMO) then continue end
 			if (mo.prevthink ~= nil) then continue end
 			if mo.prevthink == nil
 				mo.prevthink = (mo.flags & MF_NOTHINK)

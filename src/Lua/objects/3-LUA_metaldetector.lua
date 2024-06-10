@@ -65,6 +65,15 @@ local function delete3d(door)
 			end
 		end
 	end
+
+	if door.sides
+		for k,v in pairs(door.sides)
+			if v and v.valid
+				P_RemoveMobj(v)
+			end
+		end
+	end
+	
 	door.made3d = false
 	door.flags2 = $ &~MF2_DONTDRAW
 end
@@ -74,20 +83,35 @@ addHook("MobjThinker",function(door)
 	
 	local dist = 0
 	local cullout = true
-	if (displayplayer and displayplayer.valid)
-		local cam = displayplayer.realmo
-		if not (cam and cam.valid)
-			cam = camera
-		end
+	local doculling = true
+	if doculling
+		local cam = TakisGetCameraMobj()
 		
 		dist = R_PointToDist2(cam.x,cam.y, door.x,door.y)
 		
 		local thok = P_SpawnMobj(cam.x, cam.y, cam.z, MT_NULL)
+		thok.angle = cam.angle
 		thok.flags2 = $|MF2_DONTDRAW
 		if dist <= 5000*FU
 		and P_CheckSight(thok,door)
 			cullout = false
 		end
+		
+		if not cullout
+			local back = FixedAngle(AngleFixed(thok.angle)+180*FU)
+			local diff = FixedAngle(AngleFixed(R_PointToAngle2(thok.x, thok.y, door.x, door.y))-AngleFixed(back))
+			if AngleFixed(diff) > 180*FU
+				diff = InvAngle(diff)
+			end
+			
+			--in the cameras view
+			if AngleFixed(diff) > 90*FU
+				cullout = false
+			else
+				cullout = true
+			end
+		end
+		
 		P_RemoveMobj(thok)
 	end
 	
@@ -119,13 +143,14 @@ addHook("MobjThinker",function(door)
 		list[1].renderflags = $|RF_FLOORSPRITE|RF_NOSPLATBILLBOARD
 		list[1].angle = door.angle
 		list[1].height = 0
+		list[1].shadowscale = door.scale*13/10
 		P_SetOrigin(list[1],list[1].x,list[1].y,GetActorZ(door,list[1],2))
 
 		list[2] = P_SpawnMobjFromMobj(door,0,0,0,MT_THOK)
 		list[2].frame = A
 		list[2].sprite = SPR_MTLD
 		list[2].frame = B
-		list[2].tics,list[1].fuse = -1,-1
+		list[2].tics,list[2].fuse = -1,-1
 		list[2].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
 		list[2].renderflags = $|RF_FLOORSPRITE|RF_NOSPLATBILLBOARD
 		list[2].angle = door.angle
@@ -144,7 +169,7 @@ addHook("MobjThinker",function(door)
 			list[2+i] = P_SpawnMobjFromMobj(door,32*x,32*y,0,MT_THOK)
 			list[2+i].frame = C
 			list[2+i].sprite = SPR_MTLD
-			list[2+i].tics,list[1].fuse = -1,-1
+			list[2+i].tics,list[2+i].fuse = -1,-1
 			list[2+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
 			list[2+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
 			list[2+i].angle = angle+ANGLE_90
@@ -167,7 +192,7 @@ addHook("MobjThinker",function(door)
 			list[0+i] = P_SpawnMobjFromMobj(door,dist*x,dist*y,0,MT_THOK)
 			list[0+i].frame = D
 			list[0+i].sprite = SPR_MTLD
-			list[0+i].tics,list[1].fuse = -1,-1
+			list[0+i].tics,list[0+i].fuse = -1,-1
 			list[0+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
 			list[0+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
 			list[0+i].angle = angle+ANGLE_90
@@ -192,7 +217,7 @@ addHook("MobjThinker",function(door)
 			)
 			list[2+i].frame = E
 			list[2+i].sprite = SPR_MTLD
-			list[2+i].tics,list[1].fuse = -1,-1
+			list[2+i].tics,list[2+i].fuse = -1,-1
 			list[2+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
 			list[2+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
 			list[2+i].angle = angle+ANGLE_90
@@ -208,7 +233,7 @@ addHook("MobjThinker",function(door)
 		list[5] = P_SpawnMobjFromMobj(door,27*x,27*y,0,MT_THOK)
 		list[5].frame = F
 		list[5].sprite = SPR_MTLD
-		list[5].tics,list[1].fuse = -1,-1
+		list[5].tics,list[5].fuse = -1,-1
 		list[5].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
 		list[5].renderflags = $|RF_FLOORSPRITE|RF_NOSPLATBILLBOARD
 		list[5].angle = door.angle+FixedAngle(90*FU)
@@ -230,7 +255,7 @@ addHook("MobjThinker",function(door)
 			list[0+i] = P_SpawnMobjFromMobj(door,dist*x,dist*y,0,MT_THOK)
 			list[0+i].frame = D
 			list[0+i].sprite = SPR_MTLD
-			list[0+i].tics,list[1].fuse = -1,-1
+			list[0+i].tics,list[0+i].fuse = -1,-1
 			list[0+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
 			list[0+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
 			list[0+i].angle = angle+ANGLE_90
@@ -255,7 +280,7 @@ addHook("MobjThinker",function(door)
 			)
 			list[2+i].frame = E
 			list[2+i].sprite = SPR_MTLD
-			list[2+i].tics,list[1].fuse = -1,-1
+			list[2+i].tics,list[2+i].fuse = -1,-1
 			list[2+i].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
 			list[2+i].renderflags = $|RF_PAPERSPRITE|RF_NOSPLATBILLBOARD
 			list[2+i].angle = angle+ANGLE_90
@@ -271,7 +296,7 @@ addHook("MobjThinker",function(door)
 		list[5] = P_SpawnMobjFromMobj(door,27*x,27*y,0,MT_THOK)
 		list[5].frame = F
 		list[5].sprite = SPR_MTLD
-		list[5].tics,list[1].fuse = -1,-1
+		list[5].tics,list[5].fuse = -1,-1
 		list[5].flags = MF_NOGRAVITY|MF_NOCLIPHEIGHT|MF_NOCLIP
 		list[5].renderflags = $|RF_FLOORSPRITE|RF_NOSPLATBILLBOARD
 		list[5].angle = door.angle-FixedAngle(90*FU)

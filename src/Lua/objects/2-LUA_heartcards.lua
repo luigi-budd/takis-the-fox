@@ -149,6 +149,8 @@ addHook("MobjDeath",function(card,_,sor)
 			spark.fuse = -1
 			spark.state = mobjinfo[MT_RING].deathstate
 			spark.scale = $*2
+			spark.color = SKINCOLOR_ROSY
+			spark.colorized = true
 			doreturn = true
 		end
 		if (doreturn)

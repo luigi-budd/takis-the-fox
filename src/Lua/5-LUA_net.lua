@@ -165,9 +165,6 @@ addHook("MapChange", function(mapid)
 			TakisChangeHeartCards(tonumber(mapheaderinfo[mapid].takis_maxheartcards))
 		end
 	end
-	if ultimatemode
-		TakisChangeHeartCards(1)
-	end
 	
 	mapmusname = mapheaderinfo[mapid].musname
 	
@@ -189,15 +186,15 @@ addHook("MapChange", function(mapid)
 	end
 	
 	m.ideyadrones = {}
-	m.inbossmap = false
+	t.inbossmap = false
 end)
 
 --will this synch though?
 addHook("MapLoad", function(mapid)
 	
-	m.numdestroyables = 0
-	m.partdestroy = 0
-	m.inbrakmap = false
+	t.numdestroyables = 0
+	t.partdestroy = 0
+	t.inbrakmap = false
 	m.lastbump = 0
 	
 	for mt in mapthings.iterate
@@ -207,12 +204,12 @@ addHook("MapLoad", function(mapid)
 				
 			
 			if mobj.type == MT_CYBRAKDEMON
-				m.inbrakmap = true
+				t.inbrakmap = true
 			end
 			
 			if (CanFlingThing(mobj))
 			or (SPIKE_LIST[mobj.type] == true)
-				m.numdestroyables = $+1
+				t.numdestroyables = $+1
 			end
 		else
 			continue
@@ -234,13 +231,14 @@ addHook("MapLoad", function(mapid)
 	end
 	m.maxpostcount = maxcount
 	
-	if m.numdestroyables ~= 0
-		m.partdestroy = m.numdestroyables/(m.playercount+2) or 1
+	if t.numdestroyables ~= 0
+		t.partdestroy = t.numdestroyables/(m.playercount+2) or 1
 	end
 	
 end)
 
 --in milliseconds
+--maybe this should use bpm?
 rawset(_G,"TAKIS_BEATMS",{
 	["vsboss"] = 440,	--136 bpm
 	["vsalt"] = 370,	--160 bpm
@@ -302,12 +300,15 @@ addHook("ThinkFrame", do
 		return
 	end
 	
-	m.inspecialstage = G_IsSpecialStage(gamemap)
-	m.isretro = (maptol & TOL_MARIO)
+	if t.achtime then t.achtime = $-1 end
+	
+	t.inspecialstage = G_IsSpecialStage(gamemap)
+	t.isretro = (maptol & TOL_MARIO)
 	
 	m.inttic = 0
-	m.inbossmap = $ or (mapheaderinfo[gamemap].bonustype == 1)
+	t.inbossmap = $ or (mapheaderinfo[gamemap].bonustype == 1)
 	
+	m.allowfallout = mapheaderinfo[gamemap].takis_allowfallout == nil
 	livesCount()
 	
 	local playerCount = 0
@@ -396,22 +397,16 @@ addHook("ThinkFrame", do
 		end
 	end
 	
-	if (ultimatemode)
-		if TAKIS_MAX_HEARTCARDS ~= 1
-			TakisChangeHeartCards(1)
-		end
-	else
-		if TAKIS_MAX_HEARTCARDS < 1
-			TakisChangeHeartCards(6)
-		end
+	if TAKIS_MAX_HEARTCARDS < 1
+		TakisChangeHeartCards(6)
 	end
 	
-	if (m.inbossmap
+	if (t.inbossmap
 	or (HAPPY_HOUR.happyhour))
 	and not multiplayer
 		local pos = S_GetMusicPosition()
 		local musicname = ''
-		if m.inbossmap
+		if t.inbossmap
 			musicname = mapheaderinfo[gamemap].musname 
 		end
 		if HAPPY_HOUR.happyhour

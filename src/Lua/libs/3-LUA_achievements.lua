@@ -303,8 +303,13 @@ rawset(_G, "TakisLoadAchievements", function(p)
 end)
 
 rawset(_G,"TakisAwardAchievement",function(p,achieve)
-	if (TAKIS_NET.noachs and netgame) then return end
-	if (TAKIS_NET.usedcheats) then return end
+	
+	--if (TAKIS_NET.noachs and netgame) then return end
+	--if (TAKIS_NET.usedcheats) then return end
+	
+	if not (p and p.valid)
+		error("TakisAwardAchievement: argument #1 invalid")
+	end
 	
 	if p.bot == BOT_2PAI
 	or p.bot == BOT_MPAI
@@ -316,17 +321,17 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 	end
 	
 	if achieve == nil
-		error("TakisAwardAchievement was not given an achievement!")
+		error("TakisAwardAchievement: missing argument #2")
 	end
 	if type(achieve) ~= "number"
-		error("Second argument to TakisAwardAchievement must be an ACHIEVEMENT_* constant.")
+		error("TakisAwardAchievement: argument #2 must be an ACHIEVEMENT_* constant")
 	end
 	if not achieve
-		error("ACHIEVEMENT_ constant out of range.")
+		error("TakisAwardAchievement: argument #2 ACHIEVEMENT_* constant out of range.")
 	end
 	if achieve > (1<<NUMACHIEVEMENTS-1)
 	or not (TAKIS_ACHIEVEMENTINFO[achieve])
-		error("ACHIEVEMENT_ constant not defined.")
+		error("TakisAwardAchievement: argument#2 ACHIEVEMENT_* constant not defined.")
 	end
 	
 	local number = p.takistable.achfile
@@ -361,6 +366,20 @@ rawset(_G,"TakisAwardAchievement",function(p,achieve)
 		end
 		return
 	end
+	
+	if TAKIS_NET.achtime
+		if not (p.takistable.achbits & achieve)
+		and not (number & achieve)
+			p.takistable.achbits = $|achieve
+		end
+		if TAKIS_DEBUGFLAG & DEBUG_ACH
+			print("\x83TAKIS:\x80 "..p.name..": denied "..achinf[achieve].name.." because cooldown is active")
+		end
+		return
+	end
+	p.takistable.achbits = $ &~achieve
+	TAKIS_NET.achtime = TR*3/2
+	
 	local trophy = P_SpawnMobjFromMobj(p.realmo,0,0,0,MT_TAKIS_TROPHY)
 	trophy.tracer = p.realmo
 	p.takistable.trophy = trophy

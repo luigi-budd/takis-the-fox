@@ -494,7 +494,15 @@ hud.add(function(v, player)
 	
 	local colormap = box.color
 	if box.color == "playercolor"
-		colormap = player.skincolor
+		if box.portrait[1] == skins[player.skin].name
+			colormap = player.skincolor
+		else
+			if box.fallbackcolor == nil
+				colormap = skins[box.portrait[1]].prefcolor
+			else
+				colormap = box.fallbackcolor
+			end
+		end
 	end
     -- Portrait
     if box.portrait then
@@ -557,6 +565,7 @@ hud.add(function(v, player)
         if e and cursTable[e] then v.draw(cursTable[e].x, cursTable[e].y, v.cachePatch("M_CURSOR"), V_SNAPTOBOTTOM) end
     end
     
+	/*
     if box.mini then
         for i, j in ipairs(box.mini) do
             local a = "thin-"..posTable[j.pos].a
@@ -565,6 +574,7 @@ hud.add(function(v, player)
             local spr = v.getSprite2Patch(j.portrait[1], SPR2_TBXM, false, j.portrait[2], 1)
             local colormap = j.color
 			if j.color == "playercolor"
+			and j.name == skins[player.skin].name
 				colormap = player.skincolor
 			end
 			
@@ -595,6 +605,7 @@ hud.add(function(v, player)
             end
         end
     end
+	*/
 end)
 
 
@@ -718,6 +729,50 @@ rawset(_G,"TAKIS_TEXTBOXES",{
 			next = 0
 		},
 	},
+	ERROR_notag = {
+		[1] = { 
+			name = takisname,
+			portrait = takisport,
+			color = "playercolor",
+			text = "You are seeing this message because the mapper set up this trigger wrong.",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = 2*TICRATE,
+			next = 2
+		},
+		[2] = { 
+			name = takisname,
+			portrait = takisport,
+			color = "playercolor",
+			text = "ERROR: Textbox tag does not exist, check logs for more info.",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = 2*TICRATE,
+			next = 0
+		},
+	},
+	ERROR_nogmap = {
+		[1] = { 
+			name = takisname,
+			portrait = takisport,
+			color = "playercolor",
+			text = "You are seeing this message because the mapper set up this trigger wrong.",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = 2*TICRATE,
+			next = 2
+		},
+		[2] = { 
+			name = takisname,
+			portrait = takisport,
+			color = "playercolor",
+			text = "ERROR: Textbox gmap does not exist, check logs for more info.",
+			sound = takisvox,
+			soundchance = takischance,
+			delay = 2*TICRATE,
+			next = 0
+		},
+	},
 })
 
 addHook("LinedefExecute",function(line,mo,sec)
@@ -739,7 +794,27 @@ addHook("LinedefExecute",function(line,mo,sec)
 				TAKIS_TEXTBOXES["gmap"..gamemap][tag],
 				TAKIS_TEXTBOXES["gmap"..gamemap][tag][1].move
 			)
+		else
+			print("\x83TAKIS:\x80 Linedef #"..#line.." called TAK_TBOX without a valid textbox (gmap index not valid). Values:",
+				"\x83TAKIS_TEXTBOXES index:\x80 gmap"..gamemap,
+				'\x83TAKIS_TEXTBOXES["gmap'..gamemap..'"]:\x80 '..tag,
+				"Using fallback textbox..."
+			)
+			TakisTextBoxes:DisplayBox(mo.player,
+				TAKIS_TEXTBOXES.ERROR_notag,
+				TAKIS_TEXTBOXES.ERROR_notag[1].move
+			)
 		end
+	else
+		print("\x83TAKIS:\x80 Linedef #"..#line.." called TAK_TBOX without a valid textbox (gmap not valid). Values:",
+			"\x83TAKIS_TEXTBOXES index:\x80 gmap"..gamemap,
+			"Using fallback textbox..."
+		)
+			TakisTextBoxes:DisplayBox(mo.player,
+				TAKIS_TEXTBOXES.ERROR_nogmap,
+				TAKIS_TEXTBOXES.ERROR_nogmap[1].move
+			)
+		
 	end
 end,"TAK_TBOX")
 

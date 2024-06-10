@@ -41,9 +41,9 @@ Act = 1
 NoZone = true
 Music = TESTMP
 TypeOfLevel = Singleplayer,Coop,CTF,Match
-Lua.Takis_HH_Music = _DROWN
+Lua.Takis_HH_NoMusic = true
 Lua.Takis_HH_NoEndMusic = true
-Lua.Takis_HH_Timelimit = 8
+Lua.Takis_HH_Timelimit = 180
 Lua.Takis_HH_NoHappyHour = true
 NoVisitNeeded = true
 LevelSelect = 1
@@ -60,3 +60,15 @@ NoVisitNeeded = true
 LevelSelect = 1
 Lua.ForceKartExtra = true
 SkyNum = 1
+
+Level Z6
+Levelname = Test Room
+SubTitle = UDMF Test Room
+Act = 3
+NoZone = true
+Music = TESTMP
+TypeOfLevel = Coop
+NoVisitNeeded = true
+LevelSelect = 1
+SkyNum = 1
+

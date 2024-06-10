@@ -74,9 +74,22 @@ end)
 
 COM_AddCommand("takis_debuginfo", takis_printdebuginfo)
 
-COM_AddCommand("takis_saveconfig", TakisSaveStuff)
+COM_AddCommand("takis_saveconfig", function(p,force)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if not (p.takistable)
+		prn(p,"You can't use this right now.")
+		return	
+	end
+	
+	TakisSaveStuff(p,nil,force ~= nil)
+end)
 COM_AddCommand("takis_loadconfig", function(p)
 	p.takistable.io.loaded = false
+	p.takistable.io.loadwait = 25
 	TakisLoadStuff(p)
 end)
 

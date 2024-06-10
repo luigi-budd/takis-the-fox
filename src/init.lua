@@ -101,6 +101,7 @@ local filelistt2 = {
 	"heartcards",
 	"metaldetector",
 	"thokspawner",
+	"crates",
 }
 
 local filelist = {

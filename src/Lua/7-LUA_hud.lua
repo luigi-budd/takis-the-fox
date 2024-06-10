@@ -46,7 +46,7 @@ local function drawheartcards(v,p)
 	end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_MISC.inspecialstage)
+	or (TAKIS_NET.inspecialstage)
 	or amiinsrbz
 	or p.takistable.hhexiting
 		return
@@ -63,7 +63,7 @@ local function drawheartcards(v,p)
 	
 	--space allocated for all the cards
 	local bump = 0
-	if ((TAKIS_MISC.inbossmap)
+	if ((TAKIS_NET.inbossmap)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health))
 	or (HAPPY_HOUR.happyhour)
@@ -80,7 +80,7 @@ local function drawheartcards(v,p)
 		local j = i
 		
 		local eflag = V_HUDTRANS
-		if (TAKIS_MISC.inbossmap)
+		if (TAKIS_NET.inbossmap)
 		and (takis.HUD.bosscards and takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 		and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
 			eflag = $ &~V_HUDTRANS
@@ -190,7 +190,7 @@ local function drawbosscards(v,p)
 	end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_MISC.inspecialstage)
+	or (TAKIS_NET.inspecialstage)
 	or amiinsrbz
 	or p.takistable.hhexiting
 	or p.takistable.inChaos
@@ -214,7 +214,7 @@ local function drawbosscards(v,p)
 	--tween in/out
 	local et = TR/2
 	local tween = 0
-	if not (TAKIS_MISC.inbossmap and bosscards.mo.health)
+	if not (TAKIS_NET.inbossmap and bosscards.mo.health)
 	and (bosscards.mo)
 		local tics = min(bosscards.timealive or 0,et+1)
 		tween = ease.outback((FU/et)*tics,-300*FU,0,FU*3/2)
@@ -227,7 +227,7 @@ local function drawbosscards(v,p)
 		local j = i
 		
 		local eflag = V_HUDTRANS
-		if (TAKIS_MISC.inbossmap)
+		if (TAKIS_NET.inbossmap)
 		and (bosscards.mo and bosscards.mo.health)
 			eflag = $ &~V_HUDTRANS
 			eflag = $|(v.userTransFlag())
@@ -429,7 +429,7 @@ local function calcstatusface(p,takis)
 	
 	--isnt this just so retro?
 	--god, if only i lived in retroville
-	if TAKIS_MISC.isretro
+	if TAKIS_NET.isretro
 	and not noretrooverride
 		takis.HUD.statusface.frame = 0
 	end
@@ -453,7 +453,7 @@ local function drawface(v,p)
 	end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_MISC.inspecialstage)
+	or (TAKIS_NET.inspecialstage)
 	or amiinsrbz
 	or p.takistable.hhexiting
 		return
@@ -482,7 +482,7 @@ local function drawface(v,p)
 	local pre = "TAK"
 	local scale = 2*FU/5
 	local x,y2 = 0,0
-	if TAKIS_MISC.isretro
+	if TAKIS_NET.isretro
 		pre = "RETR_"
 		scale = $*3
 		x = -17*FU
@@ -515,7 +515,7 @@ local function drawface(v,p)
 		end
 	end
 	
-	if (TAKIS_MISC.inbossmap)
+	if (TAKIS_NET.inbossmap)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.valid)
 	and (takis.HUD.bosscards.mo and takis.HUD.bosscards.mo.health)
 		eflags = $ &~(V_HUDTRANS|V_HUDTRANSHALF)
@@ -631,9 +631,9 @@ local function drawbossface(v,p)
 	--tween in/out
 	local et = TR/2
 	local tween = 0
-	if not (TAKIS_MISC.inbossmap and bosscards.mo.health)
+	if not (TAKIS_NET.inbossmap and bosscards.mo.health)
 	and (bosscards.mo)
-		local tics = min(bosscards.timealive,et+1)
+		local tics = min(bosscards.timealive or 0,et+1)
 		tween = ease.outback((FU/et)*tics,-300*FU,0,FU*3/2)
 	end
 	
@@ -656,7 +656,7 @@ local function drawrings(v,p)
 	if (customhud.CheckType("rings") != modname) return end
 
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_MISC.inspecialstage)
+	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
 	or p.takistable.hhexiting
 	or (p.takis_noabil ~= nil and p.rings == 0)
@@ -745,6 +745,7 @@ local function drawrings(v,p)
 		end
 		
 		local colormap
+		local tcolormap
 		
 		if G_GametypeHasTeams()
 		and ringpatch == "TRNG"
@@ -756,7 +757,7 @@ local function drawrings(v,p)
 		end
 		
 		if flash
-			colormap = v.getColormap(TC_RAINBOW,SKINCOLOR_RED)
+			tcolormap = v.getColormap(TC_RAINBOW,SKINCOLOR_RED)
 		end
 		
 		--classic x = 102
@@ -768,12 +769,29 @@ local function drawrings(v,p)
 			V_SNAPTOLEFT|V_SNAPTOTOP|eflag|V_PERPLAYER,
 			colormap
 		)
-		v.drawNum(
-			ringx,
-			ringy,
-			val,
-			V_SNAPTOLEFT|V_SNAPTOTOP|(eflag &~V_FLIP)|V_PERPLAYER
-		)
+		
+		local rings = (takis.HUD.rings.drawrings > 0) and tostring(takis.HUD.rings.drawrings) or "*"
+		if rings:len() < 4
+			for i = 1,4-rings:len()
+				rings = "*"..$
+			end
+		end
+		for i = rings:len(),1,-1
+			local n = string.sub(rings,i,i)
+			local number = (n ~= "*") and n or "0"
+			local oflag = (n == "*") and V_HUDTRANSHALF or V_HUDTRANS
+			local patch = v.cachePatch("STTNUM"+number)
+			ringx = $-v.cachePatch("STTNUM0").width
+			v.drawScaled(ringx*FU,
+				ringy*FU,
+				FU,
+				patch,
+				V_SNAPTOLEFT|V_SNAPTOTOP|(eflag &~(V_FLIP|V_HUDTRANS))|V_PERPLAYER|oflag,
+				tcolormap
+			)
+				
+		end
+		
 	else
  		
 		local off = (takis.inBattle) and battleoffset or 0
@@ -880,7 +898,7 @@ local function drawtimer(v,p,altpos)
 	if altpos == nil then altpos = false end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_MISC.inspecialstage)
+	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
 	or HAPPY_HOUR.othergt
 		return
@@ -1047,7 +1065,7 @@ local function drawscore(v,p)
 	if (customhud.CheckType("score") != modname) return end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_MISC.inspecialstage)
+	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
 	or (p.takis_noabil ~= nil)
 		return
@@ -1412,7 +1430,7 @@ local function drawlivesarea(v,p)
 	if (customhud.CheckType("lives") != modname) return end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_MISC.inspecialstage)
+	or (TAKIS_NET.inspecialstage)
 	or p.takistable.inSRBZ
 	or (p.textBoxInAction)
 	or (TAKIS_DEBUGFLAG & (DEBUG_SPEEDOMETER|DEBUG_BUTTONS))
@@ -1520,10 +1538,12 @@ local function drawlivesarea(v,p)
 	if not nolivestext
 		local lives = takis.oldlives
 		
+		/*
 		if CV_FindVar("cooplives").value == 3
 		and (netgame or multiplayer)
 			lives = TAKIS_MISC.livescount
 		end
+		*/
 		
 		local scorenum = "CMBCF"
 		if lives >= 99
@@ -1697,6 +1717,7 @@ local function drawlivesarea(v,p)
 	
 	if (p.ptsr)
 	and me.pfstuntime
+	and p.ptsr.pizzaface
 		v.drawScaled(
 			x+60*FU+disp,
 			y-24*FU,
@@ -1755,6 +1776,38 @@ local function drawlivesarea(v,p)
 			v.cachePatch("TA_SAVE_"..state),
 			(flags &~(V_HUDTRANS|V_HUDTRANSHALF))|V_HUDTRANS
 		)
+		
+		if not takis.io.loaded
+		and takis.io.loadtries > 1
+			local scorenum = (leveltime/4) % 2 and "CMBCF" or "CMBCFR"
+			local score = takis.io.loadtries
+			local scale = FU
+			
+			local prevw
+			if not prevw then prevw = 0 end
+			
+			local textwidth = 0
+			for i = 1,string.len(score)
+				local n = string.sub(score,i,i)
+				local patch = v.cachePatch(scorenum+n)
+				textwidth = $+(patch.width*scale*4/10)		
+			end
+			
+			for i = 1,string.len(score)
+				local sc = FixedDiv(scale,2*FU)
+				local n = string.sub(score,i,i)
+				local patch = v.cachePatch(scorenum+n)
+				--local textwidth = (patch.width*scale*4/10)
+				v.drawScaled(x+prevw-textwidth+80*FU+disp,
+					y-(patch.height*sc)+5*FU,
+					sc,
+					patch,
+					(flags &~(V_HUDTRANS|V_HUDTRANSHALF))|V_HUDTRANS
+				)
+					
+				prevw = $+(patch.width*scale*4/10)
+			end
+		end
 		
 		disp = $+25*FU
 	end
@@ -1975,7 +2028,7 @@ local function drawclutches(v,p,cam)
 		local x, y, scale, nodraw
 		local cutoff = function(y) return false end
 		
-		if cam.chase and not (player.awayviewtics and not (me.flags2 & MF2_TWOD))
+		if cam.chase and not (player.awayviewtics and not takis.in2D)
 			x, y, scale, nodraw = R_GetScreenCoords(v, player, cam, mo)
 			if nodraw then return end
 			
@@ -2096,7 +2149,7 @@ local function drawnadocount(v,p,cam)
 	local x, y, scale, nodraw
 	local cutoff = function(y) return false end
 	
-	if cam.chase and not (player.awayviewtics and not (me.flags2 & MF2_TWOD))
+	if cam.chase and not (player.awayviewtics and not takis.in2D)
 		x, y, scale, nodraw = R_GetScreenCoords(v, player, cam, mo)
 		if nodraw then return end
 		
@@ -2140,8 +2193,8 @@ local function drawmincombo(v,p,maxtime)
 	or takis.combo.outrotics
 		local pre = "MINCBAR_"
 		
-		local backx = 320*FU-(takis.HUD.combo.x)
-		local backy = takis.HUD.combo.y+5*FU
+		local backx = (takis.HUD.combo.x)-3*FU
+		local backy = takis.HUD.combo.y-9*FU
 		local combonum = takis.combo.count
 		if (takis.combo.outrotics)
 			combonum = takis.combo.failcount
@@ -2154,18 +2207,15 @@ local function drawmincombo(v,p,maxtime)
 		end
 		local scale = FU/2
 		
-		local waveforce = FU*3
-		local ay = FixedMul(waveforce,sin(FixedAngle(leveltime*2*FU)))
-		local ax = FixedMul(waveforce,cos(FixedAngle(leveltime*2*FU)))
-		v.drawScaled(backx+ax,
-			backy+ay,
+		v.drawScaled(backx,
+			backy,
 			scale*2,
 			v.cachePatch(pre.."BAR2"),
-			V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANSHALF|V_PERPLAYER
+			V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANSHALF|V_PERPLAYER
 		)
 		
-		v.drawScaled(backx, backy, scale, v.cachePatch(pre.."BACK"),
-			V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS|V_PERPLAYER
+		v.drawScaled(backx+3*FU, backy+9*FU, scale, v.cachePatch(pre.."BACK"),
+			V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS|V_PERPLAYER
 		)
 		
 		
@@ -2181,35 +2231,65 @@ local function drawmincombo(v,p,maxtime)
 			color = SKINCOLOR_ICY
 		end
 		
-		v.drawCropped(backx,backy,scale,scale,
+		v.drawCropped(backx+3*FU,backy+9*FU,scale,scale,
 			v.cachePatch(pre.."FILL"),
-			V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS|V_PERPLAYER, 
+			V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS|V_PERPLAYER, 
 			v.getColormap(nil,color),
 			0,0,
 			width,v.cachePatch(pre.."FILL").height*FU
 		)
 		
+		local scorenum = "CMBCF"
+		local combonum = takis.combo.count
+		if (takis.combo.outrotics)
+			combonum = takis.combo.failcount
+		end
+		local score = combonum
+		
+		local prevw = 0
+		
+		local textwidth = 0
+		for i = 1,string.len(score)
+			local n = string.sub(score,i,i)
+			local patch = v.cachePatch(scorenum+n)
+			textwidth = $+(patch.width*FU*4/10)		
+		end
+		
+		for i = 1,string.len(score)
+			local n = string.sub(score,i,i)
+			local patch = v.cachePatch(scorenum+n)
+			v.drawScaled(backx+prevw-textwidth+89*FU,
+				backy,
+				scale,
+				patch,
+				V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS|V_PERPLAYER
+			)
+				
+			prevw = $+(patch.width*FU*4/10)
+		end
+		/*
 		v.drawString(backx-(v.cachePatch(pre.."FILL").width*scale)-FU*2,
 			backy-3*FU,
 			takis.combo.count.."x",
-			V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
+			V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
 			"thin-fixed-right"
 		)
+		*/
 		
 		if not takis.combo.outrotics
 			local length = #TAKIS_COMBO_RANKS
-			v.drawString(backx,
-				backy-10*FU,
+			v.drawString(backx+3*FU,
+				backy+14*FU,
 				TAKIS_COMBO_RANKS[ ((takis.combo.rank-1) % length)+1 ],
-				V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
-				"thin-fixed-right"
+				V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
+				"thin-fixed"
 			)
 			if takis.combo.score ~= "dontdraw"
-				v.drawString(backx,
-					backy-18*FU,
+				v.drawString(backx+3*FU,
+					backy+FU,
 					"+"..takis.combo.score,
-					V_SNAPTOTOP|V_SNAPTORIGHT|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
-					"thin-fixed-right"
+					V_SNAPTOTOP|V_SNAPTOLEFT|V_HUDTRANS|V_PERPLAYER|V_ALLOWLOWERCASE,
+					"thin-fixed"
 				)
 			end
 		end
@@ -2246,36 +2326,20 @@ local function drawmincombo(v,p,maxtime)
 		local total_width = (v.width() / v.dupx()) + 1
 		local total_height = (v.height() / v.dupy()) + 1
 		
-		/*
-		v.drawString(
-			160*FU-(total_width*FU/2),
-			((100*FU)-(total_height*FU/2))+takis.HUD.combo.basey,
-			"Combo Share",
-			V_ALLOWLOWERCASE,
-			"fixed"
-		)
-		*/
 		
 		local x,y = va.x,va.y
-		/*
-		if va.tics >= (2*TR+(TR/2))-1
-			x,y = R_GetScreenCoords(v, p, cam, players[va.node].realmo)
-			va.x,va.y = x,y
-			va.startx = x
-			va.starty = y
-		end
-		*/
 		
 		if va.tics <= TR/2
 			--THANKS NICK FOR HELPIN ME WITH THE COORDS!!
+			local pre = "MINCBAR_"
 			local et = TR/2
 			local tics = et-va.tics
 			
-			local ypos = ((100*FU)-(total_height*FU/2))+takis.HUD.combo.basey+9*FU
-			local xpos = 160*FU+(total_width*FU/2)
+			local ypos = ((100*FU)-(total_height*FU/2))+takis.HUD.combo.basey
+			local xpos = 160*FU-(total_width*FU/2)
 			
 			if takis.combo.time
-				xpos = $+(v.cachePatch("TAKCOBACK").width*FU/2)
+				xpos = $+(v.cachePatch(pre.."FILL").width*FU/2)
 			end
 			
 			y = ease.outback(
@@ -2318,7 +2382,7 @@ local function drawcombostuff(v,p,cam)
 	if (TAKIS_DEBUGFLAG & DEBUG_BOSSCARD) then return end
 	
 	if p.takistable.inNIGHTSMode
-	or (TAKIS_MISC.inspecialstage)
+	or (TAKIS_NET.inspecialstage)
 		return
 	end
 	
@@ -2876,8 +2940,10 @@ local function drawtelebar(v,p)
 	local pre = "CLTCHMET_"
 	
 	local charge = (p.pizzacharge or 0)
+	local max = TR*FU
 	
 	if p.pizzachargecooldown
+		max = CV_PTSR.pizzatpcooldown.value*FU
 		charge = CV_PTSR.pizzatpcooldown.value - p.pizzachargecooldown
 		color = SKINCOLOR_RED
 	end
@@ -2895,7 +2961,6 @@ local function drawtelebar(v,p)
 		V_SNAPTOBOTTOM|V_HUDTRANS
 	)
 
-	local max = TR*FU
 	local timer = charge*FU
 	local erm = FixedDiv((timer),max)
 	local width = v.cachePatch(pre.."FILL").height*FU-FixedMul(erm,v.cachePatch(pre.."FILL").height*FU)
@@ -3513,13 +3578,44 @@ local function drawcosmenu(v,p)
 					local file = io.openlocal("client/takisthefox/config.dat")
 					
 					if file 
+						local extra = ''
+						local curcode = TakisConstructSaveCode(p)
 						local code = file:read("*a")
+						if code ~= curcode
+							extra = "\x87 (Outdated)"
+						end
 						if code ~= nil and not (string.find(code, ";"))
-							txt = "\x82".."Config: "..code
+							txt = "\x82".."Config: "..code..extra
 						end
 						file:close()
 					else
 						txt = "\x86No Config."
+					end
+					
+				else
+					txt = "\x85Other person's config."
+				end
+				v.drawString(pos.x*FU, texty,
+					txt,
+					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,
+					"thin-fixed"
+				)
+				txtlength = v.stringWidth(txt,V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE,"thin")*FU
+			elseif (page.text[i] == "$$$$$$")
+				local txt = ''
+				if io
+				and (p == consoleplayer)
+					DEBUG_print(p,IO_CONFIG|IO_MENU)
+					local file = io.openlocal("client/takisthefox/backupconfig.dat")
+					
+					if file 
+						local code = file:read("*a")
+						if code ~= nil and not (string.find(code, ";"))
+							txt = "\x82".."Backup Config: "..code
+						end
+						file:close()
+					else
+						txt = "No Backup."
 					end
 					
 				else
@@ -3898,7 +3994,7 @@ local function drawcrosshair(v,p)
 		return
 	end
 	
-	if (camera.chase)
+	if (camera.chase and not (p.awayviewtics and not takis.in2D))
 		return
 	end
 	
@@ -4243,7 +4339,7 @@ local function drawtransfotimer(v,p,cam)
 		local cutoff = function(y) return false end
 		local bottom = false
 		
-		if cam.chase and not (p.awayviewtics and not (me.flags2 & MF2_TWOD))
+		if cam.chase and not (p.awayviewtics and not takis.in2D)
 			x, y, scale, nodraw = R_GetScreenCoords(v, p, cam, me)
 			if nodraw then return end
 			
@@ -4285,7 +4381,7 @@ local function drawtransfotimer(v,p,cam)
 			local type2 = 0
 			
 			if takis.transfo & TRANSFO_PANCAKE
-				if takis.pancaketime > takis.fireasstime
+				if takis.pancaketime >= takis.fireasstime
 					time = takis.pancaketime*FU
 					type = 0
 				else
@@ -4294,7 +4390,7 @@ local function drawtransfotimer(v,p,cam)
 				end
 			end
 			if takis.transfo & TRANSFO_FIREASS
-				if takis.fireasstime > takis.pancaketime
+				if takis.fireasstime >= takis.pancaketime
 					time = takis.fireasstime*FU
 					type = 1
 				else
@@ -4457,7 +4553,7 @@ local function drawdriftmeter(v,p,cam)
 	local cutoff = function(y) return false end
 	local bottom = false
 	
-	if cam.chase and not (p.awayviewtics and not (me.flags2 & MF2_TWOD))
+	if cam.chase and not (p.awayviewtics and not takis.in2D)
 		x, y, scale, nodraw = R_GetScreenCoords(v, p, cam, me)
 		if nodraw then return end
 		
@@ -4893,6 +4989,20 @@ local function drawracelaps(v,p)
 	
 end
 
+--lmao lol
+local numtotrans = {
+	[9] = V_90TRANS,
+	[8] = V_80TRANS,
+	[7] = V_70TRANS,
+	[6] = V_60TRANS,
+	[5] = V_50TRANS,
+	[4] = V_40TRANS,
+	[3] = V_30TRANS,
+	[2] = V_20TRANS,
+	[1] = V_10TRANS,
+	[0] = 0,
+}
+
 --rsneo
 local function drawviewmodel(v,p,cam)
 	if (customhud.CheckType("takis_viewmodel") != modname) return end	
@@ -4907,6 +5017,10 @@ local function drawviewmodel(v,p,cam)
 	if not (me and me.valid) then return end
 	
 	if cam.chase
+		return
+	end
+	
+	if (p.awayviewtics and not (takis.in2D))
 		return
 	end
 	
@@ -4947,6 +5061,7 @@ local function drawviewmodel(v,p,cam)
 		local patch = v.cachePatch("TA_VIEW_"..framenum)
 		local scale = FU
 		
+		
 		x = 32*FU + takis.HUD.viewmodel.bobx
 		y = 48*FU + takis.HUD.viewmodel.boby
 		
@@ -4958,6 +5073,19 @@ local function drawviewmodel(v,p,cam)
 				V_SNAPTOBOTTOM|V_PERPLAYER,
 				col
 			)
+			
+			if takis.afterimaging
+				local timealive = TR-takis.bashtics
+				local transnum = numtotrans[((timealive*2/3)+1) %9]
+				col = v.getColormap(TC_RAINBOW,takis.afterimagecolor)
+				v.drawScaled(x,
+					y,
+					scale,
+					patch,
+					V_SNAPTOBOTTOM|V_PERPLAYER|V_ADD|transnum,
+					col
+				)
+			end
 		end
 	
 	else
@@ -4966,7 +5094,9 @@ local function drawviewmodel(v,p,cam)
 		if RingSlinger then return end
 		
 		local currentweapon = takis.currentweapon
-		if takis.weapondelaytics
+		local mm = gametype == GT_MURDERMYSTERY
+		local role = p.role or 0
+		if (takis.weapondelaytics)
 			currentweapon = "FIRE"
 		end
 		local patch = v.cachePatch("TA_VIEWR_"..currentweapon)
@@ -5271,7 +5401,7 @@ local function drawdebug(v,p)
 		local dmg = getdmg[takis.saveddmgt]
 		
 		v.drawString(100,100,"State: "..me.state,V_ALLOWLOWERCASE,"thin")
-		v.drawString(100,108,"Sprite2: "..me.sprite2,V_ALLOWLOWERCASE,"thin")
+		v.drawString(100,108,"Sprite2: "..spr2names[me.sprite2],V_ALLOWLOWERCASE,"thin")
 		v.drawString(100,116,"PState: "..pstate,V_ALLOWLOWERCASE,"thin")
 		v.drawString(100,124,"Deadtimer: "..p.deadtimer,V_ALLOWLOWERCASE,"thin")
 		v.drawString(100,132,"DMG: "..dmg ,V_ALLOWLOWERCASE,"thin")
@@ -5283,6 +5413,8 @@ local function drawdebug(v,p)
 		drawflag(v,200,124,"WasWaterSlide",V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.wasinwaterslide))
 		drawflag(v,200,132,"TicsForPain: "..takis.ticsforpain,V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsforpain > 0))
 		drawflag(v,200,140,"TicsInPain: "..takis.ticsinpain,V_PERPLAYER|V_ALLOWLOWERCASE,V_GREENMAP,V_REDMAP,"thin",(takis.ticsinpain > 0))
+		v.drawString(200,148,"Pitanim: "..takis.pitanim,V_PERPLAYER|V_ALLOWLOWERCASE,"thin")
+		v.drawString(200,156,"Pittime,Count: "..takis.pittime..","..takis.pitcount,V_PERPLAYER|V_ALLOWLOWERCASE,"thin")
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_ACH)
 		for k,va in ipairs(takis.HUD.steam)
@@ -5298,8 +5430,12 @@ local function drawdebug(v,p)
 		end
 		local work = 0
 		for p2 in players.iterate
+			local extra = ''
+			if p2.takistable.achbits
+				extra = " ("..p2.takistable.achbits..")"
+			end
 			v.drawString(290,30+(work*8),
-				"[#"..#p2.."] "..p2.name.." - "..p2.takistable.achfile,
+				"[#"..#p2.."] "..p2.name.." - "..p2.takistable.achfile..extra,
 				V_HUDTRANS|V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE|
 				((p2 == p) and V_YELLOWMAP or 0),
 				"thin-right"
@@ -5312,7 +5448,12 @@ local function drawdebug(v,p)
 			"thin-right"
 		)
 		v.drawString(290,38+(work*8),
-			"TAKIS_NET.usedcheats\x80:\x84 "..tostring(TAKIS_NET.usedcheats),
+			"TAKIS_NET.usedcheats:\x84 "..tostring(TAKIS_NET.usedcheats),
+			V_HUDTRANS|V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE,
+			"thin-right"
+		)
+		v.drawString(290,46+(work*8),
+			"TAKIS_NET.achtime:\x84 "..TAKIS_NET.achtime,
 			V_HUDTRANS|V_SNAPTOTOP|V_SNAPTORIGHT|V_ALLOWLOWERCASE,
 			"thin-right"
 		)
@@ -5822,7 +5963,7 @@ local function drawdebug(v,p)
 		
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_NET)
-		local dex = 8
+		local dex = 9
 		local cv = {
 			[1] = CV_TAKIS.nerfarma,
 			[2] = CV_TAKIS.tauntkills,
@@ -5832,6 +5973,7 @@ local function drawdebug(v,p)
 			[6] = CV_TAKIS.hammerquake,
 			[7] = CV_TAKIS.chaingun,
 			[8] = CV_TAKIS.noeffects,
+			[9] = CV_TAKIS.forcekart,
 		}
 		local net = {
 			[1] = TAKIS_NET.nerfarma,
@@ -5842,6 +5984,7 @@ local function drawdebug(v,p)
 			[6] = TAKIS_NET.hammerquakes,
 			[7] = TAKIS_NET.chaingun,
 			[8] = TAKIS_NET.noeffects,
+			[9] = TAKIS_NET.forcekart,
 		}
 		local name = {
 			[1] = "Nerf arma",
@@ -5852,6 +5995,7 @@ local function drawdebug(v,p)
 			[6] = "Hammer quakes",
 			[7] = "Chaingun",
 			[8] = "No effects",
+			[9] = "Forcekart",
 		}
 		local boolclr = {
 			[true] = "\x83",
@@ -5888,9 +6032,10 @@ local function drawdebug(v,p)
 		
 		--other shit
 		local bottom = 10+(dex*8)
+		local n = TAKIS_NET
 		local m = TAKIS_MISC
 		v.drawString(100,bottom,
-			"FC: "..(m.partdestroy).."/"..(m.numdestroyables).." things",
+			"FC: "..(n.partdestroy).."/"..(n.numdestroyables).." things",
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			"thin"
 		)
@@ -5904,10 +6049,10 @@ local function drawdebug(v,p)
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			"thin"
 		)
-		local ss = m.inspecialstage
-		local bm = m.inbossmap
-		local bk = m.inbrakmap
-		local retro = m.isretro == TOL_MARIO
+		local ss = n.inspecialstage
+		local bm = n.inbossmap
+		local bk = n.inbrakmap
+		local retro = n.isretro == TOL_MARIO
 		drawflag(v,100,bottom+24,"spec",
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			V_GREENMAP,V_REDMAP,
@@ -5938,6 +6083,16 @@ local function drawdebug(v,p)
 			V_HUDTRANS|V_ALLOWLOWERCASE,
 			"thin"
 		)
+		
+		local strings = prtable("SPIKE_LIST",SPIKE_LIST,false)
+		for k,va in ipairs(strings)
+			v.drawString(100,bottom+40+(8*k),
+				va,
+				V_HUDTRANS|V_ALLOWLOWERCASE,
+				"thin"
+			)
+		end
+		
 	end
 	if (TAKIS_DEBUGFLAG & DEBUG_MUSIC)
 		local flags = V_SNAPTOLEFT|V_HUDTRANS
@@ -6070,12 +6225,12 @@ addHook("HUD", function(v,p,cam)
 	and (takis.deathfunny))
 		local thok = v.getSpritePatch(SPR_THOK,0,0)
 		local scale = FU*20
-		local deadtimer = p.deadtimer
+		local deadtimer = takis.deadtimer
 		if deadtimer > 0
-			if deadtimer > TR/2
+			if deadtimer > TR
 				scale = 0
 			else
-				scale = ease.linear((FU/(TR/2))*deadtimer,20*FU,0)
+				scale = ease.linear((FU/(TR))*deadtimer,20*FU,0)
 			end
 		end
 		scale = max(0,scale)
@@ -6140,7 +6295,7 @@ addHook("HUD", function(v,p,cam)
 				customhud.SetupItem("PTSR_tooltips","spicerunners")
 			end
 			customhud.SetupItem("PTSR_rank", modname)
-			customhud.SetupItem("PTSR_combo", modname)
+			--customhud.SetupItem("PTSR_combo", modname)
 			customhud.SetupItem("PTSR_lap", modname)
 			--customhud.SetupItem("rank", modname)
 			
@@ -6169,6 +6324,7 @@ addHook("HUD", function(v,p,cam)
 			end
 			
 			local hasstat = CV_FindVar("perfstats").value
+			local mm = gametype == GT_MURDERMYSTERY
 			
 			drawviewmodel(v,p,cam)
 			drawclutches(v,p,cam)
@@ -6179,15 +6335,17 @@ addHook("HUD", function(v,p,cam)
 			drawfallout(v,p)
 			--drawwareffect(v,p)
 			--drawbubbles(v,p,cam)
-			if not hasstat
+			if not (hasstat or mm)
 				drawrings(v,p)
 				drawtimer(v,p)
 			end
 			drawkartmeters(v,p)
-			drawlivesarea(v,p)
+			if not mm
+				drawlivesarea(v,p)
+			end
 			drawracelaps(v,p)
 			drawlapanim(v,p)
-			if not opmode
+			if not (opmode or mm)
 				drawcombostuff(v,p,cam)
 			end
 			drawpizzatips(v,p)
@@ -6213,11 +6371,11 @@ addHook("HUD", function(v,p,cam)
 			
 			drawcfgnotifs(v,p)
 			drawtutbuttons(v,p)
-			if not hasstat
+			if not (hasstat or mm)
 				drawscore(v,p)
 			end
 			drawbosstitles(v,p)
-			if not (hasstat or opmode)
+			if not (hasstat or opmode or mm)
 				drawheartcards(v,p)
 				drawbosscards(v,p)
 				drawface(v,p)
@@ -6310,7 +6468,7 @@ addHook("HUD", function(v,p,cam)
 					local y = 150*FU
 					
 					local waveforce = FU*3
-					local ay = FixedMul(waveforce,sin(FixedAngle(leveltime*20*FU)))
+					local ay = FixedMul(waveforce,sin (FixedAngle(leveltime*20*FU)))
 					
 					local cpatch = v.cachePatch("TAKCOSHARE")
 					local color = v.getColormap(nil,
@@ -6441,7 +6599,7 @@ addHook("HUD", function(v,p,cam)
 				customhud.SetupItem("PTSR_bar",			"spicerunners")
 				customhud.SetupItem("PTSR_tooltips",	"spicerunners")
 				customhud.SetupItem("PTSR_rank", 		"spicerunners")
-				customhud.SetupItem("PTSR_combo", 		"spicerunners")
+				--customhud.SetupItem("PTSR_combo", 		"spicerunners")
 				customhud.SetupItem("PTSR_lap", 		"spicerunners")
 				customhud.SetupItem("textspectator",	altmodname)
 				customhud.SetupItem("crosshair",		altmodname)

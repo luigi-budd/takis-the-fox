@@ -29,6 +29,23 @@ addHook("MobjThinker",function(th)
 			end
 			P_RemoveMobj(th)
 		end
+	elseif (th.camefromcrate)
+		th.flags2 = $|MF2_DONTDRAW
+		--tic respawn timer
+		if (th.respawntime)
+			if th.respawntime > CV_FindVar("respawnitemtime").value * TICRATE
+				th.respawntime = CV_FindVar("respawnitemtime").value * TICRATE
+			end
+			th.tics,th.fuse = -1,-1
+			th.respawntime = $-1
+		else
+			local card = P_SpawnMobjFromMobj(th,0,0,0,MT_TAKIS_HEARTCRATE)
+			card.scale = th.scale*7/5
+			card.destscale = th.scale
+			card.angle = th.angle
+			card.spawnpos = th.spawnpos
+			P_RemoveMobj(th)
+		end
 	elseif (th.camefromsolid)
 		th.flags2 = $|MF2_DONTDRAW
 		--tic respawn timer

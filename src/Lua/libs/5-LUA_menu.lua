@@ -96,12 +96,15 @@ tm.entries = {
 		color = SKINCOLOR_GREY,
 		text = {
 			"Save Config",
+			"Create Backup",
 			"Load Config",
 			"Delete Achievements",
 			"$$$$$",
+			"$$$$$$",
 		},
 		commands = {
 			"saveconfig",
+			"saveconfig true",
 			"loadconfig",
 			"deleteachievements",
 		}

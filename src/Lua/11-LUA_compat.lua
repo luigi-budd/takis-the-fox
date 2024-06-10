@@ -120,6 +120,12 @@ addHook("ThinkFrame",do
 			
 		end)
 		
+		PTSR_AddHook("pfthink",function(pizza)
+			if not (pizza and pizza.valid) then return end
+			
+			pizza.takis_flingme = false
+		end)
+		
 		PTSR_AddHook("onlap",function(lapper)
 			if not (lapper and lapper.valid) then return end
 			if lapper.skin ~= TAKIS_SKIN then return end
