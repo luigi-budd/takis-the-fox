@@ -209,6 +209,8 @@ addHook("MobjDeath",function(crate,inf,sor)
 	sound.fuse = TR
 	DoQuake(p,15*FU,14)
 	
+	delete3d(crate)
+	
 	if sor.skin == TAKIS_SKIN
 		--TakisGiveCombo(p,takis,true)
 		if takis.heartcards ~= TAKIS_MAX_HEARTCARDS
@@ -375,6 +377,7 @@ local regcratedeath = function(crate,inf,sor)
 	sound.flags2 = $|MF2_DONTDRAW
 	sound.fuse = TR
 	DoQuake(p,15*FU,14)
+	delete3d(crate)
 	
 	if sor.skin == TAKIS_SKIN
 		--TakisGiveCombo(p,takis,true)
@@ -530,5 +533,12 @@ addHook("MobjThinker",function(door)
 	end
 end,MT_TAKIS_BIGCRATE)
 
+local function removed(crate)
+	delete3d(crate)
+end
+
+addHook("MobjRemoved",removed,MT_TAKIS_HEARTCRATE)
+addHook("MobjRemoved",removed,MT_TAKIS_CRATE)
+addHook("MobjRemoved",removed,MT_TAKIS_BIGCRATE)
 
 filesdone = $+1

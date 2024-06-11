@@ -518,7 +518,7 @@ local function driftstuff(p,car)
 			*/
 			
 			if GetCarSpeed(car) < FU
-			or GetCarSpeed(car,CS_ACCEL) <= -2*FU
+			or GetCarSpeed(car,CS_ACCELNOABS) <= -2*FU
 				car.driftbrake = TR
 			elseif GetCarSpeed(car) < 10*FU
 				car.driftspark = $*9/10

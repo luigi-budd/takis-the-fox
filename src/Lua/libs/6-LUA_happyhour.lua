@@ -43,6 +43,13 @@ rawset(_G,"GetHappyHourMusic",function()
 	local song = mapheaderinfo[gamemap].takis_hh_music or "hapyhr"
 	local songend = mapheaderinfo[gamemap].takis_hh_endmusic or "hpyhre"
 	
+	if TAKIS_MISC.forcenohhmusic[string.lower(G_BuildMapTitle(gamemap) or '')] == true
+		nomus = true
+	end
+	if TAKIS_MISC.forcenohhendmusic[string.lower(G_BuildMapTitle(gamemap) or '')] == true
+		noendmus = true
+	end
+	
 	song,songend = string.lower($1),string.lower($2)
 		
 	return nomus,noendmus,song,songend

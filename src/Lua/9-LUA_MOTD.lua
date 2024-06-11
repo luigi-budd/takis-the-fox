@@ -15,9 +15,9 @@ hud.add(function(v, p)
 	
 	if p.discord == true
 		local off = 0
-		if (gametype == GT_SRBZ)
+		if (gametype == GT_ZE2)
 			off = 10
-			off = $+#SRBZ:GetActiveTimers()*20
+			off = $+#ZE2:GetActiveTimers()*20
 		end
 		v.drawString(160, 0+off, TAKIS_INVITELINK2,V_SNAPTOTOP|V_ALLOWLOWERCASE|V_30TRANS, "thin-center")
 		v.drawString(160, 8+off, TAKIS_INVITELINK,V_SNAPTOTOP|V_ALLOWLOWERCASE|V_30TRANS, "thin-center")

@@ -8,6 +8,7 @@ local compat = {
 	peptext = false,
 	speckismash = false,
 	ptsrhook = false,
+	ze2config = false,
 }
 
 local function printf(...)
@@ -141,6 +142,23 @@ addHook("ThinkFrame",do
 		
 		compat.ptsrhook = true
 		printf("Added PTSR stuff.")
+	end
+	if (ZE2	
+	and ZE2.AddConfig)
+	and not compat.ze2config
+		ZE2.AddConfig("takisthefox", {
+			normalspeed = 13 * FRACUNIT,
+			health = 65,
+			charability = CA_DOUBLEJUMP,
+			charability2 = CA2_NONE,
+			jumpfactor = 17 * FRACUNIT / 19,
+			actionspd = 30*FRACUNIT,
+			sprintboost = 11 * FRACUNIT,
+			desc1 = "Ready to blast zombies.",
+			desc2 = "As fast as Tails. Double jump included."
+		})
+		compat.ze2config = true
+		printf("Added ZE2 config.")
 	end
 end)
 

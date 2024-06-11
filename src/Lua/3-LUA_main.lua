@@ -163,7 +163,7 @@
 	-BOSS TITLE SHIT!!!
 	-[done]stun anim
 	-[done]specki BLOX anims
-	-crate gibs
+	-[done]crate gibs
 	
 	--PLANNED MAPHEADERS
 	--document this in some sorta manual on the mb page?
@@ -4247,7 +4247,8 @@ addHook("AbilitySpecial", function(p)
 	takis.thokked = true
 	takis.hammerblastjumped = 0
 	
-	L_ZLaunch(p.mo,15*FU)
+	local jfactor = FixedDiv(p.jumpfactor,skins[TAKIS_SKIN].jumpfactor)
+	L_ZLaunch(p.mo,FixedMul(15*FU,jfactor))
 	
 	me.state = S_PLAY_ROLL
 	if ((takis.transfo & TRANSFO_FIREASS) and (takis.firethokked))

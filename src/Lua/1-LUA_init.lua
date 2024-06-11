@@ -354,6 +354,12 @@ rawset(_G,"TAKIS_MISC",{
 		--the past
 		["srb2 museum zone"] = true,
 	},
+	forcenohhmusic = {
+		["egg satellite zone"] = true,
+	},
+	forcenohhendmusic = {
+		["egg satellite zone"] = true,
+	},
 })
 
 rawset(_G,"TAKIS_BOSSCARDS",{

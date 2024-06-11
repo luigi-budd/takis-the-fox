@@ -107,7 +107,7 @@ rawset(_G, "TakisBooleans", function(p,me,takis,SKIN)
 	takis.notCarried = ((p.powers[pw_carry] == CR_NONE) and not (takis.inwaterslide))
 	takis.isElevated = IsPlayerAdmin(p) or (p == server)
 	takis.inNIGHTSMode = (p.powers[pw_carry] == CR_NIGHTSMODE) or (maptol & TOL_NIGHTS)
-	takis.inSRBZ = gametype == GT_SRBZ
+	takis.inSRBZ = gametype == GT_ZE2
 	takis.inChaos = (CBW_Chaos_Library and CBW_Chaos_Library.Gametypes[gametype])
 	takis.isSuper = p.powers[pw_super] > 0
 	takis.isAngry = (me.health or p.playerstate == PST_LIVE) and (takis.combo.count >= 10)
@@ -3503,7 +3503,7 @@ rawset(_G, "SpawnRagThing",function(tm,t,source)
 			P_DamageMobj(tm,t,t,1)
 			return
 		end
-		if (gametype == GT_SRBZ)
+		if (gametype == GT_ZE2)
 			P_DamageMobj(tm,t,t,P_RandomRange(10,15))
 			return
 		end

@@ -38,11 +38,8 @@ local function drawheartcards(v,p)
 	
 	local amiinsrbz = false
 	
-	if (gametype == GT_SRBZ)
-		if (not p.chosecharacter)
-		or p.shop_open
-			amiinsrbz = true
-		end
+	if (gametype == GT_ZE2)
+		amiinsrbz = true
 	end
 	
 	if p.takistable.inNIGHTSMode
@@ -182,11 +179,8 @@ local function drawbosscards(v,p)
 	
 	local amiinsrbz = false
 	
-	if (gametype == GT_SRBZ)
-		if (not p.chosecharacter)
-		or p.shop_open
-			amiinsrbz = true
-		end
+	if (gametype == GT_ZE2)
+		amiinsrbz = true
 	end
 	
 	if p.takistable.inNIGHTSMode
@@ -445,11 +439,8 @@ local function drawface(v,p)
 	
 	local amiinsrbz = false
 	
-	if (gametype == GT_SRBZ)
-		if (not p.chosecharacter)
-		or p.shop_open
-			amiinsrbz = true
-		end
+	if (gametype == GT_ZE2)
+		amiinsrbz = true
 	end
 	
 	if p.takistable.inNIGHTSMode
