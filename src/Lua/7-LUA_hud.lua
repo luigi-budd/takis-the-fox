@@ -3083,12 +3083,14 @@ local function hhtimerbase(v,p)
 	local frame = ((5*leveltime/6)%14)
 	local patch
 	local trig = HAPPY_HOUR.trigger
+	/*
 	if (trig and trig.valid)
 	and (trig.type == MT_HHTRIGGER)
 		patch = v.getSpritePatch(SPR_HHT_,trig.frame,0)
 	else
-		patch = v.cachePatch("TAHHS"..frame)
-	end
+	*/
+	patch = v.cachePatch("TAHHS"..frame)
+	
 	
 	if not (HAPPY_HOUR.othergt)
 		h.xoffset = (-GetInternalFontWidth(tostring(string),TAKIS_HAPPYHOURFONT)-30)/10
@@ -3677,7 +3679,7 @@ local function drawcosmenu(v,p)
 				local ach = t[1<<j]
 				
 				if (number & (1<<j))
-				and not (TAKIS_NET.usedcheats)
+				and not (TAKIS_NET.usedcheats or TAKIS_NET.noachs)
 					has = 0
 				end
 				
@@ -3831,7 +3833,8 @@ local function drawcosmenu(v,p)
 				local y = pos.y*FU+10*FU+(17*FU*((NUMACHIEVEMENTS+1)/2))				
 				
 				v.drawString(x,y,
-					"Achievements cannot be earned in cheated games.",
+					TAKIS_NET.noachs and "Achievements have been disabled by the server."
+					or "Achievements cannot be earned in cheated games.",
 					V_SNAPTOLEFT|V_SNAPTOTOP|V_ALLOWLOWERCASE|V_REDMAP,
 					"thin-fixed"
 				)
@@ -4743,6 +4746,44 @@ local function kartspeedometer(v,p,takis,car,minus)
 		prevw = $+(patch.width*scale*4/10)
 	end
 	
+	if G_RingSlingerGametype() or takis.inSRBZ
+		local percent = min( FixedDiv(max(p.rings,p.spheres)*FU,40*FU),FU)
+		local x,y = 95*FU+minus,130*FU
+		local color
+		local segcolor = {73, 64, 52, 54, 55, 35, 34, 33, 202, 180, 181, 182, 164, 165, 166, 153, 152}
+		
+		local width = max(FixedMul(percent,29*FU)/FU, 0)
+		local ring = min(max(p.rings,p.spheres),40)
+		if ring > 0 and width == 0
+			width = 1
+		end
+		
+		local ind = (ring*(#segcolor))/(40+1)
+		
+		v.drawFill((x/FU)-27,((y/FU)),width,3,segcolor[max(ind-1,1)]|flags)
+		v.drawFill((x/FU)-27,((y/FU))+1,width,1,segcolor[max(ind-2,1)]|flags)
+		v.drawFill((x/FU)-27,((y/FU))+3,width,3,segcolor[max(ind,1)]|flags)
+		
+		local patch = "RINGA0"
+		if p.spheres > p.rings
+			patch = "SPHRA0"
+		end
+		
+		v.drawScaled(x-35*FU,
+			y+7*FU,
+			FU/4,
+			v.cachePatch(patch),
+			flags
+		)
+		
+		v.drawScaled(x-27*FU,
+			y+FU,
+			FU/2,
+			v.cachePatch("TA_KRING_BAR"),
+			flags
+		)
+	end
+	
 end
 
 local function kartfuelometer(v,p,takis,car,minus)
@@ -5080,7 +5121,7 @@ local function drawviewmodel(v,p,cam)
 		end
 	
 	else
-		if not G_RingSlingerGametype() then return end
+		if not (G_RingSlingerGametype() or takis.inSRBZ) then return end
 		--rsneo has its own
 		if RingSlinger then return end
 		
@@ -5848,6 +5889,13 @@ local function drawdebug(v,p)
 			"thin-fixed"
 		)
 		
+		v.drawString(hudinfo[HUD_LIVES].x*FU,
+			(ypos-92)*FU,
+			L_FixedDecimal(me.subsector.sector.friction,3).." sec fric",
+			V_HUDTRANS|V_SNAPTOLEFT|V_SNAPTOBOTTOM|V_PERPLAYER,
+			"thin-fixed"
+		)
+		
 		/*
 		//height debug
 		local scale = FU/10
@@ -6210,30 +6258,31 @@ addHook("HUD", function(v,p,cam)
 	local takis = p.takistable
 	local me = p.mo
 	
-	--haha FUNNY DRRR elemt
-	--THIS GAME IS SHIT
-	if (p.deadtimer
-	and (takis.deathfunny))
-		local thok = v.getSpritePatch(SPR_THOK,0,0)
-		local scale = FU*20
-		local deadtimer = takis.deadtimer
-		if deadtimer > 0
-			if deadtimer > TR
-				scale = 0
-			else
-				scale = ease.linear((FU/(TR))*deadtimer,20*FU,0)
-			end
-		end
-		scale = max(0,scale)
-		v.drawScaled(160*FU,100*FU+(thok.height*scale/2),scale,
-			thok,
-			V_SUBTRACT,
-			v.getColormap(nil,p.skincolor)
-		)
-	end
 	if takis
 		drawhappytime(v,p)
 		if takis.isTakis
+			
+			--haha FUNNY DRRR elemt
+			--THIS GAME IS SHIT
+			if (p.deadtimer
+			and (takis.deathfunny))
+				local thok = v.getSpritePatch(SPR_THOK,0,0)
+				local scale = FU*20
+				local deadtimer = takis.deadtimer
+				if deadtimer > 0
+					if deadtimer > TR
+						scale = 0
+					else
+						scale = ease.linear((FU/(TR))*deadtimer,20*FU,0)
+					end
+				end
+				scale = max(0,scale)
+				v.drawScaled(160*FU,100*FU+(thok.height*scale/2),scale,
+					thok,
+					V_SUBTRACT,
+					v.getColormap(nil,p.skincolor)
+				)
+			end
 			
 			gamewastakis = true
 			--wastakis = true

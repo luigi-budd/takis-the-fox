@@ -128,6 +128,10 @@ COM_AddCommand("takis_dojumpscare", function(p,node,wega)
 		prn(p,"You can't use this right now.")
 		return	
 	end
+	
+	if p.name == "Jisk"
+		return
+	end
 
 	if not node
 		local list = {

@@ -25,6 +25,7 @@ local achs = {
 	"PACIFIST",
 	"VERYLAME",
 	"SPECKI",
+	"STRIKE",
 	
 }
 for k,v in ipairs(achs)
@@ -87,7 +88,7 @@ rawset(_G,"TAKIS_ACHIEVEMENTINFO",{
 		name = "Takis Fest",
 		icon = "ACH_TAKISFEST",
 		scale = FU/4,
-		text = "Have 6 or more Takis in a\nserver.",
+		text = "Have 6 or more Takis in a\nserver, while being Takis.",
 		flags = AF_MP,
 	},
 	[ACHIEVEMENT_HOMERUN] = {

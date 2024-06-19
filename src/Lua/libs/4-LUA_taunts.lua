@@ -1,5 +1,8 @@
 rawset(_G, "TAKIS_TAUNT_DIST",75*FU)
 
+rawset(_G, "TF_TAUNTKILL",1<<0)
+rawset(_G, "TF_MOBILE",1<<1)
+
 local function L_ZCollide(mo1,mo2)
 	if mo1.z > mo2.height+mo2.z then return false end
 	if mo2.z > mo1.height+mo1.z then return false end
@@ -44,8 +47,6 @@ local function init_bat(p)
 	local menu = takis.tauntmenu
 	
 	if not (TAKIS_NET.tauntkillsenabled)
-		CONS_Printf(p,"You cannot use this taunt as the server has tauntkills disabled.")
-		S_StartSound(nil,sfx_adderr,p)
 		return false
 	end
 	
@@ -57,6 +58,11 @@ local function init_bird(p)
 	local me = p.mo
 	local takis = p.takistable
 	local menu = takis.tauntmenu
+	
+	takis.tauntextra = {
+		loops = 0,
+		offset = false,
+	}
 	
 	takis.taunttime = 2
 	takis.stasistic = 2
@@ -104,17 +110,6 @@ local function think_smug(p)
 
 end
 
-local congalist = {
-	[0] = {FU*12/10,	FixedDiv(FU,FU*12/10)	},
-	[1] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
-	[2] = {FU*8/10,		FixedDiv(FU,FU*7/10)	},
-	[3] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
-	[4] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
-	[5] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
-	[6] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
-	[7] = {FU*3/2,		FixedDiv(FU,FU*3/2)		},
-}
-
 local function think_conga(p)
 	local me = p.mo
 	local takis = p.takistable
@@ -130,10 +125,17 @@ local function think_conga(p)
 		me.state = S_PLAY_TAKIS_CONGA
 	end
 	
-	local tic = (leveltime/3)%8
-	me.spritexscale = congalist[tic][1]
-	me.spriteyscale = congalist[tic][2]
-	
+	local tic = leveltime%24
+	local tic2 = leveltime%48
+	for i = 0,1
+		takis.spritexscale = $+ease.inoutback((FU/24)*tic,0,FU/3,FU*3) 
+		takis.spriteyscale = $-ease.inoutback((FU/24)*tic,0,FU/3,FU*3) 
+	end
+	takis.tiltdo = true
+	takis.tiltvalue = $+FixedAngle(FixedMul(30*FU,
+		(FU/24)*tic*(tic2 >= 24 and 1 or -1)
+	))
+		
 	--cancel conga
 	if (takis.c1)
 		TakisResetTauntStuff(p)
@@ -247,9 +249,27 @@ local function think_bird(p)
 	takis.taunttime = $+2
 	
 	if me.state == S_PLAY_TAKIS_BIRD
+		local cap = 6
+		local off = takis.tauntextra.offset and 6 or 0
+		local ticker = (takis.taunttime-2)/4 % cap
+		
+		if (((takis.taunttime-2)*4) % (cap*4)) == 20
+			takis.tauntextra.loops = $+1
+			if takis.tauntextra.loops >= P_RandomRange(8,25)
+				takis.tauntextra.loops = 0
+				if not takis.tauntextra.offset
+					takis.tauntextra.offset = true
+					off = $+6
+				else
+					takis.tauntextra.offset = false
+					off = 0
+				end
+			end
+		end
+		
 		--me.state = S_PLAY_TAKIS_BIRD
 		--me.frame = ((takis.taunttime-2) % 6)
-		me.frame = ((takis.taunttime-2)/4 % 6)
+		me.frame = (ticker)+off
 	end
 	
 	--cancel conga
@@ -305,5 +325,49 @@ rawset(_G, "TAKIS_TAUNT_THINK", {
 	[5] = think_bird,
 	[6] = think_yeah,
 })
+
+rawset(_G, "TAKIS_TAUNT_FLAGS", {
+	[3] = TF_MOBILE,
+	[4] = TF_TAUNTKILL,
+})
+
+rawset(_G, "TAKIS_TAUNT_REJECT", {
+/*
+	[1] = think_ouch,
+	[2] = think_smug,
+	[3] = think_conga,
+	[4] = think_bat,
+	[5] = think_bird,
+	[6] = think_yeah,
+*/
+})
+
+rawset(_G, "TakisIsTauntUsable",function(p,tauntid)
+	--if TAKIS_TAUNT_REJECT[tauntid] == nil then return true end
+	
+	local takis = p.takistable
+	local usable = true
+	
+	if (TAKIS_TAUNT_FLAGS[tauntid] or 0) & TF_MOBILE
+	and (p.powers[pw_nocontrol] or (p.pflags & PF_STASIS) or takis.nocontrol)
+		usable = false
+	end
+	
+	if (TAKIS_TAUNT_FLAGS[tauntid] or 0) & TF_TAUNTKILL
+	and (not TAKIS_NET.tauntkillsenabled or gametype == GT_ZE2)
+		CONS_Printf(p,"\x85You cannot use this taunt as the server has tauntkills disabled.")
+		usable = false
+	end
+	
+	if TAKIS_TAUNT_REJECT[tauntid] ~= nil
+		usable = TAKIS_TAUNT_REJECT[tauntid](p)
+	end
+	
+	if not usable
+		S_StartSound(nil,sfx_adderr,p)
+		takis.tauntreject = true
+	end
+	return usable
+end)
 
 filesdone = $+1

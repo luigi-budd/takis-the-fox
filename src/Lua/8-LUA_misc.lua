@@ -889,6 +889,18 @@ addHook("MobjThinker",function(mo)
 		return
 	end
 	
+	mo.timealive = mo.target.player.takistable.tauntjointime
+	
+	if mo.timealive >= TR*3/2
+		mo.frame = ($ &~FF_FRAMEMASK)|B
+	end
+	
+	if not TakisIsScreenPlayer(mo.target.player)
+		mo.flags2 = $|MF2_DONTDRAW
+	else
+		mo.flags2 = $ &~MF2_DONTDRAW
+	end
+	
 	if mo.target.eflags & MFE_VERTICALFLIP
 		mo.eflags = $|MFE_VERTICALFLIP
 		P_MoveOrigin(mo, mo.target.x, mo.target.y, (mo.target.z + mo.target.height - mo.height)-(mo.target.height*2))
@@ -1022,6 +1034,8 @@ addHook("MobjThinker",function(s)
 	or not s.valid
 		return
 	end
+	
+	if not (s.target and s.target.valid) then return end
 	
 	if s.target.skin == TAKIS_SKIN
 		local p = s.target.player
@@ -1909,6 +1923,13 @@ local forcepspritesskins = {
 }
 local function playerragsprites(mo)
 	if not (mo and mo.valid) then return end
+	
+	--2.2.14 already has SPR2_PLAY
+	if (VERSION == 202)
+	and (SUBVERSION >= 14)
+		return
+	end
+	
 	mo.takis_playerragsprites = true
 	if forcepspritesskins[mo.type] ~= nil
 		mo.takis_playerragskin = forcepspritesskins[mo.type][1]
@@ -1940,6 +1961,11 @@ addHook("MobjThinker",function(mo)
 		mo.scalespeed = $*6/5
 	else
 		mo.scalespeed = 0
+	end
+	
+	if not (mo.tracer and mo.tracer.valid)
+		P_RemoveMobj(mo)
+		return
 	end
 	
 	mo.takis_vfx = true
@@ -2197,7 +2223,7 @@ addHook("MobjThinker",function(th)
 		th.timealive = $+1
 	end
 	th.angle = TakisMomAngle(th)
-	th.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0,0,th.momx,th.momy), th.momz)
+	th.rollangle = R_PointToAngle2(0, 0, R_PointToDist2(0,0,th.momx,th.momy), th.momz*P_MobjFlip(th))
 	--th.momz = $+(P_GetMobjGravity(th)*2*P_MobjFlip(th))
 	th.spritexscale,th.spriteyscale = FU*3/2,FU*3/2
 	
@@ -2249,6 +2275,7 @@ end,MT_TAKIS_SPARK)
 addHook("MobjThinker",function(spb)
 	if not (spb and spb.valid) then return end
 	
+	spb.succ = true
 	spb.skin = TAKIS_SKIN
 	spb.sprite2 = SPR2_KART
 	spb.frame = ($ &~FF_FRAMEMASK)|(leveltime % 2)

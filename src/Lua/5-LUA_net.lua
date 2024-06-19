@@ -376,6 +376,7 @@ addHook("ThinkFrame", do
 			or p.playerstate ~= PST_LIVE
 			or p.spectator
 			or p.inkart
+			or p.powers[pw_flashing]
 				continue
 			end
 			local k = P_SpawnMobjFromMobj(p.mo,0,0,0,MT_TAKIS_KART)

@@ -55,8 +55,55 @@ rawset(_G,"GetHappyHourMusic",function()
 	return nomus,noendmus,song,songend
 end)
 
+local oppositefaces = {
+	--awake to asleep
+	["TAKISBK1"] = "TAKISBK2",
+	["TKISBKB1"] = "TKISBKB2",
+	--asleep to awake
+	["TAKISBK2"] = "TAKISBK1",
+	["TKISBKB2"] = "TKISBKB1",
+}
+
+local function fofsolids()
+	if mapheaderinfo[gamemap].takis_hh_nofofflip ~= nil
+		return
+	end
+	
+	for sec in sectors.iterate
+		for rover in sec.ffloors()
+			if not rover.valid then continue end
+			local side = rover.master.frontside
+			
+			if not (side.midtexture == R_TextureNumForName("TAKISBK2")
+			or side.midtexture == R_TextureNumForName("TAKISBK1")
+			or side.midtexture == R_TextureNumForName("TKISBKB1")
+			or side.midtexture == R_TextureNumForName("TKISBKB2"))
+				continue
+			end
+			
+			--awake to asleep
+			if rover.flags & FOF_SOLID
+				rover.flags = $|FOF_TRANSLUCENT|FOF_NOSHADE &~FOF_SOLID
+				rover.alpha = 128
+			--asleep to awake
+			else
+				rover.flags = $|FOF_SOLID &~(FOF_TRANSLUCENT|FOF_NOSHADE)
+				rover.alpha = 255
+			end
+			side.midtexture = R_TextureNumForName(
+				oppositefaces[
+					string.sub(R_TextureNameForNum(side.midtexture),1,8)
+				]
+			)
+		end
+	end
+	
+end
+
 rawset(_G,"HH_Trigger",function(actor,player,timelimit)
 	if not hh.happyhour
+		
+		fofsolids()
 		
 		--get map's default timelimit
 		if timelimit == nil
@@ -420,8 +467,8 @@ mobjinfo[MT_HHTRIGGER] = {
 addHook("MobjSpawn",function(mo)
 --	mo.height,mo.radius = $1*2,$2*2
 	mo.shadowscale = mo.scale*9/10
-	mo.spritexoffset = 19*FU
-	mo.spriteyoffset = 26*FU
+	--mo.spritexoffset = 19*FU
+	--mo.spriteyoffset = 26*FU
 	mo.takis_flingme = false
 end,MT_HHTRIGGER)
 
@@ -869,8 +916,8 @@ addHook("MapLoad", function(mapid)
 						end
 						P_SetOrigin(trig,trig.x,trig.y,z)
 						trig.shadowscale = trig.scale*9/10
-						trig.spritexoffset = 19*FU
-						trig.spriteyoffset = 26*FU
+						--trig.spritexoffset = 19*FU
+						--trig.spriteyoffset = 26*FU
 						trig.takis_flingme = false
 						trig.spritexscale = 2*FU
 						trig.spriteyscale = 2*FU
@@ -890,8 +937,8 @@ addHook("MapLoad", function(mapid)
 				MT_HHTRIGGER
 			)
 			trig.shadowscale = trig.scale*9/10
-			trig.spritexoffset = 19*FU
-			trig.spriteyoffset = 26*FU
+			--trig.spritexoffset = 19*FU
+			--trig.spriteyoffset = 26*FU
 			trig.takis_flingme = false
 			trig.spritexscale = 2*FU
 			trig.spriteyscale = 2*FU

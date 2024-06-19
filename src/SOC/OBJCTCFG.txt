@@ -1,4 +1,14 @@
 Character
+SkinName = takisthefox&takisthefox
+PicName = TAKISBK1
+DisplayName = takis & takis
+TagTextColor = SKINCOLOR_FOREST
+TagOutlineColor = SKINCOLOR_RED
+OppositeColor = SKINCOLOR_SALMON
+PlayerText = What the shit
+#
+
+Character
 SkinName = takisthefox
 NameTag = TA_CHARTAG
 TagTextColor = SKINCOLOR_FOREST

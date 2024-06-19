@@ -160,7 +160,7 @@ local shields = {
 	["ff"] = SH_FIREFLOWER,
 }
 
-COM_AddCommand("shield", function(p,sh)
+COM_AddCommand("shield", function(p,sh,hp)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
 		return
@@ -171,14 +171,21 @@ COM_AddCommand("shield", function(p,sh)
 	end
 	
 	sh = string.lower($)
+	hp = abs(tonumber($) or 0)
+	hp = min($,254)
 	
-	if shields[sh]
-		p.powers[pw_shield] = shields[sh]
-		if shields[sh] ~= 0
+	if shields[sh] ~= nil
+		local shield = shields[sh]
+		if shields[sh] ~= SH_NONE
 			P_SpawnShieldOrb(p)
+			if shield & SH_FORCE
+				shield = SH_FORCE|hp
+			end
 		else
 			P_RemoveShield(p)
+			shield = SH_NONE
 		end
+		P_SwitchShield(p,shield)
 		if sh == "ff"
 			p.realmo.color = SKINCOLOR_WHITE
 		end
@@ -528,7 +535,7 @@ COM_AddCommand("sharecombo", function(p, num)
 	
 end,COM_ADMIN)
 
-COM_AddCommand("forcecheat", function(p, num)
+COM_AddCommand("forcecheat", function(p)
 	if gamestate ~= GS_LEVEL
 		prn(p,"You can't use this right now.")
 		return
@@ -731,6 +738,103 @@ COM_AddCommand("dobonus", function(p,bonust)
 		
 	elseif bonust == "heartcard"
 		table.insert(bonus.cards,{tics = TR+18,score = 100,text = "\x8EHeart Card\x80"})
+	end
+end,COM_ADMIN)
+
+COM_AddCommand("spawnmobj", function(p,type,aiming,offset)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	local me = p.realmo
+	if not (me and me.valid)
+		prn(p,"You can't use this right now.")
+		return
+	end
+
+	if type == nil
+		prn(p,"spawnmobj <type> <aiming> <offset>")
+		return
+	end
+	
+	local mobjtype = nil
+	if offset == nil then offset = "50" end
+	local soffset = L_DecimalFixed(offset)
+	if soffset == 0 then soffset = 50*FU end
+	soffset = FixedMul($,me.scale)
+	
+	if tonumber(type) ~= nil
+		mobjtype = abs(tonumber(type))
+	else
+		if tostring(type) ~= nil
+			local tstring = string.upper(tostring(type))
+			if (string.sub(tstring,1,3) ~= "MT_")
+				tstring = "MT_"..$
+			end
+			if (pcall(do return _G[tstring] end))
+				mobjtype = _G[tstring]
+			end
+		end
+	end
+	
+	if mobjtype == nil
+	or (mobjtype < 0)
+	or (mobjtype > #mobjinfo)
+	or (mobjinfo[mobjtype] == nil)
+		mobjtype = nil
+	end
+	
+	if mobjtype == nil
+		prn(p,"Type does not exist")
+		return
+	end
+	
+	soffset = $+FixedMul(mobjinfo[mobjtype].radius,me.scale)
+	local off2 = {x = 0, y = 0, z = 0}
+	if aiming ~= nil
+		--off2.x = FixedMul(soffset,cos(p.aiming))
+		--off2.y = FixedMul(soffset,sin(p.aiming))
+		off2.z = FixedMul(soffset,sin(p.aiming))
+	end
+	
+	local spawn = P_SpawnMobjFromMobj(me,
+		P_ReturnThrustX(nil,me.angle,soffset)+off2.x,
+		P_ReturnThrustY(nil,me.angle,soffset)+off2.y,
+		off2.z,
+		mobjtype
+	)
+	spawn.angle = me.angle
+	spawn.scale = me.scale
+	
+end,COM_ADMIN)
+
+COM_AddCommand("goto", function(p,node)
+	if gamestate ~= GS_LEVEL
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	if node == nil
+		return
+	end
+	
+	local me = p.realmo
+	if not (me and me.valid)
+		prn(p,"You can't use this right now.")
+		return
+	end
+	
+	local p2 = GetPlayer(p,node)
+	if p2
+		local mo = p2.realmo
+		if not (mo and mo.valid)
+			prn(p,"You can't use this right now.")
+			return
+		end
+		
+		me.momz = 0
+		P_SetOrigin(me,mo.x,mo.y,mo.z)
 	end
 end,COM_ADMIN)
 

@@ -14,7 +14,7 @@
 	-katsy - bounce sector detection
 	-Banddy - metal sonic boss portrait, tested hh things mapheader positions
 	-Marilyn - final demo cutscene i used lol, kart bump code
-	-nicholas rickys (saxashitter) - helped me with some code in sharecombos
+	-saxashitter - helped me with some code in sharecombos
 	
 	CODE I STOLE (from reusable mods)
 	-SMSReborn - IO code
@@ -28,6 +28,7 @@
 	-ffoxD's Momentum mod - momentum used in takis
 	-Checker Wrecker - offroad collision for kart
 	-Team New - shield ability code
+	-Squash and Stretch in 2.2.9 - jumping squash and stretch
 	
 	SOME MORE STUFF I STOLE
 	-Antonblast - sound effects, music, sprites
@@ -535,7 +536,6 @@ rawset(_G, "TakisInitTable", function(p)
 		setmusic = false,
 		crushtime = 0,
 		timescrushed = 0,
-		goingfast = false,
 		wentfast = 0,
 		sweat = 0,
 		body = 0,
@@ -629,6 +629,7 @@ rawset(_G, "TakisInitTable", function(p)
 		lastweapon = 0,
 		currentweapon = 0,
 		weapondelaytics = 0,
+		slopeairtime = false,
 		
 		prevstate = S_PLAY_STND,
 		prevfreeze = false,
@@ -655,6 +656,7 @@ rawset(_G, "TakisInitTable", function(p)
 		tauntspecial = false,
 		--join mobj
 		tauntjoin = 0,
+		tauntjointime = 0,
 		tauntjoinable = false,
 		--quick taunts activated by
 		--tossflag+c2/c3
@@ -666,6 +668,8 @@ rawset(_G, "TakisInitTable", function(p)
 		tauntpartner = 0,
 		--dont put the other player in tauntpartner if this is false
 		tauntacceptspartners = false,
+		tauntreject = false,
+		tauntextra = {},
 		
 		hammerblastdown = 0,
 		hammerblastwentdown = false,
@@ -1377,6 +1381,7 @@ for i = 0,12
 	SafeFreeslot("sfx_krte"..text)
 	sfxinfo[sfx_krte00+i].caption = "/"
 end
+/*
 for i = 1,16
 	local text = i
 	if i < 10
@@ -1385,6 +1390,7 @@ for i = 1,16
 	SafeFreeslot("sfx_pass"..text)
 	sfxinfo[sfx_pass01+(i-1)].caption = "/"
 end
+*/
 SafeFreeslot("sfx_takskd")
 sfxinfo[sfx_takskd].caption = "Skid"
 for i = 1,3
@@ -1393,6 +1399,8 @@ for i = 1,3
 end
 SafeFreeslot("sfx_takcbk")
 sfxinfo[sfx_takcbk].caption = "Break"
+SafeFreeslot("sfx_takpop")
+sfxinfo[sfx_takpop].caption = "Balloon pop"
 
 --spr_ freeslot
 
@@ -1626,7 +1634,7 @@ states[S_TAKIS_TAUNT_JOIN] = {
 	frame = A|FF_FULLBRIGHT,
 	tics = 6,
 	nextstate = S_NULL
-}
+} 
 
 SafeFreeslot("S_TAKIS_TROPHY")
 SafeFreeslot("S_TAKIS_TROPHY2")
@@ -1740,6 +1748,7 @@ states[S_TAKIS_HEARTCRATE_BREAK] = {
     sprite = SPR_HTCD,
     frame = C,
 	action = function(mo)
+		mo.flags2 = $|MF2_DONTDRAW
 		SpawnEnemyGibs(mo,mo,nil,true)
 		SpawnEnemyGibs(mo,mo,nil,true)
 		--SpawnBam(mo,true)
@@ -1759,7 +1768,7 @@ states[S_TAKIS_HEARTCRATE_BREAK] = {
 			P_SetOrigin(new,mo.spawnpos[1],mo.spawnpos[2],mo.spawnpos[3])
 		end
 	end,
-	tics = 1,
+	tics = 0,
 }
 SafeFreeslot("MT_TAKIS_HEARTCRATE")
 mobjinfo[MT_TAKIS_HEARTCRATE] = {
@@ -1787,6 +1796,7 @@ states[S_TAKIS_CRATE_BREAK] = {
     sprite = SPR_HTCD,
     frame = C,
 	action = function(mo)
+		mo.flags2 = $|MF2_DONTDRAW
 		SpawnEnemyGibs(mo,mo,nil,true)
 		if mo.type ~= MT_TAKIS_CRATE
 			SpawnEnemyGibs(mo,mo,nil,true)
@@ -1808,7 +1818,7 @@ states[S_TAKIS_CRATE_BREAK] = {
 		S_StartSound(sfx,mo.info.deathsound)
 		
 	end,
-	tics = 1,
+	tics = 0,
 }
 SafeFreeslot("MT_TAKIS_CRATE")
 mobjinfo[MT_TAKIS_CRATE] = {
@@ -2289,7 +2299,7 @@ SafeFreeslot("MT_TAKIS_GUNSHOT")
 SafeFreeslot("S_TAKIS_GUNSHOT")
 states[S_TAKIS_GUNSHOT] = {
 	sprite = SPR_SHGN,
-	frame = D,
+	frame = D|FF_FULLBRIGHT,
 	action = A_ThrownRing,
 	tics = 1,
 	nextstate = S_TAKIS_GUNSHOT

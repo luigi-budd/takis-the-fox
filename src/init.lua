@@ -108,7 +108,7 @@ local filelist = {
 	"io",
 	"main",
 	"cmds",
-	"DNU-net",
+	"DNU-net",	--DO NOT remove DNU-, this is executed before
 	"devcmds",
 	"hud",
 	"misc",

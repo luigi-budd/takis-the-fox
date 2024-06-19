@@ -418,7 +418,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 	end
 	
 	if ((takis.transfo & TRANSFO_SHOTGUN)
-	or (G_RingSlingerGametype()))
+	or (G_RingSlingerGametype() or takis.inSRBZ))
 	and not p.spectator
 		local mm = gametype == GT_MURDERMYSTERY
 		local role = p.role or 0
@@ -431,7 +431,7 @@ rawset(_G, "TakisHUDStuff", function(p)
 			end
 		end
 		
-		if G_RingSlingerGametype()
+		if (G_RingSlingerGametype() or takis.inSRBZ)
 		and not (takis.transfo & TRANSFO_SHOTGUN)
 			if (takis.lastweapon ~= takis.currentweapon
 			and not takis.weapondelaytic)
@@ -463,11 +463,11 @@ rawset(_G, "TakisHUDStuff", function(p)
 			target = $+(wdt*45*FU)
 			target = min($,140*FU)
 		end
-		if G_RingSlingerGametype()
+		if (G_RingSlingerGametype() or takis.inSRBZ)
 		and not (takis.transfo & TRANSFO_SHOTGUN)
 			if p.climbing 
 			or (G_TagGametype() and not (p.pflags & PF_TAGIT))
-			or takis.currentweapon == -1
+			--or takis.currentweapon == -1
 			or (mm and role == ROLE_INNOCENT)
 				target = max($,130*FU)
 				takis.currentweapon = -1
@@ -608,6 +608,10 @@ rawset(_G, "TakisHUDStuff", function(p)
 	
 	if (gametyperules & GTR_RACE)
 	and circuitmap
+		if p.realtime == 0
+			takis.laptime = 0
+		end
+		
 		local maxlaps = CV_FindVar("numlaps").value
 		hud.lapanim.maxlaps = maxlaps
 		if p.laps > takis.lastlaps
@@ -1173,6 +1177,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 				end
 			end
 		else
+			p.pflags = $|PF_SPINNING
 			takis.afterimaging = false
 			takis.clutchingtime = 0
 			takis.noability = $|NOABIL_SLIDE
@@ -1244,7 +1249,7 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			
 			local thok = P_SpawnMobjFromMobj(me,0,0,0,MT_THOK)
 			thok.radius = me.radius
-			thok.height = FixedDiv(me.height,FixedDiv(me.spriteyscale,FU))
+			thok.height = P_GetPlayerHeight(p)
 			thok.fuse = 1
 			thok.flags2 = $|MF2_DONTDRAW
 			thok.parent = me
@@ -1312,7 +1317,10 @@ rawset(_G, "TakisTransfoHandle", function(p,me,takis)
 			p.jumpfactor = skins[TAKIS_SKIN].jumpfactor
 		end
 	else
-		takis.pancaketime = 0
+		if takis.pancaketime
+			takis.pancaketime = 0
+			p.pflags = $ &~PF_INVIS
+		end
 	end
 	--LOST BITS!!
 	if (takis.transfo & TRANSFO_TORNADO)
@@ -1762,7 +1770,7 @@ end
 --hook system?
 rawset(_G, "TakisDoNoabil", function(p,me,takis)
 	if takis.inSRBZ
-		takis.noability = NOABIL_ALL|NOABIL_AFTERIMAGE
+		takis.noability = (NOABIL_ALL|NOABIL_AFTERIMAGE) &~NOABIL_SHOTGUN
 	end
 	if (takis.wavedashcapable)
 		takis.noability = $|NOABIL_HAMMER
@@ -1815,6 +1823,9 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	local role = p.role or 0
 	local wd = p.weapondelay
 	if mm then wd = p.mmweapondelay end
+	if takis.inSRBZ
+		wd = max(p["ze2_info"].weapondelay,p["ze2_info"].reload)
+	end
 	
 	if not (wd)
 		takis.currentweapon = p.currentweapon
@@ -1826,6 +1837,38 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 				takis.currentweapon = 7
 			end
 		end
+		
+		if takis.inSRBZ
+		and (ZE2)
+			if ZE2:FetchInventorySlot(p)
+				local iteminfo = ZE2:FetchInventorySlot(p)
+				if iteminfo.displayname
+					local wname = string.lower(iteminfo.displayname)
+					--sigma
+					if wname == "automatic ring"
+						takis.currentweapon = 1
+					elseif wname == "bounce ring"
+						takis.currentweapon = 2
+					elseif wname == "explosion ring"
+						takis.currentweapon = 5
+					elseif wname == "rail ring"
+						takis.currentweapon = 6
+					elseif wname == "red ring"
+						takis.currentweapon = 0
+					elseif wname == "scatter ring"
+						takis.currentweapon = 3
+					else
+						takis.currentweapon = -1
+					end
+				end
+				if p["ze2_info"].reload
+				or (iteminfo.ammo ~= nil and iteminfo.ammo == 0)
+					takis.currentweapon = -1
+				end
+				
+			end
+		end
+		
 	end
 	
 	if takis.weapondelaytics
@@ -1833,7 +1876,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 	end
 	if (wd)
 		if not takis.weapondelaytics
-		and (p.pflags & PF_ATTACKDOWN)
+		and (takis.inSRBZ and p.cmd.buttons & BT_ATTACK or (p.pflags & PF_ATTACKDOWN) or p["ze2_info"].reload)
 			takis.weapondelaytics = 1
 		end
 	else
@@ -2121,17 +2164,47 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		if (me.state == S_PLAY_WALK or me.state == S_PLAY_RUN)
 		and (p.playerstate == PST_LIVE)
 		and (takis.notCarried)
-			takis.goingfast = true
 			takis.wentfast = 10*TR
 		end
 	elseif (takis.heartcards <= (TAKIS_MAX_HEARTCARDS/6 or 1))
 	and not (takis.fakeexiting)
 	and (p.playerstate == PST_LIVE)
-		takis.goingfast = true
 		takis.wentfast = 3
-	else
-		takis.goingfast = false
 	end
+	
+	if takis.inSRBZ
+		local pze = p["ze2_info"]
+		
+		if pze.isSprinting
+			takis.wentfast = TR
+			
+			if pze.sprintmeter == 0
+			and leveltime % 20 == 0
+				TakisSpawnDust(me,
+					p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT )),
+					10,
+					P_RandomRange((me.height/me.scale)/2,(me.height/me.scale)*3/2)*me.scale,
+					{
+						xspread = 0,
+						yspread = 0,
+						zspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+						
+						thrust = P_RandomRange(5,10)*me.scale,
+						thrustspread = (P_RandomFixed()*((P_RandomChance(FU/2)) and 1 or -1)),
+						
+						momz = P_RandomRange(10,-5)*me.scale,
+						momzspread = 0,
+						
+						scale = me.scale,
+						scalespread = P_RandomFixed(),
+						
+						fuse = 20,
+					}
+				)
+			end
+		end
+	end
+	
 	
 	--spawn sweat mobj
 	if takis.wentfast ~= 0
@@ -2162,11 +2235,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		TakisGiveCombo(p,takis,false,true)
 	end
 	
-	if P_CheckDeathPitCollide(me)
-	and not me.health
-		me.flags = $|MF_NOCLIPHEIGHT
-	end
-
 	--ffoxd's smoothspintrilas
 	if not takis.prevz
 	or not me.prevleveltime 
@@ -2257,6 +2325,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 		end
 	end
 	
+	local doingclapper = false
 	for p2 in players.iterate
 		if p2 == p
 			continue
@@ -2275,6 +2344,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 					if (not takis.taunttime)
 						if p2.takistable.tauntjoinable
 							--this is stupid,,,, :/
+							doingclapper = true
+							/*
 							local tics = 6
 							if ((takis.tauntjoin) and (takis.tauntjoin.valid))
 							and not (takis.accspeed or me.momz)
@@ -2284,6 +2355,7 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 								takis.tauntjoin = P_SpawnMobjFromMobj(me, 0, 0, me.height*2, MT_TAKIS_TAUNT_JOIN)
 								takis.tauntjoin.target = me
 							end
+							*/
 						end
 					end
 				elseif m2.skin == "inazuma"
@@ -2295,6 +2367,8 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 					
 					if isultimate
 					and not (takis.taunttime or p.textBoxInAction)
+						doingclapper = true
+						/*
 						local tics = 6
 						if ((takis.tauntjoin) and (takis.tauntjoin.valid))
 						and not (takis.accspeed or me.momz)
@@ -2304,9 +2378,35 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 							takis.tauntjoin = P_SpawnMobjFromMobj(me, 0, 0, me.height*2, MT_TAKIS_TAUNT_JOIN)
 							takis.tauntjoin.target = me
 						end
+						*/
 					end
 				end
 			end
+		end
+	end
+	
+	if (takis.accspeed or me.momz)
+	or not me.health
+		doingclapper = false
+	end
+	
+	if doingclapper
+		if not (takis.tauntjoin and takis.tauntjoin.valid)
+			takis.tauntjoin = P_SpawnMobjFromMobj(me, 0, 0, me.height*2, MT_TAKIS_TAUNT_JOIN)
+			takis.tauntjoin.tics = -1
+			takis.tauntjoin.target = me
+		end
+		if takis.tauntjointime < 2*TR
+			takis.tauntjointime = $+1
+		end
+	else
+		if takis.tauntjointime
+			takis.tauntjointime = $-1
+		end
+		
+		if (takis.tauntjoin and takis.tauntjoin.valid)
+			P_RemoveMobj(takis.tauntjoin)
+			takis.tauntjoin = 0
 		end
 	end
 	
@@ -2627,26 +2727,6 @@ rawset(_G, "TakisDoShorts", function(p,me,takis)
 					fuse = 20,
 				}
 			)
-			
-			/*
-			local angle = p.drawangle+(FixedAngle( P_RandomRange(-337,337)*FRACUNIT ))
-			local x,y = ReturnTrigAngles(angle)
-			local steam = P_SpawnMobjFromMobj(me,10*x,10*y,
-				P_RandomRange((me.height/me.scale)/2,(me.height/me.scale)*3/2)*me.scale,
-				MT_TAKIS_STEAM
-			)
-			steam.angle = angle
-			P_Thrust(steam,steam.angle,P_RandomRange(5,10)*me.scale)
-			P_SetObjectMomZ(steam,
-				P_RandomRange(10,-5)*me.scale+P_RandomFixed(),
-				false
-			)
-			steam.timealive = 1
-			steam.tracer = me
-			steam.destscale = 1
-			steam.fuse = 20
-			*/
-			
 		end
 	end
 	
@@ -4026,10 +4106,17 @@ rawset(_G, "TakisDeathThinker",function(p,me,takis)
 		
 		elseif takis.saveddmgt == DMG_SPACEDROWN
 			
-			me.rollangle = $ - ANG1
-			me.momz = me.scale*takis.gravflip
-			
-			TakisSpawnDeadBody(p, me, takis)
+			if takis.deadtimer == 1
+				SpawnBam(me,true)
+				local sfx = P_SpawnGhostMobj(me)
+				sfx.tics = TR
+				sfx.flags2 = $|MF2_DONTDRAW
+				S_StartSound(sfx,sfx_takpop)
+			end
+			S_StopSound(me)
+			me.flags2 = $|MF2_DONTDRAW
+			me.momz = 0
+			me.flags = $|MF_NOGRAVITY
 			IncrementDeadtimer(p,takis)
 			return
 		
@@ -4482,6 +4569,9 @@ rawset(_G,"TakisPowerfulArma",function(p)
 	end
 	
 	if not (TAKIS_NET.nerfarma)
+	--idk something bugs out and its 3am sooo
+	and not G_RingSlingerGametype()
+	
 		--kill!
 		local px = me.x
 		local py = me.y
@@ -4490,10 +4580,13 @@ rawset(_G,"TakisPowerfulArma",function(p)
 		searchBlockmap("objects", function(me, found)
 			if found and found.valid
 			and (found.health)
+			and found ~= me
 				if (CanFlingThing(found,MF_ENEMY|MF_BOSS))
 					P_KillMobj(found,me,me,DMG_NUKE)
 				elseif SPIKE_LIST[found.type] == true
 					P_KillMobj(found,me,me,DMG_NUKE)
+				else
+					return
 				end
 			end
 		end, me, px-br, px+br, py-br, py+br)			
@@ -4567,8 +4660,11 @@ rawset(_G,"TakisResetTauntStuff",function(p,killclapper)
 	if takis.taunttime
 		takis.taunttime = 0
 		P_RestoreMusic(p)
+		p.realmo.state = S_PLAY_STND
+		P_MovePlayer(p)
 		takis.tauntid = 0
 		takis.tauntspecial = 0
+		takis.tauntextra = {}
 	end
 	if (killclapper)
 		if ((takis.tauntjoin) and (takis.tauntjoin.valid))
@@ -6357,7 +6453,8 @@ rawset(_G,"TakisHammerBlastHitbox",function(p)
 		dispy+me.momy,
 		--theres some discrepancies with these on different scales,
 		--but its miniscule so whatever yknow
-		(-FixedMul(TAKIS_HAMMERDISP,me.scale)*takis.gravflip)+me.momz,
+		(-FixedMul(TAKIS_HAMMERDISP,me.scale)*takis.gravflip)+me.momz
+		+(takis.gravflip == -1 and -me.height or 0),
 		MT_THOK
 	)
 	thok.radius = 40*me.scale
@@ -6366,6 +6463,13 @@ rawset(_G,"TakisHammerBlastHitbox",function(p)
 	thok.fuse = 2
 	thok.flags2 = $|MF2_DONTDRAW
 	thok.parent = me
+	P_SetOrigin(thok,
+		me.x+dispx+me.momx,
+		me.y+dispy+me.momy,
+		me.z+(-FixedMul(TAKIS_HAMMERDISP,me.scale)*takis.gravflip)+me.momz
+		+(takis.gravflip == -1 and -me.height+thok.height or 0)
+	)
+	
 	if TakisBreakAndBust(p,thok)
 		didit = true
 	end
@@ -6479,7 +6583,7 @@ end)
 
 --you're mother
 rawset(_G,"TakisMomAngle",function(mo,fallback)
-	if (mo.momx ~= 0 or mo.momy ~= 0)
+	if (mo.momx/FU ~= 0 or mo.momy/FU ~= 0)
 		return R_PointToAngle2(0,0,mo.momx,mo.momy)
 	else
 		return (fallback ~= nil and fallback or ((mo.player and mo.player.valid) and mo.player.drawangle or mo.angle))
@@ -6494,7 +6598,13 @@ rawset(_G,"TakisGetCameraMobj",function()
 	local cam = camera
 	if (displayplayer and displayplayer.valid)
 		if not CV_FindVar("chasecam").value
-			cam = displayplayer.realmo
+			local th = P_SpawnMobj(displayplayer.realmo.x,
+				displayplayer.realmo.y,
+				displayplayer.realmo.z+(displayplayer.realmo.height/2),
+				MT_NULL
+			)
+			th.angle = displayplayer.realmo.angle
+			cam = th
 		else
 			cam = camera
 		end
@@ -6534,6 +6644,95 @@ rawset(_G,"TakisShouldIHideInFP",function(fx,sourcep)
 	else
 		return false
 	end
+end)
+
+rawset(_G, 'L_DecimalFixed', function(str)
+	if str == nil return nil end
+	local dec_offset = string.find(str,'%.')
+	if dec_offset == nil
+		return (tonumber(str) or 0)*FRACUNIT
+	end
+	local whole = tonumber(string.sub(str ,0,dec_offset-1)) or 0
+	local decimal = tonumber(string.sub(str,dec_offset+1)) or 0
+	whole = $ * FRACUNIT
+	local dec_len = string.len(decimal)
+	decimal = $ * FRACUNIT / (10^dec_len)
+	return whole + decimal
+end)
+
+rawset(_G,"TakisBotThinker",function(p)
+	if (p.bot == 0 or p.ai == 0) then return end
+	if not (p.realmo and p.realmo.valid) then return end
+	
+	local me = p.realmo
+	local takis = p.takistable
+	
+	local pb = p.botleader
+	local tak2 = pb.takistable
+	local bmo = pb.realmo
+	
+	local dist = FixedHypot(FixedHypot(bmo.x - me.x,bmo.y - me.y),bmo.z - me.z)
+	takis.noability = $|NOABIL_CLUTCH
+	
+	if (takis.tauntjoin and takis.tauntjoin.valid)
+	and not takis.taunttime
+		local menu = takis.tauntmenu
+		for p2 in players.iterate
+			if p2 == p
+				continue
+			end
+			
+			local m2 = p2.realmo
+			
+			local dx = me.x-m2.x
+			local dy = me.y-m2.y
+			
+			--in range!
+			if FixedHypot(dx,dy) <= TAKIS_TAUNT_DIST
+				if skins[p2.skin].name == TAKIS_SKIN
+					if p2.takistable.tauntjoinable
+					
+						--we want their taunt number!
+						takis.tauntid = p2.takistable.tauntid
+						
+						if (p2.takistable.tauntacceptspartners)
+							takis.tauntpartner = p2
+							p2.takistable.tauntpartner = p
+						end
+						
+						local func = TAKIS_TAUNT_INIT[p2.takistable.tauntid]
+						func(p)
+						
+						--close
+						menu.open = false
+					end
+				elseif skins[p2.skin].name == "inazuma"
+					--Holy MOLY!
+					TakisTextBoxes:DisplayBox(p,TAKIS_TEXTBOXES.ultzuma)
+					
+					menu.open = false
+				end
+			end
+			
+		end
+	end
+	
+	if takis.taunttime
+	and (not tak2.taunttime or tak2.c1 == 1)
+		TakisResetTauntStuff(p)
+	end
+	
+	if (pb.pflags & PF_SPINNING)
+	and (dist <= TAKIS_TAUNT_DIST*3)
+		takis.c2 = $+1
+		p.cmd.buttons = $ &~BT_USE
+		takis.use = 0
+	end
+	
+	if p.playerstate == PST_LIVE
+		takis.heartcards = TAKIS_MAX_HEARTCARDS
+	end
+	
 end)
 
 filesdone = $+1

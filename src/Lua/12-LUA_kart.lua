@@ -15,6 +15,7 @@
 local CMD_DEADZONE = 14
 local STATS = {9,4} --speed,weight
 local spaceaccel = true
+local driftvolume = 255/2
 
 SafeFreeslot("MT_TAKIS_KART_HELPER")
 SafeFreeslot("S_TAKIS_KART_HELPER")
@@ -126,12 +127,13 @@ local CS_ACCELNOABS = (1<<2)
 
 local function GetCarSpeed(car,flags)
 	flags = $ or 0
+	local p = car.target.player
 	local speed = FixedDiv(FixedHypot(car.momx,car.momy),car.scale)
 	
 	if (flags & CS_VERT)
-		speed = FixedDiv(FixedHypot(FixedHypot(car.momx,car.momy),car.momz),car.scale)
+		speed = FixedDiv(FixedHypot(FixedHypot(car.momx-p.cmomx,car.momy-p.cmomy),car.momz),car.scale)
 	end
-	if (flags & CS_ACCEL)
+	if (flags & (CS_ACCEL|CS_ACCELNOABS))
 		if flags & CS_ACCELNOABS
 			speed = car.accel*8
 		else
@@ -150,6 +152,8 @@ local function lookatpeople(p,car)
 	local blindspot = 10*FU
 	local glancedir = 0
 	local lastvalidglance
+	local lookingback = p.cmd.buttons & BT_CUSTOM3
+	local taunting = false
 	
 	for player in players.iterate
 		local back,diff,distance
@@ -198,16 +202,23 @@ local function lookatpeople(p,car)
 			lastvalidglance = dir
 			
 			--horn
-			
+			if lookingback
+				taunting = true
+				
+				if car.hornwait == 0
+					S_StartAntonLaugh(me)
+					car.hornwait = 3*TR
+				end
+			end
 		end
 	end
 	
 	if glancedir > 0
-		return 1
+		return 1,taunting
 	elseif glancedir < 0
-		return -1
+		return -1,taunting
 	end
-	return lastvalidglance
+	return lastvalidglance,taunting
 	
 end
 
@@ -219,7 +230,7 @@ local function animhandle(p,car)
 	if me.sprite2 ~= SPR2_KART
 		me.sprite2 = SPR2_KART
 	end
-	local speed = GetCarSpeed(car)
+	local speed = GetCarSpeed(car,CS_ACCEL)
 	local rumble = leveltime % 2 == 0
 	local frame = A
 	local dontrumble = false
@@ -248,11 +259,11 @@ local function animhandle(p,car)
 	if abs(p.cmd.sidemove) < CMD_DEADZONE
 	and car.drift == 0
 	and P_IsObjectOnGround(car)
-		local destglance = lookatpeople(p,car)
+		local destglance,taunt = lookatpeople(p,car)
 		if destglance == 1
-			frame = O
+			frame = taunt and U or O
 		elseif destglance == -1
-			frame = R
+			frame = taunt and X or R
 		end
 	end
 	
@@ -518,7 +529,7 @@ local function driftstuff(p,car)
 			*/
 			
 			if GetCarSpeed(car) < FU
-			or GetCarSpeed(car,CS_ACCELNOABS) <= -2*FU
+			or GetCarSpeed(car,CS_ACCELNOABS) <= -car.basemaxspeed/3
 				car.driftbrake = TR
 			elseif GetCarSpeed(car) < 10*FU
 				car.driftspark = $*9/10
@@ -729,7 +740,7 @@ local function driftstuff(p,car)
 	
 	if car.drift ~= 0
 	and not S_SoundPlaying(car,sfx_kartdr)
-		S_StartSound(car,sfx_kartdr)
+		S_StartSoundAtVolume(car,sfx_kartdr,driftvolume)
 	elseif car.drift == 0
 		S_StopSoundByID(car,sfx_kartdr)
 	end
@@ -803,7 +814,17 @@ local function offroadcollide(p,car)
 		kartstuff = true
 	end
 	if not kartstuff
-		return (P_InQuicksand(car) or P_InQuicksand(me)) and 5 or 0
+		local secfric = me.subsector.sector.friction
+		local val = 0
+		
+		if secfric < 29*FU/32
+			val = 2
+		elseif (P_InQuicksand(car) or P_InQuicksand(me))
+			val = 5
+		end
+		
+		return val
+		
 	elseif kartstuff
 		local val = 0
 		--check weak offroad
@@ -848,6 +869,12 @@ local function updateoffroad(p,car)
 	
 end
 
+addHook("MobjCollide",function(car,mo)
+	if (mo.flags & MF_MISSILE)
+		return false
+	end
+end,MT_TAKIS_KART_HELPER)
+
 addHook("MobjMoveCollide",function(car,mo)
 	if (mo.type == MT_PLAYER)-- and mo == car.target)
 	or (mo.flags & MF_SPRING)
@@ -866,7 +893,9 @@ end,MT_TAKIS_KART_HELPER)
 --bumpcode
 addHook("MobjMoveBlocked",function(car,thing,line)
 	if ((thing) and (thing.valid)) or ((line) and (line.valid))
-		if (car.sprung) and car.momz*P_MobjFlip(car) > 0 then return end
+		local sprung = car.target.player.takistable.slopeairtime or car.sprung
+		
+		if (sprung) and car.momz*P_MobjFlip(car) > 0 then return end
 		
 		local oldangle = car.angle
 		if thing and thing.valid
@@ -874,15 +903,18 @@ addHook("MobjMoveBlocked",function(car,thing,line)
 				return
 			end
 			
+			local myspeed = FixedHypot(FixedHypot(car.momz,car.momy),car.momz)
+			local theirspeed = FixedHypot(FixedHypot(thing.momz,thing.momy),thing.momz)
+			
 			car.angle = FixedAngle(AngleFixed(R_PointToAngle2(car.x,car.y,thing.x,thing.y))+(180*FU))
-			P_InstaThrust(car,car.angle,20*car.scale)
+			P_InstaThrust(car,car.angle,20*car.scale+(theirspeed/2))
 			car.angle = oldangle
 			car.accel = $/5
 			
 			if thing.iskart
 				oldangle = thing.angle
 				thing.angle = FixedAngle(AngleFixed(R_PointToAngle2(thing.x,thing.y,car.x,car.y))+(180*FU))
-				P_InstaThrust(thing,thing.angle,20*thing.scale)
+				P_InstaThrust(thing,thing.angle,20*thing.scale+(myspeed/2))
 				thing.angle = oldangle
 				if thing.accel ~= nil
 					thing.accel = $/5
@@ -916,7 +948,7 @@ addHook("MobjMoveBlocked",function(car,thing,line)
 	end
 end,MT_TAKIS_KART_HELPER)
 
-local basenormalspeed = 45
+local basenormalspeed = 43
 local function carinit(car)
 	--toggles takis specific stuff (like fuel)
 	car.iskart = true
@@ -952,6 +984,8 @@ local function carinit(car)
 	car.reversing = 0
 	car.stats = STATS
 	car.rmomt = 0
+	car.jumphalf = false
+	car.hornwait = 0
 end
 
 addHook("MobjThinker",function(car)
@@ -1007,6 +1041,11 @@ addHook("MobjThinker",function(car)
 	p.kartingtime = $+1 or 0
 	car.scale = me.scale
 	takis.transfo = 0|(takis.transfo & TRANSFO_SHOTGUN)
+	if takis.use
+	or (p["ze2_info"] and p["ze2_info"].isSprinting)
+		p.cmd.buttons = $|BT_USE
+	end
+	TakisResetTauntStuff(p)
 	
 	/*
 	--idk this seems fine to me now
@@ -1072,9 +1111,15 @@ addHook("MobjThinker",function(car)
 	car.basemaxspeed = basenormalspeed*FU
 	local basemaxspeed = car.basemaxspeed
 	local maxspeed = car.maxspeed
-	local accel = p.accelstart + (GetCarSpeed(car)>>FRACBITS)*p.acceleration
+	local accel = p.accelstart + (FixedDiv(FixedHypot(car.momx,car.momy),car.scale)>>FRACBITS)*p.acceleration --p.accelstart + (basenormalspeed)*p.acceleration
 	local slow = FU
 	accel = ($*10)*3/2
+	
+	if G_RingSlingerGametype()
+	or gametype == GT_ZE2
+		car.basemaxspeed = basemaxspeed/2+(FixedMul(basemaxspeed/2, min( FixedDiv(max(p.rings,p.spheres)*FU,40*FU),FU) ))
+		maxspeed = car.maxspeed
+	end
 	
 	if car.accel ~= 0
 	and car.accel < -accel*2
@@ -1127,7 +1172,7 @@ addHook("MobjThinker",function(car)
 		and not (car.driftedout)
 		and (max(GetCarSpeed(car,CS_ACCEL),GetCarSpeed(car)) >= 10*FU)
 		and car.drift == 0
-		and grounded
+		--and grounded
 		and abs(p.cmd.sidemove) >= CMD_DEADZONE
 		and moving >= CMD_DEADZONE
 		and not car.reversing
@@ -1184,7 +1229,8 @@ addHook("MobjThinker",function(car)
 	
 	driftstuff(p,car)
 	car.momt = $*3/5
-	car.rmomt = ease.outquad(FU/3,$,car.momt)
+	--"real" turning momentum
+	car.rmomt = ease.outcubic(FU/3,$,car.momt)
 	car.angle = $+FixedAngle(car.rmomt/9)
 	--
 	
@@ -1192,6 +1238,7 @@ addHook("MobjThinker",function(car)
 	if (takis.fire == 1
 	or (not (takis.fire % 3) and takis.fire))
 	and p.rings > 0
+	and not (G_RingSlingerGametype() or takis.inSRBZ)
 		P_GivePlayerRings(p,-1)
 		local me = p.realmo
 		local ring = P_SpawnMobjFromMobj(me,me.momx,me.momy,me.momz,MT_RING)
@@ -1211,9 +1258,11 @@ addHook("MobjThinker",function(car)
 		car.driftboost = $-1
 	end
 	if car.ringboost
+		/*
 		if car.ringboost > 3*TR
 			car.ringboost = 3*TR
 		end
+		*/
 		car.basemaxspeed = $*13/10
 		TakisDoWindLines(me,nil,SKINCOLOR_SUPERRUST4)
 		car.ringboost = $-1
@@ -1273,12 +1322,14 @@ addHook("MobjThinker",function(car)
 			end
 			if car.accel+accel < cmaxspeed/8
 				car.accel = $+accel
+			else
+				car.accel = cmaxspeed/8
 			end
 		--back it up terry
 		else
 			--braking
 			if car.accel > 0
-			or (GetCarSpeed(car,CS_ACCELNOABS) >= 13*FU)
+			or (GetCarSpeed(car,CS_ACCELNOABS) >= cmaxspeed/8)
 				if grounded
 					brakegfx(p,car)
 					if not S_SoundPlaying(car,sfx_skid)
@@ -1292,12 +1343,14 @@ addHook("MobjThinker",function(car)
 			
 			if car.accel-accel > -cmaxspeed/16
 				car.accel = $-accel
+			else
+				car.accel = -cmaxspeed/16
 			end
 		end
 	else
 		if grounded
 			local ab = (car.accel > 0) and 1 or -1
-			car.accel = (FixedMul(abs($),29*FU/32))*ab
+			car.accel = 0 --(FixedMul(abs($),29*FU/32))*ab
 			
 			if GetCarSpeed(car,CS_ACCEL) <= FU
 				car.accel = 0
@@ -1307,9 +1360,11 @@ addHook("MobjThinker",function(car)
 	if car.accel > (car.maxspeed/8)--+(accel*2)
 		car.accel = car.maxspeed/8
 	end
-	if car.accel < (-car.maxspeed/32)---(accel*2)
-		car.accel = -car.maxspeed/32
+	/*
+	if car.accel < (-car.maxspeed/16)---(accel*2)
+		car.accel = -car.maxspeed/16
 	end
+	*/
 	
 	car.oldspeed = R_PointToDist2(car.momx - p.cmomx,car.momy - p.cmomy,0,0)
 	local thrustangle = car.angle
@@ -1377,12 +1432,13 @@ addHook("MobjThinker",function(car)
 			movethrust = FixedDiv($,car.offroad+FU)
 		end
 		
+		/*
 		if GetCarSpeed(car) > car.basemaxspeed+(FU*2)
 			local mul = FU
 			mul = FixedDiv(GetCarSpeed(car),car.basemaxspeed*4/5)
 			movethrust = FixedDiv($,mul)
 		end
-		
+		*/
 	end
 	movethrust = FixedMul($,car.scale)
 	P_Thrust(car, thrustangle, movethrust)
@@ -1395,12 +1451,16 @@ addHook("MobjThinker",function(car)
 		car.accel = min($,15*FU/8)
 	end
 	
-	P_ButteredSlope(car)
-	P_ButteredSlope(car)
-	P_ButteredSlope(me)
-	P_ButteredSlope(me)
+	--ringracers bro
+	/*
+	for i = 0,2
+		P_ButteredSlope(car)
+		P_ButteredSlope(me)
+	end
+	*/
 	
-	--tire tracks
+	--tire tracks/
+	/*
 	if grounded
 	and (GetCarSpeed(car) >= 60*FU
 	or car.drift ~= 0)
@@ -1423,6 +1483,7 @@ addHook("MobjThinker",function(car)
 		end
 	end
 	--
+	*/
 	
 	--jump
 	local jumped = false
@@ -1436,27 +1497,30 @@ addHook("MobjThinker",function(car)
 		L_ZLaunch(car,15*FU)
 		S_StartSound(car,sfx_ngjump)
 		car.jumped = true
+		car.jumphalf = false
 		jumped = true
 	end
 	if not (cmd.buttons & BT_JUMP)
 	and car.jumped
 	and car.momz*P_MobjFlip(car) > 0
+	and not car.jumphalf
 		car.momz = $/2
-		car.jumped = false
+		car.jumphalf = true
 	end
 	--
 	
+	if takis.slopeairtime then car.sprung = true end
 	TakisBreakAndBust(p,car)
 	local flashingtics = flashingtics/2
 	if not grounded
 		if not (car.sprung)
-			car.momz = $+(P_GetMobjGravity(car)*3/5*P_MobjFlip(me))
+			car.momz = $+(P_GetMobjGravity(car)*3/5)
 		end
 		if car.inpain
 			car.accel = $*9/10
 			me.flags2 = $ &~MF2_DONTDRAW
 			car.jumped = false
-			car.momz = $+(P_GetMobjGravity(car)*2/5*P_MobjFlip(me))
+			car.momz = $+(P_GetMobjGravity(car)*3/5)
 			if takis.fakeflashing < flashingtics-2
 				takis.fakeflashing = flashingtics
 			end
@@ -1464,6 +1528,7 @@ addHook("MobjThinker",function(car)
 	else
 		if not jumped
 			car.jumped = false
+			car.jumphalf = false
 		end
 		car.sprung = false
 		if car.inpain
@@ -1489,6 +1554,7 @@ addHook("MobjThinker",function(car)
 	if (gametype == GT_RACE
 	or HAPPY_HOUR.othergt)
 	or (TAKIS_NET.forcekart)
+	or (takis.inSRBZ)
 	or (extrastuff)
 		car.fuel = 100*FU
 	end
@@ -1532,33 +1598,36 @@ addHook("MobjThinker",function(car)
 		if (p.cmd.buttons & BT_CUSTOM2 and not car.inpain)
 		or (car.fuel <= 0 and car.takiscar)
 			p.inkart = 0
-			local newkart = P_SpawnMobjFromMobj(me,
-				P_ReturnThrustX(nil,me.angle+ANGLE_90,64*me.scale),
-				P_ReturnThrustY(nil,me.angle+ANGLE_90,64*me.scale),
-				0,
-				MT_TAKIS_KART
-			)
-			newkart.color = me.color
-			newkart.fuel = car.fuel
-			newkart.angle = car.angle
-			me.state = S_PLAY_STND
-			P_MovePlayer(p)
-			P_RemoveMobj(car)
-			/*
-			TakisFancyExplode(me,
-				car.x, car.y, car.z,
-				P_RandomRange(60,64)*car.scale,
-				32,
-				MT_TAKIS_EXPLODE,
-				15,20
-			)
-			P_MovePlayer(p)
-			P_DoPlayerPain(p,car,car)
-			P_SetObjectMomZ(me,15*me.scale)
-			P_Thrust(me,car.angle,20*car.scale)
-			P_MovePlayer(p)
-			p.powers[pw_nocontrol] = 5
-			*/
+			if (p.cmd.buttons & BT_CUSTOM2 and not car.inpain)
+			and car.fuel > 0
+				local newkart = P_SpawnMobjFromMobj(me,
+					P_ReturnThrustX(nil,me.angle+ANGLE_90,64*me.scale),
+					P_ReturnThrustY(nil,me.angle+ANGLE_90,64*me.scale),
+					0,
+					MT_TAKIS_KART
+				)
+				newkart.color = me.color
+				newkart.fuel = car.fuel
+				newkart.angle = car.angle
+				me.state = S_PLAY_STND
+				P_MovePlayer(p)
+				P_RemoveMobj(car)
+			else
+				TakisFancyExplode(me,
+					car.x, car.y, car.z,
+					P_RandomRange(60,64)*car.scale,
+					32,
+					MT_TAKIS_EXPLODE,
+					15,20
+				)
+				P_MovePlayer(p)
+				P_DoPlayerPain(p,car,car)
+				P_SetObjectMomZ(me,15*me.scale)
+				P_Thrust(me,car.angle,20*car.scale)
+				P_MovePlayer(p)
+				P_KillMobj(car)
+				p.powers[pw_nocontrol] = 5
+			end
 			if p.powers[pw_carry] == CR_TAKISKART
 				p.powers[pw_carry] = 0
 			end
@@ -1567,6 +1636,8 @@ addHook("MobjThinker",function(car)
 			return
 		end
 	end
+	
+	if car.hornwait then car.hornwait = $-1 end
 	
 	car.driftdiff = FixedAngle(AngleFixed($)*4/5)
 	if not car.inpain

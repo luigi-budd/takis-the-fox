@@ -13,6 +13,10 @@ hud.add(function(v, p)
 		return
 	end
 	
+	if gametype == GT_ZE2
+		return
+	end
+	
 	if p.discord == true
 		local off = 0
 		if (gametype == GT_ZE2)

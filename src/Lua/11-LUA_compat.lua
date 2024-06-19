@@ -147,15 +147,15 @@ addHook("ThinkFrame",do
 	and ZE2.AddConfig)
 	and not compat.ze2config
 		ZE2.AddConfig("takisthefox", {
-			normalspeed = 13 * FRACUNIT,
-			health = 65,
+			normalspeed = 10 * FRACUNIT,
+			health = 60,
 			charability = CA_DOUBLEJUMP,
 			charability2 = CA2_NONE,
-			jumpfactor = 17 * FRACUNIT / 19,
+			jumpfactor = FU*4/5,
 			actionspd = 30*FRACUNIT,
-			sprintboost = 11 * FRACUNIT,
+			sprintboost = 9 * FRACUNIT,
 			desc1 = "Ready to blast zombies.",
-			desc2 = "As fast as Tails. Double jump included."
+			desc2 = "A little slow. Double jump included."
 		})
 		compat.ze2config = true
 		printf("Added ZE2 config.")

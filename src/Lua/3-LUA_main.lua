@@ -311,6 +311,7 @@ addHook("PreThinkFrame",function()
 		
 		TakisDoNoabil(p,me,takis)
 		TakisButtonStuff(p,takis)
+		TakisBotThinker(p)
 		
 		if (me and me.valid)
 			if P_IsObjectOnGround(me)
@@ -446,6 +447,9 @@ addHook("PlayerThink", function(p)
 			
 			--just switched
 			if (takis.otherskin)
+				takis.spritexscale,takis.spriteyscale,
+				me.spritexscale,me.spriteyscale = FU,FU,FU,FU
+				me.spriteyoffset = 0
 				takis.otherskin = false
 				takis.otherskintime = 0
 			end
@@ -610,6 +614,7 @@ addHook("PlayerThink", function(p)
 			if (p.cmd.forwardmove or p.cmd.sidemove)
 			and p.normalspeed <= takis.accspeed
 			and me.friction < FU
+			and not takis.inSRBZ
 				me.friction = FU
 			end
 			
@@ -688,9 +693,14 @@ addHook("PlayerThink", function(p)
 					end
 				else
 					
+					local use = takis.use
+					if takis.inSRBZ
+						use = takis.c2
+					end
+					
 					--shotgun shot
-					if ((takis.use and TAKIS_NET.chaingun)
-					or (takis.use == 1 and not TAKIS_NET.chaingun))
+					if ((use and TAKIS_NET.chaingun)
+					or (use == 1 and not TAKIS_NET.chaingun))
 					and not (takis.shotguncooldown and not TAKIS_NET.chaingun)
 					and not (takis.inPain or takis.inFakePain)
 					and not (takis.noability & NOABIL_SHOTGUN
@@ -702,7 +712,7 @@ addHook("PlayerThink", function(p)
 							
 							takis.shotguncooldown = 18
 						else
-							if takis.use == 1
+							if use == 1
 								P_Thrust(me,p.drawangle,-10*me.scale)
 								P_MovePlayer(p)
 								TakisAwardAchievement(p,ACHIEVEMENT_RIPANDTEAR)
@@ -833,16 +843,18 @@ addHook("PlayerThink", function(p)
 			and takis.taunttime == 0
 			and not takis.yeahed
 			and not (takis.tauntmenu.open)
+			and not takis.tauntreject
 				if ((takis.c2) and (not takis.c3))
 					if takis.tauntquick1
 						if ((TAKIS_TAUNT_INIT[takis.tauntquick1] ~= nil)
 						and (TAKIS_TAUNT_THINK[takis.tauntquick1] ~= nil))
-							takis.tauntid = takis.tauntquick1
-						
-							--init func
-							local func = TAKIS_TAUNT_INIT[takis.tauntquick1]
-							func(p)
+							if TakisIsTauntUsable(p,takis.tauntquick1)
+								takis.tauntid = takis.tauntquick1
 							
+								--init func
+								local func = TAKIS_TAUNT_INIT[takis.tauntquick1]
+								func(p)
+							end
 						else
 							if (takis.c2 == 1)
 								S_StartSound(nil,sfx_notadd,p)
@@ -858,12 +870,13 @@ addHook("PlayerThink", function(p)
 						
 						if ((TAKIS_TAUNT_INIT[takis.tauntquick2] ~= nil)
 						and (TAKIS_TAUNT_THINK[takis.tauntquick2] ~= nil))
-							takis.tauntid = takis.tauntquick2
-						
-							--init func
-							local func = TAKIS_TAUNT_INIT[takis.tauntquick2]
-							func(p)
+							if TakisIsTauntUsable(p,takis.tauntquick2)
+								takis.tauntid = takis.tauntquick2
 							
+								--init func
+								local func = TAKIS_TAUNT_INIT[takis.tauntquick2]
+								func(p)
+							end
 						else
 							if (takis.c3 == 1)
 								S_StartSound(nil,sfx_notadd,p)
@@ -875,6 +888,11 @@ addHook("PlayerThink", function(p)
 						end
 					end
 				end
+			end
+			
+			if takis.tauntreject
+			and not (takis.c2 or takis.c3)
+				takis.tauntreject = false
 			end
 			
 			--tf2-styled taunt menu!
@@ -995,6 +1013,7 @@ addHook("PlayerThink", function(p)
 							and p.panim == PA_IDLE
 							and takis.taunttime == 0
 							and not takis.yeahed
+							and TakisIsTauntUsable(p,num)
 								takis.tauntid = num
 								
 								--init func
@@ -1676,12 +1695,22 @@ addHook("PlayerThink", function(p)
 				end
 			end
 			
+			if not takis.dontlanddust
+			and me.momz*takis.gravflip <= -18*me.scale
+				local mom = FixedDiv(me.momz*takis.gravflip,me.scale)+18*FU
+				mom = $/50
+				mom = max($,-FU*4/5)
+				takis.spritexscale,
+				takis.spriteyscale = $1+mom,$2-mom
+			end
+		
 			--stuff to do while grounded
 			if takis.onGround
 				if not p.inkart
 					takis.coyote = 8+(p.cmd.latency)
 				end
 				takis.bashcooldown = false
+				takis.slopeairtime = false
 				
 				if not takis.pitanim
 					if takis.pittime
@@ -1905,10 +1934,14 @@ addHook("PlayerThink", function(p)
 					takis.coyote = 0
 				end
 				
+				if p.powers[pw_justlaunched]
+					takis.slopeairtime = true
+				end
+				
 				--coyote time
 				if takis.coyote
 				and (me.health)
-				and (p.powers[pw_carry] ~= CR_NIGHTSMODE)
+				and (takis.notCarried)
 					takis.coyote = $-1
 					if takis.jump == 1
 					and not (p.pflags & (PF_JUMPED|PF_JUMPSTASIS|PF_THOKKED))
@@ -2029,7 +2062,6 @@ addHook("PlayerThink", function(p)
 					takis.body.color = me.color
 				end
 				
-				takis.goingfast = false
 				takis.wentfast = 0
 				
 				--death thinker and anims are called in 
@@ -2461,6 +2493,10 @@ addHook("PlayerThink", function(p)
 				takis.otherskintime = $+1
 			end
 			
+			if takis.deathfunny
+				takis.deathfunny = false
+				me.spritexoffset = 0
+			end
 			takis.combo.time = 0
 			--still animate happy hour and stuff
 			
@@ -2507,10 +2543,12 @@ addHook("PlayerThink", function(p)
 		and takis.HUD.lives.useplacements
 		and not p.spectator
 			takis.HUD.lives.bump = FU*3/2
+			/*
 			if me.skin == TAKIS_SKIN
 				local sound = min(takis.placement,16)
 				S_StartSound(nil,sfx_pass01+(sound-1),p)
 			end
+			*/
 		end
 		
 		--holding FN, C3, C2 open menu
@@ -2559,27 +2597,34 @@ addHook("ThinkFrame", function ()
 		
 		local takis = p.takistable
 		
+		if p.spectator
+			takis.inwaterslide = 0
+			takis.wasinwaterslide = 0
+			continue
+		end
+		
 		takis.wasinwaterslide = takis.inwaterslide
 		if takis
 			takis.inwaterslide = p.pflags & PF_SLIDING
 		end
 		
-		if takis.inwaterslide
-		and not takis.wasinwaterslide
-			S_StartSound(p.realmo,sfx_eeugh)
-			p.mo.state = S_PLAY_STUN
-			takis.transfo = $ &~TRANSFO_BALL
+		if skins[p.skin].name == TAKIS_SKIN
+			if takis.inwaterslide
+			and not takis.wasinwaterslide
+				S_StartSound(p.realmo,sfx_eeugh)
+				p.mo.state = S_PLAY_STUN
+				takis.transfo = $ &~TRANSFO_BALL
+			end
+			
+			if not takis.inwaterslide
+			and takis.wasinwaterslide
+				p.mo.state = S_PLAY_ROLL
+				p.pflags = $|PF_SPINNING
+				takis.transfo = $|TRANSFO_BALL
+				P_MovePlayer(p)
+				S_StartAntonOw(p.mo)
+			end
 		end
-		
-		if not takis.inwaterslide
-		and takis.wasinwaterslide
-			p.mo.state = S_PLAY_ROLL
-			p.pflags = $|PF_SPINNING
-			takis.transfo = $|TRANSFO_BALL
-			P_MovePlayer(p)
-			S_StartAntonOw(p.mo)
-		end
-		
 	end
 end)
 
@@ -2650,7 +2695,14 @@ addHook("PostThinkFrame", function()
 			P_StartQuake(takis.quakeint,1)
 		end
 		
-		if not (me.skin == TAKIS_SKIN) then continue end
+		if (takis.spritexscale ~= FU or takis.spriteyscale ~= FU)
+		and (me.skin ~= TAKIS_SKIN)
+			takis.spritexscale,takis.spriteyscale,
+			me.spritexscale,me.spriteyscale = FU,FU,FU,FU
+			me.spriteyoffset = 0
+		end
+		
+		if (me.skin ~= TAKIS_SKIN) then continue end
 		
 		me.spritexscale,me.spriteyscale = takis.spritexscale,takis.spriteyscale
 		takis.spritexscale,takis.spriteyscale = FU,FU
@@ -3187,11 +3239,12 @@ local function kartpain(me,inf)
 	if not (me.tracer and me.tracer.valid) then return end
 	local car = me.tracer
 	
+	p.powers[pw_flashing] = flashingtics*2
 	car.inpain = true
 	car.painangle = car.angle
 	P_SetObjectMomZ(car,P_RandomRange(25,30)*car.scale)
 	SpawnBam(me,true)
-	S_StartAntonOw(car)
+	--S_StartAntonOw(car)
 	car.fuel = $-(5*FU)
 	car.damagetic = TR
 	car.driftspark = 0
@@ -3207,8 +3260,7 @@ end
 --handle takis damage here
 --freeroam damage is handled in the ShouldDamage
 addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
-	if not mo
-	or not mo.valid
+	if not (mo and mo.valid)
 		return
 	end
 	
@@ -3311,7 +3363,7 @@ addHook("MobjDamage", function(mo,inf,sor,_,dmgt)
 		TakisResetHammerTime(p)
 		--DIE
 		if takis.heartcards == 1
-			P_KillMobj(mo,inf,sor,dmgt)
+			--P_KillMobj(mo,inf,sor,dmgt)
 			
 			--lose EVERYTHING
 			spillrings(p,true)
@@ -3582,8 +3634,7 @@ local function knockbacklolll(t,tm)
 end
 
 addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
-	if not mo
-	or not mo.valid
+	if not (mo and mo.valid)
 		return
 	end
 	
@@ -3751,6 +3802,7 @@ addHook("ShouldDamage", function(mo,inf,sor,dmg,dmgt)
 		
 		if takis.heartcards > 1
 		and TAKIS_MISC.allowfallout
+		and mo.health
 			TakisResetHammerTime(p)
 			mo.state = S_PLAY_DEAD
 			
@@ -4111,6 +4163,7 @@ addHook("MobjDeath", hurtbytakis)
 addHook("MobjDamage", diedbytakis)
 
 --summa
+--cant use BossDeath since i need the source
 addHook("MobjDeath",function(mo,inf,sor,dmgt)
 	if not (mo.flags & MF_BOSS) then return end
 	if not (sor and sor.valid) then return end
@@ -4247,7 +4300,7 @@ addHook("AbilitySpecial", function(p)
 	takis.thokked = true
 	takis.hammerblastjumped = 0
 	
-	local jfactor = FixedDiv(p.jumpfactor,skins[TAKIS_SKIN].jumpfactor)
+	local jfactor = min(FixedDiv(p.jumpfactor,skins[TAKIS_SKIN].jumpfactor),FU)
 	L_ZLaunch(p.mo,FixedMul(15*FU,jfactor))
 	
 	me.state = S_PLAY_ROLL
@@ -4465,7 +4518,7 @@ addHook("MobjMoveCollide",function(tm,t)
 					p.drawangle = t.angle
 				end
 				car.sprung = true
-				if (mobjinfo[t.type].painsound == sfx_cdfm62)
+				if (t.info.painchance == 3)
 					car.driftboost = 3*TR
 				end
 				return
@@ -4521,7 +4574,7 @@ addHook("MobjMoveCollide",function(tm,t)
 				else
 					TakisAddHurtMsg(t.player,HURTMSG_BALL)
 				end
-				P_DamageMobj(t,tm,tm,10)
+				P_DamageMobj(t,tm,tm,100)
 				LaunchTargetFromInflictor(1,t,tm,63*tm.scale,takis.accspeed/5)
 				P_Thrust(tm,p.drawangle,5*tm.scale)
 				L_ZLaunch(t,P_RandomRange(5,15)*tm.scale,true)
@@ -4529,6 +4582,11 @@ addHook("MobjMoveCollide",function(tm,t)
 				SpawnEnemyGibs(t,tm)
 				SpawnBam(tm,true)
 				
+				if p.inkart
+					P_KillMobj(t,tm,tm,DMG_INSTAKILL)
+					tm.player.takistable.saveddmgt = DMG_INSTAKILL
+					tm.player.takistable.deathfunny = true
+				end
 				S_StartSound(t,sfx_bowl)
 				S_StartSound(tm,sfx_smack)
 			end
@@ -4578,6 +4636,8 @@ addHook("MobjMoveCollide",function(tm,t)
 			fling.radius = tm.radius
 			fling.height = tm.height
 			fling.state = tm.state
+			fling.spritexoffset,fling.spriteyoffset = tm.spritexoffset,tm.spriteyoffset
+			fling.spritexscale,fling.spriteyscale = tm.spritexscale,tm.spriteyscale
 			fling.fuse = 3*TR
 			fling.color = tm.color
 			L_ZLaunch(fling,
@@ -4641,13 +4701,14 @@ addHook("MobjMoveCollide",function(tm,t)
 		and ((t.player) and (t.player.valid))
 		and (p.inkart)
 		and L_ZCollide(t,tm)
-		and (takis.accspeed >= 15*FU)
+		and (takis.accspeed >= 10*FU)
 		and not t.player.inkart
 			if CanPlayerHurtPlayer(p,t.player)
-				P_DamageMobj(t,tm,tm,10)
+				P_DamageMobj(t,tm,tm,100)
 				LaunchTargetFromInflictor(1,t,tm,63*tm.scale,takis.accspeed/5)
-				P_Thrust(tm,p.drawangle,5*tm.scale)
+				P_Thrust(tm,p.drawangle,50*tm.scale)
 				L_ZLaunch(t,P_RandomRange(5,15)*tm.scale,true)
+				P_MovePlayer(t.player)
 				
 				SpawnEnemyGibs(t,tm)
 				SpawnBam(tm,true)
@@ -4675,6 +4736,11 @@ addHook("MobjMoveBlocked", function(me, thing, line)
 	if takis.inwaterslide
 	or (takis.transfo & TRANSFO_BALL)
 		allowbump = true
+	end
+	
+	if takis.slopeairtime
+	and me.momz*P_MobjFlip(me) > 0
+		allowbump = false
 	end
 	
 	if not allowbump
